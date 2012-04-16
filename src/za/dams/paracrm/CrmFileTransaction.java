@@ -313,7 +313,7 @@ public class CrmFileTransaction {
 		}
 		
 		// ******** Load de tous les FIELDS ************
-		String localFileCode = tFileinfo.fileCode ;
+		
 		
 		ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
 		
@@ -323,6 +323,7 @@ public class CrmFileTransaction {
 		/*
 		// --- field "pivot"
 		String pivotFieldCode = null ;
+		String localFileCode = tFileinfo.fileCode ;
 		if( tFileinfo.fileIsSubfile ){
 			tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code " +
 					"FROM define_file_entry " +
@@ -508,7 +509,7 @@ public class CrmFileTransaction {
 		
 		ArrayList<CrmFileRecord> tRecords = new ArrayList<CrmFileRecord>();
 		
-		Iterator<BibleHelper.BibleEntry> bibleIter ;
+		Iterator<BibleMemoryHelper.BibleEntry> bibleIter ;
     	Iterator<CrmFileFieldDesc> mIter = tFields.iterator() ;
     	CrmFileFieldDesc tFieldDesc ;
     	HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
@@ -520,10 +521,9 @@ public class CrmFileTransaction {
     			
     			
     			// appel a bible helper
-    			BibleHelper bibleHelper = BibleHelper.getInstance(mContext) ;
+    			BibleMemoryHelper bibleHelper = BibleMemoryHelper.getInstance(mContext) ;
     			bibleIter = bibleHelper.queryBible(tFieldDesc.fieldLinkBible).iterator() ;
-    			//Iterator<BibleHelper.BibleEntry> miter = bibleHelper.queryBible("STORE").iterator() ;
-    			BibleHelper.BibleEntry bibleEntry ;
+    			BibleMemoryHelper.BibleEntry bibleEntry ;
     			int a = 0 ;
     	    	while( bibleIter.hasNext() ){
     	    		bibleEntry = bibleIter.next() ; 
@@ -661,15 +661,15 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_bible( int pageId , int recordId, int fieldId, String entryKey ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			Log.w(TAG,"Aborting...") ;
+			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
-		Log.w(TAG,"Updating...") ;
+		//Log.w(TAG,"Updating...") ;
 		String bibleCode = TransactionPageFields.get(pageId).get(fieldId).fieldLinkBible ;
 		
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
 		
-		BibleHelper.BibleEntry tmpBibleEntry = BibleHelper.getInstance(mContext).prettifyEntry( new BibleHelper.BibleEntry( bibleCode, entryKey ))  ;
+		BibleHelper.BibleEntry tmpBibleEntry = new BibleHelper(mContext).getBibleEntry(bibleCode, entryKey) ;
 		record.valueString = entryKey ;
 		record.displayStr = tmpBibleEntry.displayStr ;
 		record.isSet = true ;
@@ -961,6 +961,8 @@ public class CrmFileTransaction {
 	public ArrayList<BibleHelper.BibleEntry> links_getBibleConditions() { // utilisation : dans les BiblePickers , dans les tables TABLE_AUTOFILL
 		ArrayList<BibleHelper.BibleEntry> mArr = new ArrayList<BibleHelper.BibleEntry>() ;
 		
+		BibleHelper bh = new BibleHelper(mContext) ;
+		
 		Iterator<CrmFileFieldDesc> mIter = TransactionPageFields.get(0).iterator() ;
 		CrmFileRecord mRecord = TransactionPageRecords.get(0).get(0) ;
 		if( mRecord == null || mRecord.recordData == null ) {
@@ -972,8 +974,8 @@ public class CrmFileTransaction {
 				continue ;
 			}
 			if( mRecord.recordData.get(fieldDesc.fieldCode).isSet ) {
-				//Log.w(TAG,"Adding "+fieldDesc.fieldLinkBible+" "+mRecord.recordData.get(fieldDesc.fieldCode).valueString ) ;
-				mArr.add( new BibleHelper.BibleEntry(fieldDesc.fieldLinkBible , mRecord.recordData.get(fieldDesc.fieldCode).valueString) ) ;
+				Log.w(TAG,"Adding "+fieldDesc.fieldLinkBible+" "+mRecord.recordData.get(fieldDesc.fieldCode).valueString ) ;
+				mArr.add( bh.getBibleEntry(fieldDesc.fieldLinkBible , mRecord.recordData.get(fieldDesc.fieldCode).valueString) ) ;
 			}
 		}
 		

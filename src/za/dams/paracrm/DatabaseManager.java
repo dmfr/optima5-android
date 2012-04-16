@@ -5,7 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -28,7 +29,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 5;
+    private final int DB_VERSION = 6;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -160,11 +161,32 @@ public class DatabaseManager {
             db.execSQL(createTableQuery);
             
     		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "store_bible_entry_field_linkmembers" + " ("
+                    + "bible_code" + " VARCHAR(50), "
+                    + "entry_key" + " VARCHAR(100),"
+                    + "entry_field_code" + " VARCHAR(100),"
+                    + "entry_field_linkmember_index" + " INTEGER,"
+                    + "entry_field_linkmember_treenodekey" + " VARCHAR(100),"
+                    + "PRIMARY KEY( bible_code, entry_key,entry_field_code,entry_field_linkmember_index)"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
                     + "store_bible_tree" + " ("
                     + "bible_code" + " VARCHAR(50), "
                     + "treenode_key" + " VARCHAR(100),"
                     + "treenode_parent_key" + " VARCHAR(100),"
                     + "PRIMARY KEY( bible_code, treenode_key)"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "store_bible_tree_inheritednodes" + " ("
+                    + "bible_code" + " VARCHAR(50), "
+                    + "treenode_key" + " VARCHAR(100),"
+                    + "inherited_index" + " INTEGER,"
+                    + "inherited_treenode_key" + " VARCHAR(100),"
+                    + "PRIMARY KEY( bible_code, treenode_key, inherited_index)"
                     + ");";
             db.execSQL(createTableQuery);
             
@@ -178,6 +200,17 @@ public class DatabaseManager {
                     + "treenode_field_value_date" + " DATE,"
                     + "treenode_field_value_link" + " VARCHAR(500),"
                     + "PRIMARY KEY( bible_code, treenode_key,treenode_field_code)"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "store_bible_tree_field_linkmembers" + " ("
+                    + "bible_code" + " VARCHAR(50), "
+                    + "treenode_key" + " VARCHAR(100),"
+                    + "treenode_field_code" + " VARCHAR(100),"
+                    + "treenode_field_linkmember_index" + " INTEGER,"
+                    + "treenode_field_linkmember_treenodekey" + " VARCHAR(100),"
+                    + "PRIMARY KEY( bible_code, treenode_key,treenode_field_code,treenode_field_linkmember_index)"
                     + ");";
             db.execSQL(createTableQuery);
             
@@ -292,51 +325,92 @@ public class DatabaseManager {
     	
     	ArrayList<ContentValues> insertBuffer = new ArrayList<ContentValues>() ;
     	
-    	HashMap<String,Columns> mapTables = new HashMap<String,Columns>() ;
-    	String tableName = "" ;
+    	String tableName = null ;
     	try {
     		BufferedReader r = new BufferedReader(new InputStreamReader(is));
     		String readLine ;
+    		boolean isFirst = true ;
+    		String remoteColumnNames[] = new String[0] ;
+    		ContentValues cv ;
     		
     		JSONObject jsonObj ;
+    		JSONArray jsonArr ;
 			while( (readLine = r.readLine()) != null ) {
+				// Log.w(TAG,readLine) ;
 				try {
-					jsonObj = new JSONObject(readLine) ;
-					if( jsonObj.optBoolean("success",false) && jsonObj.optLong("timestamp",0) > 0 ) {
-						versionTimestamp = jsonObj.optLong("timestamp",0) ;
-						nbRowsExpected = jsonObj.optInt("nb_rows",0) ;
-						nbTablesExpected = jsonObj.optInt("nb_tables",0) ;
-						continue ;
+					if( isFirst ) {
+						jsonObj = new JSONObject(readLine) ;
+						if( jsonObj.optBoolean("success",false) && jsonObj.optLong("timestamp",0) > 0 ) {
+							versionTimestamp = jsonObj.optLong("timestamp",0) ;
+							nbRowsExpected = jsonObj.optInt("nb_rows",0) ;
+							nbTablesExpected = jsonObj.optInt("nb_tables",0) ;
+							isFirst = false ;
+							continue ;
+						}
+						else {
+							return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+						}
 					}
 					
-					if( !jsonObj.optString("table_name","").equals(tableName) ) {
-						upgradeReferentielStream_bulkInsert(tableName,insertBuffer) ;
-		    			insertBuffer = new ArrayList<ContentValues>() ;
-		    			//Log.w("")
-					}
-					
-					tableName = jsonObj.optString("table_name","") ;
-					if( tableName.equals("") ) {
-						continue ;
-					}
-					if( !mapTables.containsKey(tableName) ) {
-						String columnNames[] ;
+					if( tableName == null ) {
+						jsonArr = new JSONArray(readLine) ;
+						if( jsonArr.length() != 1 ) {
+							return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+						}
+						tableName = jsonArr.getString(0) ;
+						
+						
+						Collection<String> localColumnNames = new ArrayList<String>() ;
 						try{
+							mDb.execSQL(String.format("DELETE FROM %s",tableName));
 							Cursor c = mDb.rawQuery(String.format("SELECT * FROM %s WHERE 0",tableName),null);
-							columnNames = c.getColumnNames() ;
+							localColumnNames = Arrays.asList(c.getColumnNames()) ;
 							c.close() ;
 						}
 						finally{
 						}
-						mDb.execSQL(String.format("DELETE FROM %s",tableName));
-						mapTables.put(tableName,
-								new Columns(columnNames)
-						);
-						nbTables++ ;
+						
+						readLine = r.readLine() ;
+						jsonArr = new JSONArray(readLine) ;
+						remoteColumnNames = new String[jsonArr.length()] ;
+						for( int a=0 ; a<jsonArr.length() ; a++ ) {
+							String colName = jsonArr.optString(a) ;
+							if( localColumnNames.contains(colName) ) {
+								remoteColumnNames[a] = colName ;
+							}
+							else {
+								remoteColumnNames[a] = null ;
+							}
+						}
+						
+						continue ;
 					}
 					
-					// mDb.insert(tableName, "NULL", );
-					insertBuffer.add(mapTables.get(tableName).jsonToContentValues(jsonObj.optJSONObject("data"))) ;
+					jsonArr = new JSONArray(readLine) ;
+					if(jsonArr.length() == 0 ) {
+						Log.w(TAG,"Committing "+tableName) ;
+						upgradeReferentielStream_bulkInsert(tableName,insertBuffer) ;
+						insertBuffer = new ArrayList<ContentValues>() ;
+						tableName = null ;
+						nbRowstmp = 0 ;
+						nbTables++ ;
+						continue ;
+					}
+					
+					if( jsonArr.length() != remoteColumnNames.length ) {
+						Log.w(TAG,"Bad length !!!") ;
+						return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+					}
+					
+					cv = new ContentValues() ;
+					for( int a=0 ; a<remoteColumnNames.length ; a++ ) {
+						if( remoteColumnNames[a] == null ) {
+							continue ;
+						}
+						// Log.w(TAG,"adding "+remoteColumnNames[a]+" "+jsonArr.getString(a)) ;
+						cv.put(remoteColumnNames[a], jsonArr.getString(a)) ;
+					}
+					insertBuffer.add(cv) ;
 		    		nbRows++ ;
 		    		nbRowstmp++ ;
 		    		

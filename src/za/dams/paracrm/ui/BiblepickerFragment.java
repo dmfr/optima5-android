@@ -1,11 +1,11 @@
 package za.dams.paracrm.ui;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
 import za.dams.paracrm.BibleHelper;
-import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
@@ -14,8 +14,10 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -33,6 +35,8 @@ public class BiblepickerFragment extends DialogFragment {
 	
 	String bibleCode ;
 	private ArrayList<HashMap<String,Object>> mList ;
+	
+	private Thread syncWithDataThread ;
 	
     static BiblepickerFragment newInstance(int pageId , int recordId , int fieldId ) {
     	BiblepickerFragment f = new BiblepickerFragment();
@@ -109,11 +113,19 @@ public class BiblepickerFragment extends DialogFragment {
         mlv.setAdapter(new SimpleAdapter(getActivity().getApplicationContext(), mList, R.layout.biblepicker_row, adaptFrom, adaptTo )) ;
         syncWithData() ;
         
+        ((EditText)getView().findViewById(R.id.biblepickertext)).setOnKeyListener(new OnKeyListener() {
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if (keyCode == KeyEvent.KEYCODE_ENTER) {
+                	chooseNullItem() ;
+                }
+                return false;
+            }
+        }) ;
         
         ((EditText)getView().findViewById(R.id.biblepickertext)).addTextChangedListener(new TextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
-            	BiblepickerFragment.this.syncWithData() ;
+            	BiblepickerFragment.this.syncWithData(true) ;
             }
 
             @Override
@@ -123,42 +135,81 @@ public class BiblepickerFragment extends DialogFragment {
             public void onTextChanged(CharSequence s, int start, int before, int count) { }
         });
 
-        
-        
+
+
         mlv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-     	   public void onItemClick(AdapterView<?> parentView, View childView, int position, long id) {
-     		  chooseItem( position ) ;
-     	   }
-     }) ;
-     }
-    public void syncWithData() {
-    	mList.clear() ;
-    	HashMap<String,Object> mPoint ;
+        	public void onItemClick(AdapterView<?> parentView, View childView, int position, long id) {
+        		chooseItem( position ) ;
+        	}
+        }) ;
+    }
+    public void onPause() {
+    	if( syncWithDataThread != null ) {
+    		syncWithDataThread.interrupt() ;
+    	}
+    	super.onPause() ;
+    }
+    public void syncWithData(){
+    	syncWithData(false) ;
+    }
+    public void syncWithData(final boolean doWait) {
+    	final String typedText = ((EditText)getView().findViewById(R.id.biblepickertext)).getText().toString() ;
     	
-    	String typedText = ((EditText)getView().findViewById(R.id.biblepickertext)).getText().toString() ;
+    	if( syncWithDataThread != null ) {
+    		syncWithDataThread.interrupt() ;
+    	}
+        // Async check
+    	syncWithDataThread = new Thread() {
+            public void run() {
+            	if( doWait ) {
+            		try{
+            			Thread.sleep(500) ;
+            		}
+            		catch( InterruptedException e ) {
+            			//Log.w(TAG,"Interrupting request") ;
+            			return ;
+            		}
+            	}
+            	syncWithData_queryAsync(typedText);
+            };
+        };
+        syncWithDataThread.start();
+    }
+    public void syncWithData_queryAsync( String typedText ) {
+    	if( !isAdded() ) {
+    		//Log.w(TAG,"Fragment was gone") ;
+    		return ;
+    	}
     	
 		// appel a bible helper
-		BibleHelper bibleHelper = BibleHelper.getInstance(getActivity().getApplicationContext()) ;
-		Iterator<BibleEntry> bibleIter ;
-		if( typedText.length() == 0 ) {
-			// Log.w(TAG,"Size of "+mTransaction.links_getBibleConditions().size()) ;
-			bibleIter = bibleHelper.queryBible(bibleCode, mTransaction.links_getBibleConditions()).iterator() ;
-		}
-		else{
-			bibleIter = bibleHelper.queryBible(bibleCode, mTransaction.links_getBibleConditions(), typedText ).iterator() ;
-		}
-		BibleHelper.BibleEntry bibleEntry ;
-    	while( bibleIter.hasNext() ){
-    		bibleEntry = bibleIter.next() ; 
+		BibleHelper bh = new BibleHelper(getActivity().getApplicationContext()) ;
+		
+    	final ArrayList<HashMap<String,Object>> mListNew = new ArrayList<HashMap<String,Object>>() ;
+    	for( BibleHelper.BibleEntry bibleEntry : 
+    		bh.queryBible(bibleCode, mTransaction.links_getBibleConditions(), typedText, 25 ) ){
     		
-    		mPoint = new HashMap<String,Object>() ;
+    		HashMap<String,Object> mPoint = new HashMap<String,Object>() ;
     		mPoint.put("entry_key",bibleEntry.entryKey) ;
     		mPoint.put("text1",bibleEntry.displayStr1) ;
     		mPoint.put("text2",bibleEntry.displayStr2) ;
-    		mList.add(mPoint) ;
+    		mListNew.add(mPoint) ;
     	}
-    	((SimpleAdapter) ((ListView) getView().findViewById(R.id.biblepickerlist)).getAdapter()).notifyDataSetChanged() ;
+    	if( !Thread.interrupted() ) {
+    		getActivity().runOnUiThread(new Runnable(){
+    			public void run(){
+    				syncWithData_setAdapterList(mListNew) ;
+    			}
+    		});
+    	}
     }
+    public void syncWithData_setAdapterList( Collection<HashMap<String,Object>> mListNew ){
+    	mList.clear() ;
+    	mList.addAll(mListNew) ;
+    	if( isAdded() ) {
+    	((SimpleAdapter) ((ListView) getView().findViewById(R.id.biblepickerlist)).getAdapter()).notifyDataSetChanged() ;
+    	}
+    }
+    
     
     public void chooseItem( int position ) {
     	String mEntryKey = mList.get(position).get("entry_key").toString() ;
@@ -171,6 +222,15 @@ public class BiblepickerFragment extends DialogFragment {
     	((FiledetailListFragment)getTargetFragment()).syncWithData() ;
     	getDialog().dismiss() ;
     }
+    public void chooseNullItem() {
+    	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+    	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+    	mTransaction.page_setRecordFieldValue_unset(pageId,recordId,fieldId) ;
+    	
+    	((FiledetailListFragment)getTargetFragment()).syncWithData() ;
+    	getDialog().dismiss() ;
+    }
+    
     
 
 }

@@ -36,7 +36,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -277,6 +276,7 @@ public class MainMenuActivity extends Activity {
             	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
         			@Override
         			public void run() {
+        				MainMenuActivity.this.mStaticMenuAdapter.hasAvailableUpdate = true ;
         				MainMenuActivity.this.myDownloadUpdate() ; ;
         			}
         		});
@@ -289,6 +289,10 @@ public class MainMenuActivity extends Activity {
     				MainMenuActivity.this.mStaticMenuAdapter.hasAvailableUpdate = true ;
     			}
     		});
+    	}
+    	else {
+    		//Log.w(TAG,"Local version "+localVersion) ;
+    		//Log.w(TAG,"Nightly version "+nightlyVersion) ;
     	}
     	
 
@@ -525,6 +529,12 @@ public class MainMenuActivity extends Activity {
 	
 	
 	
+	public void myPrintTrees(){
+		Log.w(TAG,"Print Trees...") ;
+ 		BibleHelper bh = new BibleHelper(getApplicationContext()) ;
+		bh.buildCaches() ;
+	}
+	
 	
 	public void myDownloadUpdate(){
 		new DownloadUpdateTask().execute() ;
@@ -556,8 +566,10 @@ public class MainMenuActivity extends Activity {
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
         	postParams.put("_domain", "paramount");
         	postParams.put("_moduleName", "paracrm");
-        	postParams.put("_action", "android_getDbImageStream");
+        	postParams.put("_action", "android_getDbImageTab");
         	String postString = HttpPostHelper.getPostString(postParams) ;
+        	
+        	DatabaseManager.DatabaseUpgradeResult dbUpResult = new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
     		
     		try {
     			URL url = new URL(getString(R.string.server_url));
@@ -573,8 +585,8 @@ public class MainMenuActivity extends Activity {
 
     				InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
     	            DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
-    	            DatabaseManager.DatabaseUpgradeResult dbUpResult = mDbManager.upgradeReferentielStream( in ) ;
-    				return dbUpResult ;
+    	            dbUpResult = mDbManager.upgradeReferentielStream( in ) ;
+    				// return dbUpResult ;
     			}
     			catch (IOException e) {
     				return new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
@@ -591,11 +603,26 @@ public class MainMenuActivity extends Activity {
     			return new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
     		}
         	
+    		
+    		publishProgress(1) ;
+    		
+    		try{Thread.sleep(500);}catch(Exception e){}
+    		
+    		BibleHelper bh = new BibleHelper(getApplicationContext()) ;
+    		bh.buildCaches() ;
+    		
+    		try{Thread.sleep(500);}catch(Exception e){}
+    		
+    		return dbUpResult ;
         }
 
         protected void onProgressUpdate(Integer... progress ) {
-            // setProgressPercent(progress[0]);
-        	
+        	// setProgressPercent(progress[0]);
+        	if( onForeground ) {
+        		if (mProgressDialog.isShowing()) {
+        			mProgressDialog.setMessage("Building relationships...");
+        		}        	
+        	}
         }
 
         protected void onPostExecute(DatabaseManager.DatabaseUpgradeResult dbUpResult) {

@@ -1,39 +1,102 @@
 package za.dams.paracrm;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.Map;
 
+import org.json.JSONArray;
+
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 public class BibleHelper {
 	
     public final static String TAG = "PARACRM/BibleHelper";
 
-    private static BibleHelper instance;
-    
     private DatabaseManager mDb ;
     
-    private HashMap<String,ArrayList<String>> mapBible ;
-    private HashMap<String,HashMap<String,String>> mapForeignLinks ;
-    private HashMap<String,ArrayList<HashMap<String,String>>> memDb ;
-    private HashMap<String,HashMap<String,Integer>> hashDb ;
+    private HashMap<BibleCode,ArrayList<BibleFieldCode>> mapBible ;
+    private HashMap<BibleCode,HashMap<BibleFieldCode,BibleCode>> mapForeignLinks ;
+    
+	public enum RecordType {
+		BIBLE_TREENODE, BIBLE_ENTRY
+	}
+	public enum FieldType {
+		FIELD_STRING, FIELD_NUMBER, FIELD_LINKBIBLE, FIELD_DATE
+	}
+    
+    public static class BibleCode {
+    	public String bibleCode ;
+    	public BibleCode( String bibleCode ){
+    		this.bibleCode = bibleCode ;
+    	}
+    	
+    	public boolean equals( Object bc ) {
+    		return this.bibleCode.equals( ((BibleCode)bc).bibleCode) ;
+    	}
+    	public int hashCode(){
+    		return this.bibleCode.hashCode() ;
+    	}
+    }
+    public static class BibleFieldCode {
+    	public RecordType recordType ;
+    	public String fieldCode ;
+    	public FieldType fieldType ;
+    	public String linkBible ;
+    	public boolean isKey ;
+    	public boolean isHeader ;
+    	public boolean isHighlight ;
+    	public BibleFieldCode( RecordType recordType, String fieldCode ){
+    		this.recordType = recordType ;
+    		this.fieldCode = fieldCode ;
+    	}
+    	public BibleFieldCode( RecordType recordType, String fieldCode,
+    			FieldType fieldType, String linkBible, boolean isKey, boolean isHeader, boolean isHighlight ){
+    		this.recordType = recordType ;
+    		this.fieldCode = fieldCode ;
+    		this.fieldType = fieldType ;
+    		this.linkBible = linkBible ;
+    		this.isKey = isKey ;
+    		this.isHeader = isHeader ;
+    		this.isHighlight = isHighlight ;
+    	}
+    	
+    	public boolean equals( Object bfc ) {
+    		if( this.recordType == ((BibleFieldCode)bfc).recordType
+    				&& this.fieldCode.equals( ((BibleFieldCode)bfc).fieldCode) ){
+    			return true;
+    		}
+    		return false ;
+    	}
+    	public int hashCode(){
+    		int result = 17 ;
+    		result = 31 * result + recordType.ordinal();
+    		result = 31 * result + fieldCode.hashCode() ;
+    		return result ;
+    	}
+    }
+    
+    
+    
     
     public static class BibleEntry {
     	public String bibleCode ;
+    	public String treenodeKey ;
     	public String entryKey ;
     	public String displayStr ;
     	public String displayStr1 ;
     	public String displayStr2 ;
     	
-    	public BibleEntry( String bibleCode, String entryKey ) {
+    	public BibleEntry( String bibleCode, String treenodeKey, String entryKey ) {
     		this.bibleCode = bibleCode ;
+    		this.treenodeKey = treenodeKey ;
     		this.entryKey = entryKey ;
     	}
-    	public BibleEntry( String bibleCode, String entryKey, String displayStr, String displayStr1, String displayStr2 ) {
+    	public BibleEntry( String bibleCode, String treenodeKey, String entryKey, String displayStr, String displayStr1, String displayStr2 ) {
     		this.bibleCode = bibleCode ;
+    		this.treenodeKey = treenodeKey ;
     		this.entryKey = entryKey ;
     		this.displayStr = displayStr ;
     		this.displayStr1 = displayStr1 ;
@@ -46,115 +109,676 @@ public class BibleHelper {
     	}
     }
     
-    
-    
-    
-    
-    
-    
-
-    private BibleHelper(Context c) {
+    public BibleHelper(Context c) {
     	mDb = DatabaseManager.getInstance(c) ;
-    	mapBible = new HashMap<String,ArrayList<String>>() ;
-    	mapForeignLinks = new HashMap<String,HashMap<String,String>>() ;
-    	memDb = new HashMap<String,ArrayList<HashMap<String,String>>>() ;
-    	hashDb = new HashMap<String,HashMap<String,Integer>>() ;
+    	loadBiblesDefinition() ;
     }
-
-    public synchronized static BibleHelper getInstance(Context context) {
-        if (instance == null) {
-            instance = new BibleHelper(context.getApplicationContext());
-        }
-        return instance;
-    }
-    
-    
-    private void loadMemDb( String bibleCode ) {
-    	Cursor tmpCursor ;
-		tmpCursor = mDb.rawQuery( String.format("SELECT bible_code FROM define_bible WHERE bible_code='%s'",bibleCode) ) ;
-		if( tmpCursor.getCount() < 1 ) {
-			return ;
-		}
-		ArrayList<String> mMap = new ArrayList<String>();
-		mMap.add("treenode_key") ;
-		mMap.add("entry_key") ;
-		HashMap<String,String> mForeign = new HashMap<String,String>();
-		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible FROM define_bible_entry WHERE bible_code='%s' AND entry_field_is_header='O' AND entry_field_is_key<>'O' ORDER BY entry_field_index",bibleCode) ) ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		mMap.add(tmpCursor.getString(0)) ;
-    	}
-    	tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible FROM define_bible_entry WHERE bible_code='%s' ORDER BY entry_field_index",bibleCode) ) ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		if( tmpCursor.getString(1).equals("link") ){
-    			mForeign.put(tmpCursor.getString(2),tmpCursor.getString(0)) ;
-    		}
-    	}
-    	mapBible.put(bibleCode,mMap) ;
-    	mapForeignLinks.put(bibleCode,mForeign) ;
+    private void loadBiblesDefinition(){
+    	mapBible = new HashMap<BibleCode,ArrayList<BibleFieldCode>>() ;
+    	mapForeignLinks = new HashMap<BibleCode,HashMap<BibleFieldCode,BibleCode>>() ;
     	
     	
-    	
-    	ArrayList<HashMap<String,String>> bibleDb = new ArrayList<HashMap<String,String>>() ;
-    	HashMap<String,Integer> bibleHash = new HashMap<String,Integer>() ;
-    	HashMap<String,String> bibleEntry ;
-		tmpCursor = mDb.rawQuery( String.format("SELECT treenode_key, entry_key FROM store_bible_entry WHERE bible_code='%s' ORDER BY treenode_key, entry_key",bibleCode) ) ;
-		int a = 0 ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		bibleEntry = new HashMap<String,String>() ;
-    		bibleEntry.put("treenode_key", tmpCursor.getString(0)) ;
-    		bibleEntry.put("entry_key", tmpCursor.getString(1)) ;
-    		bibleDb.add(bibleEntry) ;
-    		
-    		bibleHash.put(tmpCursor.getString(1),new Integer(a)) ;
+    	Cursor c ;
+    	c = mDb.rawQuery("SELECT bible_code FROM define_bible") ;
+    	BibleCode[] bibles = new BibleCode[c.getCount()] ; 
+    	int a = 0 ;
+    	while( c.moveToNext() ) {
+    		bibles[a] = new BibleCode(c.getString(0)) ;
     		a++ ;
     	}
-		tmpCursor = mDb.rawQuery( String.format("SELECT entry_key,entry_field_code,entry_field_value_string,entry_field_value_number,entry_field_value_link FROM store_bible_entry_field WHERE bible_code='%s' ORDER BY entry_key",bibleCode) ) ;
-		String curEntryKey = "" ;
-		String tmpValue ; 
-		bibleEntry = new HashMap<String,String>() ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
+    	
+    	for( a=0 ; a<bibles.length ; a++ ) {
+    		BibleCode bibleCode = bibles[a] ;
+    		Cursor tmpCursor ;
+
+    		ArrayList<BibleFieldCode> mMap = new ArrayList<BibleFieldCode>();
+    		HashMap<BibleFieldCode,BibleCode> mForeign = new HashMap<BibleFieldCode,BibleCode>();
+   		
     		
-    		if( tmpCursor.getString(0).equals("") ) {
-    			continue ;
-    		}
-    		if( tmpCursor.getString(1).equals("") ) {
-    			continue ;
-    		}
-    		
-    		tmpValue = tmpCursor.getString(2) ;
-    		if( tmpValue.equals("") && tmpCursor.getFloat(3) != 0 ) {
-    			// Log.w(TAG,String.valueOf((float)tmpCursor.getFloat(3))) ;
-    			if( tmpCursor.getFloat(3)==Math.ceil(tmpCursor.getFloat(3)) ) {
-    				tmpValue = String.valueOf((int)tmpCursor.getFloat(3)) ;
-    			}
-    			else {
-    				tmpValue = String.valueOf((float)tmpCursor.getFloat(3)) ;
-    			}
+    		mMap.add(new BibleFieldCode(RecordType.BIBLE_TREENODE,"treenode_parent_key")) ;
+    		mMap.add(new BibleFieldCode(RecordType.BIBLE_TREENODE,"treenode_key")) ;
+    		tmpCursor = mDb.rawQuery( String.format("SELECT tree_field_code,tree_field_type,tree_field_linkbible,tree_field_is_key,tree_field_is_header,tree_field_is_highlight FROM define_bible_tree WHERE bible_code='%s' ORDER BY tree_field_index",bibleCode.bibleCode) ) ;
+    		while( tmpCursor.moveToNext() ){
     			
+    			FieldType tFieldType ;
+        		if( tmpCursor.getString(1).equals("number") ) {
+        			tFieldType = FieldType.FIELD_NUMBER ;
+        		}
+        		else {
+        			if( tmpCursor.getString(1).equals("date") ) {
+        				tFieldType = FieldType.FIELD_DATE ;
+        			}
+        			else{
+            			if( tmpCursor.getString(1).equals("link") ) {
+            				tFieldType = FieldType.FIELD_LINKBIBLE ;
+            			}
+            			else{
+            				tFieldType = FieldType.FIELD_STRING ;
+            			}
+        			}
+        		}
+    			
+        		BibleFieldCode bfc = new BibleFieldCode(
+        				RecordType.BIBLE_TREENODE,tmpCursor.getString(0),
+        				tFieldType,
+        				tmpCursor.getString(2),
+        				tmpCursor.getString(3).equals("O") ? true : false ,
+                		tmpCursor.getString(4).equals("O") ? true : false ,
+        				tmpCursor.getString(5).equals("O") ? true : false
+        				);
+
+    			
+    			mMap.add(bfc) ;
+    			
+    			if( tmpCursor.getString(1).equals("link") ){
+    				mForeign.put(bfc,new BibleCode(tmpCursor.getString(2))) ;
+    			}
     		}
-    		if( tmpValue.equals("") && !tmpCursor.getString(4).equals("")) {
-    			tmpValue = tmpCursor.getString(4) ;
+    		
+    		
+    		
+    		
+    		mMap.add(new BibleFieldCode(RecordType.BIBLE_ENTRY,"treenode_key")) ;
+    		mMap.add(new BibleFieldCode(RecordType.BIBLE_ENTRY,"entry_key")) ;
+    		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible,entry_field_is_key,entry_field_is_header,entry_field_is_highlight FROM define_bible_entry WHERE bible_code='%s' ORDER BY entry_field_index",bibleCode.bibleCode) ) ;
+    		while( tmpCursor.moveToNext() ){
+    			
+    			FieldType tFieldType ;
+        		if( tmpCursor.getString(1).equals("number") ) {
+        			tFieldType = FieldType.FIELD_NUMBER ;
+        		}
+        		else {
+        			if( tmpCursor.getString(1).equals("date") ) {
+        				tFieldType = FieldType.FIELD_DATE ;
+        			}
+        			else{
+            			if( tmpCursor.getString(1).equals("link") ) {
+            				tFieldType = FieldType.FIELD_LINKBIBLE ;
+            			}
+            			else{
+            				tFieldType = FieldType.FIELD_STRING ;
+            			}
+        			}
+        		}
+    			
+        		BibleFieldCode bfc = new BibleFieldCode(
+        				RecordType.BIBLE_ENTRY,tmpCursor.getString(0),
+        				tFieldType,
+        				tmpCursor.getString(2),
+        				tmpCursor.getString(3).equals("O") ? true : false ,
+                		tmpCursor.getString(4).equals("O") ? true : false ,
+        				tmpCursor.getString(5).equals("O") ? true : false
+        				);
+
+    			
+    			mMap.add(bfc) ;
+    			
+    			if( tmpCursor.getString(1).equals("link") ){
+    				mForeign.put(bfc,new BibleCode(tmpCursor.getString(2))) ;
+    			}
     		}
-     		
-    		if( !curEntryKey.equals(tmpCursor.getString(0)) ){
-    			bibleEntry = bibleDb.get(bibleHash.get(tmpCursor.getString(0)).intValue()) ;
-    			if( bibleEntry == null ) {
-    				curEntryKey = "" ;
+
+    		mapBible.put(bibleCode,mMap) ;
+    		mapForeignLinks.put(bibleCode,mForeign) ;
+    	}
+    }
+    
+    
+    
+    public BibleEntry getBibleEntry( String bibleCode, String entryKey ) {
+    	
+    	//Log.w(TAG, String.format("SELECT treenode_key FROM store_bible_entry WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
+    	Cursor c = mDb.rawQuery(String.format("SELECT treenode_key FROM store_bible_entry WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
+    	if( c.getCount() == 0 ) {
+    		return null ;
+    	}
+    	c.moveToNext() ;
+    	BibleEntry be = new BibleEntry(bibleCode,c.getString(0),entryKey) ;
+    	
+       	HashMap<String,BibleFieldCode> tmpMapFields = new HashMap<String,BibleFieldCode>() ;
+		for( BibleFieldCode bfc : mapBible.get(new BibleCode(be.bibleCode)) ) {
+       		if( bfc.recordType == RecordType.BIBLE_ENTRY ) 
+       			tmpMapFields.put(bfc.fieldCode,bfc) ;
+       	}
+    	
+    	
+  
+    	c = mDb.rawQuery(String.format("SELECT entry_field_code," +
+    			"entry_field_value_string,entry_field_value_number,entry_field_value_date" +
+    			" FROM store_bible_entry_field " +
+    			"WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
+		HashMap<String,String> tmpBufSub = new HashMap<String,String>() ;
+		tmpBufSub.put("treenode_key", be.treenodeKey) ;
+		tmpBufSub.put("entry_key", be.entryKey) ;
+    	while( c.moveToNext() ){
+    		BibleFieldCode bfc = tmpMapFields.get(c.getString(0)) ;
+    		if( bfc == null ) {
+    			// Log.w(TAG, "Pagination for field "+c.getString(2)) ;
+    			continue ;
+    		}
+    		switch(bfc.fieldType) {
+    		case FIELD_STRING :
+    			tmpBufSub.put("field_"+bfc.fieldCode,c.getString(1)) ;
+    			break ;
+    		case FIELD_NUMBER :
+    			tmpBufSub.put("field_"+bfc.fieldCode,c.getString(2)) ;
+    			break ;
+    		case FIELD_DATE :
+    			tmpBufSub.put("field_"+bfc.fieldCode,c.getString(3)) ;
+    			break ;
+    		}
+		}
+    	return prettifyEntry(be,tmpBufSub) ;
+    }
+    
+    private BibleEntry prettifyEntry( BibleEntry bibleEntry , HashMap<String,String> bibleEntryFields ) {
+    	ArrayList<String> pretty1 = new ArrayList<String>() ;
+    	pretty1.add("("+bibleEntryFields.get("treenode_key")+")") ;
+    	pretty1.add(bibleEntryFields.get("entry_key")) ;
+    	
+		ArrayList<String> pretty2 = new ArrayList<String>() ;
+       	for( BibleFieldCode bfc : mapBible.get(new BibleCode(bibleEntry.bibleCode)) ) {
+       		if( bfc.recordType == RecordType.BIBLE_ENTRY
+       				&& !bfc.isKey && bfc.isHeader )
+       		{
+       			pretty2.add(bibleEntryFields.get("field_"+bfc.fieldCode)) ;
+       		}
+       	}
+    	
+       	bibleEntry.setDisplayStr(
+				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
+				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
+				implodeArray(pretty2.toArray(new String[pretty2.size()]), " ")) ;
+    	
+    	return bibleEntry ;
+    }
+    
+    
+    
+    
+    
+    
+    
+    private String getSqlConditionLocal( BibleCode localBible, BibleFieldCode localTargetField, BibleEntry foreignEntry ) {
+    	if( !localTargetField.linkBible.equals( foreignEntry.bibleCode ) ) {
+    		return null ;
+    	}
+    	
+    	StringBuilder sb = new StringBuilder() ;
+    	sb.append(" AND entry_key IN (") ;
+    		sb.append(" SELECT entry_key FROM") ;
+    		switch( localTargetField.recordType ) {
+    		case BIBLE_TREENODE :
+    			sb.append(" store_bible_tree_field_linkmembers") ;
+    			break ;
+    		case BIBLE_ENTRY :
+    			sb.append(" store_bible_entry_field_linkmembers") ;
+    			break ;
+    		}
+    		sb.append(String.format(" WHERE bible_code='%s'",localBible.bibleCode)) ;
+    		switch( localTargetField.recordType ) {
+    		case BIBLE_TREENODE :
+    			sb.append(String.format(" AND tree_field_code='%s'",localTargetField.fieldCode)) ;
+    			sb.append(String.format(" AND treenode_field_linkmember_treenodekey='%s'",foreignEntry.treenodeKey)) ;
+   			break ;
+    		case BIBLE_ENTRY :
+    			sb.append(String.format(" AND entry_field_code='%s'",localTargetField.fieldCode)) ;
+    			sb.append(String.format(" AND entry_field_linkmember_treenodekey='%s'",foreignEntry.treenodeKey)) ;
+    			break ;
+    		}
+    	sb.append(")") ;
+    	return sb.toString() ;
+    }
+    
+    
+    private String getSqlConditionForeign( BibleCode localBible, BibleFieldCode foreignTargetField, BibleEntry foreignEntry ) {
+    	if( !foreignTargetField.linkBible.equals( localBible.bibleCode ) ) {
+    		return null ;
+    	}
+    	
+    	StringBuilder sb = new StringBuilder() ;
+    	sb.append(" AND treenode_key IN (") ;
+		switch( foreignTargetField.recordType ) {
+		case BIBLE_TREENODE :
+			sb.append("select treenode_field_linkmember_treenodekey FROM store_bible_tree_field_linkmembers") ;
+			sb.append(String.format(
+					" WHERE bible_code='%s' AND treenode_key='%s' AND treenode_field_code='%s'",
+					foreignEntry.bibleCode,
+					foreignEntry.treenodeKey,
+					foreignTargetField.fieldCode
+					));
+			break ;
+		case BIBLE_ENTRY :
+			sb.append("select entry_field_linkmember_treenodekey FROM store_bible_entry_field_linkmembers") ;
+			sb.append(String.format(
+					" WHERE bible_code='%s' AND entry_key='%s' AND entry_field_code='%s'",
+					foreignEntry.bibleCode,
+					foreignEntry.entryKey,
+					foreignTargetField.fieldCode
+					));
+			break ;
+		}
+    	sb.append(")") ;
+    	return sb.toString() ;
+    }
+    
+    
+
+    
+    public ArrayList<BibleEntry> queryBible( String strBibleCode, ArrayList<BibleEntry> mForeignEntries, String searchStr, int limit ) {
+    	
+    	BibleCode localBible = new BibleCode(strBibleCode) ;
+    	
+    	
+    	
+    	
+    	// ******* Construction de la requête sur entête *********
+    	StringBuilder sbEnt = new StringBuilder() ;
+    	sbEnt.append("SELECT * FROM store_bible_entry WHERE 1") ;
+    	sbEnt.append(String.format(" AND bible_code='%s'",localBible.bibleCode)) ;
+    	if( mForeignEntries != null ) {
+	    	// ***** Process de mForeignEntries ******
+	    	for( BibleEntry foreignEntry : mForeignEntries ) {
+	    		BibleCode foreignBible = new BibleCode(foreignEntry.bibleCode) ;
+	    		
+	    		//Log.w(TAG,"Foreign "+foreignEntry.entryKey+" tree: "+foreignEntry.treenodeKey) ;
+	    		
+	    		// condition locale ?  ex: req STORE (condition SALES)
+	    		if( mapForeignLinks.get(localBible).containsValue(foreignBible) ) {
+	    			BibleFieldCode localTargetField = getKeyByValue(mapForeignLinks.get(localBible),foreignBible) ;
+	    			sbEnt.append(getSqlConditionLocal(localBible,localTargetField,foreignEntry)) ;
+	    			break ;
+	    		}
+	    		
+	    		// condition étrangère ? ex: req PROD (condition STORE)
+	    		if( mapForeignLinks.get(foreignBible).containsValue(localBible) ) {
+	    			BibleFieldCode foreignTargetField = getKeyByValue(mapForeignLinks.get(foreignBible),localBible) ;
+	    			sbEnt.append(getSqlConditionForeign(localBible,foreignTargetField,foreignEntry)) ;
+	    			break ;
+	    		}
+	    	}
+    	}
+    	if( searchStr != null ) {
+	    	// ***** Process du search *******
+    		for( String subStr : searchStr.split(" ") ) {
+    			sbEnt.append(String.format(" AND entry_key IN (" +
+    					"select entry_key FROM store_bible_entry_field " +
+    					"WHERE bible_code='%s' " +
+    					"AND entry_field_value_string LIKE '%%%s%%')",
+    					localBible.bibleCode,
+    					subStr)) ;
+    		}
+    	}
+    	sbEnt.append(" ORDER by treenode_key,entry_key") ;
+    	if( limit > 0 ) {
+    		sbEnt.append(String.format(" LIMIT %d",limit)) ;
+    	}
+    	
+    	// ******* Construction de la requete complete *********
+    	StringBuilder sbFull = new StringBuilder() ;
+    	sbFull.append("select e.treenode_key, e.entry_key," +
+    			" ef.entry_field_code, ef.entry_field_value_string, ef.entry_field_value_number, ef.entry_field_value_date " +
+    			"from (") ;
+    	sbFull.append(sbEnt.toString()) ;
+    	sbFull.append(") e") ;
+       	sbFull.append(" left outer join store_bible_entry_field ef ON ef.bible_code=e.bible_code AND ef.entry_key=e.entry_key") ;
+       	sbFull.append(" ORDER BY e.treenode_key, e.entry_key") ;
+       	
+       	
+       	//Log.w(TAG,sbFull.toString()) ;
+       	
+       	Cursor c = mDb.rawQuery(sbFull.toString()) ;
+       	HashMap<String,BibleFieldCode> tmpMapFields = new HashMap<String,BibleFieldCode>() ;
+       	for( BibleFieldCode bfc : mapBible.get(localBible) ) {
+       		if( bfc.recordType == RecordType.BIBLE_ENTRY ) 
+       			tmpMapFields.put(bfc.fieldCode,bfc) ;
+       	}
+       	ArrayList<String> tmpOrder = new ArrayList<String>() ;
+       	HashMap<String,HashMap<String,String>> tmpBuffer = new HashMap<String,HashMap<String,String>>() ;
+       	while( c.moveToNext() ) {
+       		String treenodeKey = c.getString(0) ;
+       		String entryKey = c.getString(1) ;
+       		if( tmpBuffer.get(entryKey) == null ){
+       			tmpOrder.add(entryKey) ;
+       			
+       			HashMap<String,String> tmpBufSub = new HashMap<String,String>() ;
+       			tmpBufSub.put("treenode_key", treenodeKey) ;
+       			tmpBufSub.put("entry_key", entryKey) ;
+       			tmpBuffer.put(entryKey,tmpBufSub) ;
+       		}
+       		BibleFieldCode bfc = tmpMapFields.get(c.getString(2)) ;
+       		if( bfc == null ) {
+       			// Log.w(TAG, "Pagination for field "+c.getString(2)) ;
+       			continue ;
+       		}
+       		switch(bfc.fieldType) {
+       		case FIELD_STRING :
+       			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,c.getString(3)) ;
+       			break ;
+       		case FIELD_NUMBER :
+       			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,c.getString(4)) ;
+       			break ;
+       		case FIELD_DATE :
+       			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,c.getString(5)) ;
+       			break ;
+       		}
+       	}
+       	
+       	
+       	ArrayList<BibleEntry> retCollection = new ArrayList<BibleEntry>() ;
+       	for( String entryKey : tmpOrder ) {
+       		HashMap<String,String> tmpBufSub =  tmpBuffer.get(entryKey) ;
+       		
+       		BibleEntry be = new BibleEntry(localBible.bibleCode,tmpBufSub.get("treenode_key"),tmpBufSub.get("entry_key")) ;
+       		prettifyEntry(be,tmpBufSub) ;
+       		retCollection.add(prettifyEntry(be,tmpBufSub)) ;
+       	}
+           	
+    	
+    	return retCollection ;
+    }
+    public ArrayList<BibleEntry> queryBible( String bibleCode, ArrayList<BibleEntry> mForeignEntries, String searchStr ) {
+    	return queryBible( bibleCode, mForeignEntries, searchStr, 0 ) ;
+    }
+    public ArrayList<BibleEntry> queryBible( String bibleCode, ArrayList<BibleEntry> mForeignEntries ) {
+    	return queryBible( bibleCode, mForeignEntries, null ) ;
+    }
+    public ArrayList<BibleEntry> queryBible( String bibleCode ) {
+    	return queryBible( bibleCode, new ArrayList<BibleEntry>() ) ;
+    }
+    
+    
+    
+    
+    
+    
+    private class buildCacheTableCV {
+    	public String tableName ;
+    	public ContentValues cv ;
+    	
+    	public buildCacheTableCV(String tableName, ContentValues cv) {
+    		this.tableName = tableName ;
+    		this.cv = cv ;
+    	}
+    }
+    
+    
+    public void buildCaches() {
+    	buildCaches_dbClean() ;
+    	
+    	
+    	Cursor c ;
+    	c = mDb.rawQuery("SELECT bible_code FROM define_bible") ;
+    	BibleCode[] bibles = new BibleCode[c.getCount()] ; 
+    	int a = 0 ;
+    	for( c.moveToPosition(-1) ; !c.isLast() ; a++ ) {
+    		c.moveToNext() ;
+    		bibles[a] = new BibleCode(c.getString(0)) ;
+    	}
+    	
+    	
+    	HashMap<BibleCode,Tree<String>> bibleTreemaps = new HashMap<BibleCode,Tree<String>>() ;
+    	// ******** Pour chaque bible ***********
+    	//   => création de l'arbre (treenodes)
+    	for( a=0 ; a<bibles.length ; a++ ) {
+    		BibleCode bibleCode = bibles[a] ;
+    		
+    		int nbPushed = 0 ;
+    		int nbPushedThispass = 0 ;
+    		
+    		Tree<String> bibleTree = new Tree<String>("&");
+    		
+    		c = mDb.rawQuery(String.format("SELECT treenode_key, treenode_parent_key FROM store_bible_tree WHERE bible_code='%s'",bibleCode.bibleCode)) ;
+    		do {
+    			nbPushedThispass = 0 ;
+    			for( c.moveToPosition(-1) ; !c.isLast() ; ) {
+    				c.moveToNext() ;
+    				
+    				String treenodeParentKey = c.getString(1) ;
+    				if( treenodeParentKey.equals("") ){
+    					treenodeParentKey = "&" ;
+    				}
+    				String treenodeKey = c.getString(0) ;
+    				if( treenodeKey.equals("") ){
+    					continue ;
+    				}
+    				
+    				if( bibleTree.getTree(treenodeParentKey) != null ) {
+    					bibleTree.addLeaf(treenodeParentKey, treenodeKey) ;
+    					nbPushedThispass++ ;
+    					nbPushed++ ;
+    				}
+    			}
+    			if( nbPushed >= c.getCount() ) {
+    				break ;
+    			}
+    		}
+    		while( nbPushedThispass > 0 ) ;
+    		
+    		
+    		//Log.w(TAG,"For bible "+bibleCode.bibleCode) ;
+    		//Log.w(TAG,bibleTree.toString()) ;
+    		//Log.w(TAG," ") ;
+    		
+    		
+    		
+    		bibleTreemaps.put(bibleCode,bibleTree) ;
+    	}
+    	
+    	
+    	// ******** Pour chaque bible ***********
+    	//   => interro du define : champs concernés par des links + pour le tree, collection initiale de chaque champ (& ou rien)
+    	//   => "walk" de l'arbre
+    	//   => apply en série de tous les éléments (entries)
+    	for( a=0 ; a<bibles.length ; a++ ) {
+    		BibleCode curBibleCode = bibles[a] ;
+    		
+    		if( mapBible.get(curBibleCode) == null ) {
+    			continue ;
+    		}
+    		
+    		// **** A constituer : champs => bibleciblée   +    collection initiale de la bible ciblée ( & ou rien )
+    		HashMap<BibleFieldCode,BibleCode> mFieldlinkBible = new HashMap<BibleFieldCode,BibleCode>()  ;
+    		HashMap<BibleFieldCode,Collection<String>> mCurrentNodeLinks = new HashMap<BibleFieldCode,Collection<String>>() ;
+    		
+    		
+    		// ***** Interro du define de la bible ********
+    		for( BibleFieldCode bfc :  mapBible.get(curBibleCode) ) {
+    			if( bfc.fieldType != FieldType.FIELD_LINKBIBLE ) {
     				continue ;
     			}
-    			else {
-    				curEntryKey = tmpCursor.getString(0) ;
+    			
+    			if( bibleTreemaps.get(new BibleCode(bfc.linkBible)) == null ) {
+    				continue ;
+    			}
+   			
+    			mFieldlinkBible.put(bfc, new BibleCode(bfc.linkBible)) ;
+    			
+    			if( bfc.recordType == RecordType.BIBLE_TREENODE ) {
+    				// initialement la collection racine est vide
+    				//  note : on pourrait prendre '&' ou tous les éléments de la bible en question
+    				mCurrentNodeLinks.put(bfc, new ArrayList<String>()) ;
     			}
     		}
-    		bibleEntry.put(tmpCursor.getString(1),tmpValue) ;
+    		
+    		
+    		buildCaches_dbInsert( buildCaches_walkBibleTree( curBibleCode,
+    				bibleTreemaps,
+    				mFieldlinkBible,
+    				bibleTreemaps.get(curBibleCode),
+    				mCurrentNodeLinks) ) ;
+    		
+    		buildCaches_dbInsert( buildCaches_walkBibleEntries(curBibleCode,bibleTreemaps,mFieldlinkBible) ) ;
     	}
-    	memDb.put(bibleCode,bibleDb) ;
-    	hashDb.put(bibleCode, bibleHash) ;
     }
+    public Collection<buildCacheTableCV> buildCaches_walkBibleTree( BibleCode bc,
+    		HashMap<BibleCode,Tree<String>> bibleTreemaps,
+    		HashMap<BibleFieldCode,BibleCode> mFieldlinkBible,
+    		Tree<String> curTreeNode,
+    		HashMap<BibleFieldCode,Collection<String>> mParentNodeLinks) {
+    	
+    	int b ; // utilitaire pour les itérations
+    	
+    	Collection<buildCacheTableCV> insertRows = new ArrayList<buildCacheTableCV>() ;
+    	
+    	
+    	// 1 ---- apply des inherited nodes ---------
+    	//   Log.w(TAG,curTreeNode.getHead()+": Applying "+curTreeNode.getAllInherited().toString() ) ;
+		b = 1 ;
+		for( String s : curTreeNode.getAllInherited() ) {
+			ContentValues cv = new ContentValues() ;
+			cv.put("bible_code",bc.bibleCode) ;
+			cv.put("treenode_key",curTreeNode.getHead()) ;
+			cv.put("inherited_index",b) ;
+			cv.put("inherited_treenode_key",s) ;
+
+			insertRows.add(new buildCacheTableCV("store_bible_tree_inheritednodes",cv)) ;
+			b++ ;
+		}
+   
+    	
+    	Cursor c ;
+    	// 2 ---- apply des memberslinknodes --------
+    	//   => FOREACH mFieldlinkBible
+    	//      -> si champ courant vide => on apply la collection transmise
+    	//      -> sinon, chaque node de l'entrée on prend tous les "members", apply et on passe cette collection
+    	HashMap<BibleFieldCode,Collection<String>> mCurrentNodeLinks = new HashMap<BibleFieldCode,Collection<String>>() ;
+    	for (Map.Entry<BibleFieldCode, BibleCode> entry : mFieldlinkBible.entrySet()) {
+    		if( entry.getKey().recordType != RecordType.BIBLE_TREENODE ) {
+    			continue ;
+    		}
+    		
+    		c = mDb.rawQuery(String.format("SELECT treenode_field_value_link " +
+    				"FROM store_bible_tree_field " +
+    				"WHERE bible_code='%s' AND treenode_key='%s' AND treenode_field_code='%s'",
+    				bc.bibleCode, curTreeNode.getHead(), entry.getKey().fieldCode
+    				)) ;
+    		if( c.getCount() != 1 ) {
+    			mCurrentNodeLinks.put(entry.getKey(), mParentNodeLinks.get(entry.getKey())) ;
+    			continue ;
+    		}
+    		try{
+    			c.moveToNext() ;
+    			JSONArray jsonArr = new JSONArray(c.getString(0)) ;
+    			Collection<String> newMembers = new ArrayList<String>() ;
+    			for( int a = 0 ; a<jsonArr.length() ; a++ ){
+    				newMembers.addAll( bibleTreemaps.get(entry.getValue()).getAllMembers(jsonArr.getString(a)) ) ;
+    			}
+    			mCurrentNodeLinks.put(entry.getKey(), newMembers) ;
+    		}
+    		catch( Exception e ) {
+    			mCurrentNodeLinks.put(entry.getKey(), mParentNodeLinks.get(entry.getKey())) ;
+    			continue ;
+    		}
+    	}
+    	for (Map.Entry<BibleFieldCode, Collection<String>> entry : mCurrentNodeLinks.entrySet()) {
+    		if( entry.getKey().recordType != RecordType.BIBLE_TREENODE ) {
+    			// continue ; // pas nécessaire car mCurrentNodeLinks/mInitialNodeLinks ne concerne que le tree
+    		}
+    		
+    		// Log.w(TAG,curTreeNode.getHead()+" "+ entry.getKey().fieldCode +": Applying "+entry.getValue().toString() ) ;
+    		
+    		// insertRows
+    		b = 1 ;
+    		for( String s : entry.getValue() ) {
+    			ContentValues cv = new ContentValues() ;
+    			cv.put("bible_code",bc.bibleCode) ;
+    			cv.put("treenode_key",curTreeNode.getHead()) ;
+    			cv.put("treenode_field_code",entry.getKey().fieldCode) ;
+    			cv.put("treenode_field_linkmember_index",b) ;
+    			cv.put("treenode_field_linkmember_treenodekey",s) ;
+
+    			insertRows.add(new buildCacheTableCV("store_bible_tree_field_linkmembers",cv)) ;
+    			b++ ;
+    		}
+    	}
+    	
+    	// end --- récursif sur les childs
+    	for( Tree<String> childTreeNode : curTreeNode.getSubTrees() ) {
+    		insertRows.addAll(
+    				buildCaches_walkBibleTree( bc, bibleTreemaps, mFieldlinkBible,childTreeNode, mCurrentNodeLinks )
+    				);
+    	}
+    	return insertRows ;
+    }
+    
+    public Collection<buildCacheTableCV> buildCaches_walkBibleEntries( BibleCode bc,
+    		HashMap<BibleCode,Tree<String>> bibleTreemaps,
+    		HashMap<BibleFieldCode,BibleCode> mFieldlinkBible ) {
+    	
+    	Collection<buildCacheTableCV> insertRows = new ArrayList<buildCacheTableCV>() ;
+    	
+    	Cursor c ;
+    	
+    	for (Map.Entry<BibleFieldCode, BibleCode> entry : mFieldlinkBible.entrySet()) {
+    		if( entry.getKey().recordType != RecordType.BIBLE_ENTRY ) {
+    			continue ;
+    		}
+    		
+    		String myQuery = String.format("SELECT e.entry_key , ef.entry_field_value_link " +
+    				"FROM store_bible_entry e " +
+    				"LEFT OUTER JOIN store_bible_entry_field ef " +
+    				"ON e.bible_code=ef.bible_code AND e.entry_key=ef.entry_key AND ef.entry_field_code='%s' " +
+    				"WHERE e.bible_code='%s'",
+    				entry.getKey().fieldCode, bc.bibleCode);
+    		// Log.w(TAG,myQuery) ;
+    		c = mDb.rawQuery(myQuery) ;
+    		while( c.moveToNext() ) {
+    			if( c.getString(1).equals("") ) {
+    				continue ;
+    			}
+    			try{
+        			JSONArray jsonArr = new JSONArray(c.getString(1)) ;
+        			Collection<String> members = new ArrayList<String>() ;
+        			for( int a = 0 ; a<jsonArr.length() ; a++ ){
+        				members.addAll( bibleTreemaps.get(entry.getValue()).getAllMembers(jsonArr.getString(a)) ) ;
+        			}
+        			
+        			// Log.w(TAG,c.getString(0)+" "+ entry.getKey().fieldCode +": Applying "+members.toString() ) ;
+        			
+            		// insertRows
+            		int b = 1 ;
+            		for( String s : members ) {
+            			ContentValues cv = new ContentValues() ;
+            			cv.put("bible_code",bc.bibleCode) ;
+            			cv.put("entry_key",c.getString(0)) ;
+            			cv.put("entry_field_code",entry.getKey().fieldCode) ;
+            			cv.put("entry_field_linkmember_index",b) ;
+            			cv.put("entry_field_linkmember_treenodekey",s) ;
+
+            			insertRows.add(new buildCacheTableCV("store_bible_entry_field_linkmembers",cv)) ;
+            			b++ ;
+            		}
+    			}
+    			catch( Exception e ){
+    				continue ;
+    			}
+    		}
+    		
+    	}
+    	return insertRows ;
+    }
+    
+    private void buildCaches_dbClean() {
+    	mDb.beginTransaction() ;
+    	mDb.execSQL("DELETE FROM store_bible_tree_inheritednodes") ;
+    	mDb.execSQL("DELETE FROM store_bible_tree_field_linkmembers") ;
+    	mDb.execSQL("DELETE FROM store_bible_entry_field_linkmembers") ;   	
+    	mDb.endTransaction() ;
+   }
+    
+    private void buildCaches_dbInsert(Collection<buildCacheTableCV> tcvs) {
+    	mDb.beginTransaction() ;
+    	for( buildCacheTableCV tcv : tcvs ) {
+    		// Log.w(TAG,"Inserting") ;
+    		mDb.insert(tcv.tableName, tcv.cv) ;
+    	}
+    	mDb.endTransaction() ;
+  }
+    
+    
+    
+    
     
     
     /**
@@ -183,178 +807,14 @@ public class BibleHelper {
 
     	return output;
     }
+    private static <T, E> T getKeyByValue(Map<T, E> map, E value) {
+        for (Map.Entry<T, E> entry : map.entrySet()) {
+            if (value.equals(entry.getValue())) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
 
-    
-    public ArrayList<BibleEntry> queryBible( String bibleCode, ArrayList<BibleEntry> mForeignEntries, String searchStr ) {
-    	if( memDb.get(bibleCode) == null ){
-    		loadMemDb(bibleCode) ;
-    		//Log.w(TAG,"Loading "+bibleCode) ;
-    	}
-    	if( memDb.get(bibleCode) == null ){
-    		return new ArrayList<BibleEntry>() ;
-    	}
-    	
-    	ArrayList<BibleEntry> mResult = new ArrayList<BibleEntry>() ;
-    	
-    	//Log.w(TAG,"Size of "+bibleCode+" is "+memDb.get(bibleCode).size()) ;
-    	Iterator<HashMap<String,String>> mIter = memDb.get(bibleCode).iterator() ; 
-    	HashMap<String,String> mtmp ;
-    	// String pretty ;
-    	ArrayList<String> pretty1 ;
-    	ArrayList<String> pretty2 ;
-    	boolean goSearch = false ;
-    	boolean goSearchVoid = false ;
-    	if( searchStr != null && searchStr.length() > 0 ) {
-    		goSearch = true ;
-    		if( searchStr.length() < 3 ) {
-    			goSearchVoid = true ;
-    		}
-    	}
-    	
-    	//Log.w(TAG,"Foreign size "+mForeignEntries.size()) ;
-    	Iterator<BibleEntry> foreignIter ;
-    	HashMap<String,String> foreignSearch = new HashMap<String,String>() ;
-		if( true ) {
-			foreignIter = mForeignEntries.iterator() ;
-			while( foreignIter.hasNext()) {
-				BibleEntry foreignBibleCondition = foreignIter.next() ;
-				//Log.w(TAG,"Foreign condition "+foreignBibleCondition.bibleCode) ;
-				String foreignField = mapForeignLinks.get(bibleCode).get(foreignBibleCondition.bibleCode) ;
-				if( foreignField != null ) {
-					//Log.w(TAG,"Putting "+foreignField+" "+foreignBibleCondition.entryKey) ;
-					foreignSearch.put(foreignField,foreignBibleCondition.entryKey) ;
-				}
-			}
-		}
-		Iterator<String> foreignSearchIter ;
-		//Log.w(TAG,"Foreign search "+foreignSearch.size()) ;
-    	
-    	
-    	String[] fields =  mapBible.get(bibleCode).toArray(new String[mapBible.get(bibleCode).size()]) ;
-    	
-    	int fieldsSize = fields.length ;
-    	int a , i ;
-    	boolean isAMatch , isAMatchPartiel ;
-    	String[] ttmp ;
-    	while( mIter.hasNext() ){
-    		mtmp = mIter.next() ;
-    		
-    		if( !foreignSearch.isEmpty() ) {
-    			isAMatch = true ;
-    			foreignSearchIter = foreignSearch.keySet().iterator() ;
-    			while( foreignSearchIter.hasNext()) {
-    				String fieldSearch = foreignSearchIter.next() ;
-    				if( !mtmp.get(fieldSearch).contains(foreignSearch.get(fieldSearch)) ) {
-    					isAMatch = false ;
-    				}
-    			}
-    			if( !isAMatch ) {
-    				continue ;
-    			}
-    		}
-    		
-    		
-    		if( goSearch ) {
-    			isAMatch = true ;
-    			if( !goSearchVoid ) {
-    				ttmp = searchStr.split(" ") ;
-    				for( i=0 ; i<ttmp.length ; i++ ) {
-    					isAMatchPartiel = false ;
-    					for( a=1 ; a<fieldsSize ; a++ ) {
-    						if( mtmp.get(fields[a]).toLowerCase().contains(ttmp[i].toLowerCase()) ) {
-    							isAMatchPartiel = true ;
-    							break ;
-    						}
-    					}
-    					if( !isAMatchPartiel ){
-    						isAMatch = false ;
-    					}
-    				}
-    			}
-    			else{
-    				isAMatch = false ;
-    			}
-    			if( !isAMatch ) {
-    				continue ;
-    			}
-    		}
-    		
-    		pretty1 = new ArrayList<String>() ;
-    		pretty2 = new ArrayList<String>() ;
-    		for( a=0 ; a<fieldsSize ; a++ ) {
-    			if( a > 1 ){
-    				pretty2.add(mtmp.get(fields[a])) ;
-    			}
-    			else{
-    				if( a == 0 ) { // treenode_key
-    					pretty1.add("("+mtmp.get(fields[a])+")") ;
-    				}
-    				else{ // entry_key
-    					pretty1.add(mtmp.get(fields[a])) ;
-    				}
-    				
-    			}
-    		}
-    		
-    		mResult.add(new BibleEntry(bibleCode,mtmp.get("entry_key"),
-    				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
-    				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
-    				implodeArray(pretty2.toArray(new String[pretty2.size()]), " "))) ;
-    	}
-    	
-    	return mResult ;
-    }
-    public ArrayList<BibleEntry> queryBible( String bibleCode, ArrayList<BibleEntry> mForeignEntries ) {
-    	return queryBible( bibleCode, mForeignEntries, null ) ;
-    }
-    public ArrayList<BibleEntry> queryBible( String bibleCode ) {
-    	return queryBible( bibleCode, new ArrayList<BibleEntry>() ) ;
-    }
-    
-    
-    
-    public BibleEntry prettifyEntry( BibleEntry bibleEntry ) {
-    	if( memDb.get(bibleEntry.bibleCode) == null ){
-    		loadMemDb(bibleEntry.bibleCode) ;
-    		//Log.w(TAG,"Loading "+bibleCode) ;
-    	}
-    	if( memDb.get(bibleEntry.bibleCode) == null ){
-    		return bibleEntry ;
-    	}
-    	
-    	HashMap<String,String> mtmp ;
-    	// String pretty ;
-    	ArrayList<String> pretty1 ;
-    	ArrayList<String> pretty2 ;
-    	
-		mtmp = memDb.get(bibleEntry.bibleCode).get(hashDb.get(bibleEntry.bibleCode).get(bibleEntry.entryKey)) ; 
-		
-		String[] fields =  mapBible.get(bibleEntry.bibleCode).toArray(new String[mapBible.get(bibleEntry.bibleCode).size()]) ;
-	  	int fieldsSize = fields.length ;
-    	int a ;
-  	
-		pretty1 = new ArrayList<String>() ;
-		pretty2 = new ArrayList<String>() ;
-		for( a=0 ; a<fieldsSize ; a++ ) {
-			if( a > 1 ){
-				pretty2.add(mtmp.get(fields[a])) ;
-			}
-			else{
-				if( a == 0 ) { // treenode_key
-					pretty1.add("("+mtmp.get(fields[a])+")") ;
-				}
-				else{ // entry_key
-					pretty1.add(mtmp.get(fields[a])) ;
-				}
-				
-			}
-		}
-		
-    	return new BibleEntry(bibleEntry.bibleCode,mtmp.get("entry_key"),
-				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
-				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
-				implodeArray(pretty2.toArray(new String[pretty2.size()]), " ")) ;
-    }
-    
     
 }
