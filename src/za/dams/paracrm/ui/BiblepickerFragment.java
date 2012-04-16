@@ -116,9 +116,12 @@ public class BiblepickerFragment extends DialogFragment {
         ((EditText)getView().findViewById(R.id.biblepickertext)).setOnKeyListener(new OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
                 if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                	chooseNullItem() ;
+                	if( ((EditText)v).getText().length() == 0 ) {
+                		chooseNullItem() ;
+                	}
+                	return true ;
                 }
-                return false;
+                return false ;
             }
         }) ;
         
@@ -194,7 +197,7 @@ public class BiblepickerFragment extends DialogFragment {
     		mPoint.put("text2",bibleEntry.displayStr2) ;
     		mListNew.add(mPoint) ;
     	}
-    	if( !Thread.interrupted() ) {
+    	if( !Thread.interrupted() && isAdded() ) {
     		getActivity().runOnUiThread(new Runnable(){
     			public void run(){
     				syncWithData_setAdapterList(mListNew) ;
