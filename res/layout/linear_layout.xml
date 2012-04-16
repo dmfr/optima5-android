@@ -1,0 +1,40 @@
+  <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_weight="1">
+    <TextView
+        android:text="Salesman"
+        android:textSize="10pt"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"/>
+    <TextView
+        android:text="  (Z_OVER) WYCLIFF.MUTHINI@BOLLORE.COM Wycliff Muthini"
+        android:textSize="8pt"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"/>
+    <View
+	android:layout_width="fill_parent"
+        android:layout_height="10dip"/>
+    <View
+	android:layout_width="fill_parent"
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+        <View
+	android:layout_width="fill_parent"
+        android:layout_height="5dip"/>
+    <TextView
+        android:text="Store"
+        android:textSize="10pt"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"/>
+    <TextView
+        android:text="  (CRF_MKT_SUD) 1234567890124 CC Chelles2"
+        android:textSize="8pt"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"/>
+  </LinearLayout>

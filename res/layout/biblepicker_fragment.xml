@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="wrap_content" android:layout_height="wrap_content">
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:minWidth="500px"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp" >
+
+    <EditText
+        android:id="@+id/biblepickertext"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"/>
+
+    <ListView
+        android:id="@+id/biblepickerlist"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:divider="#FFFFFF"
+        android:dividerHeight="1dp"
+        android:drawSelectorOnTop="false"
+        android:background="#000000"/>
+
+</LinearLayout>
+</RelativeLayout>

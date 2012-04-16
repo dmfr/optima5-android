@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="server_url">http://paracrm.kn-abbeville.fr/server/android.php</string>
+    <string name="apk_update_url">http://dl.optima-wms.com/android/paracrm.apk</string>
+    <string name="apk_update_version">http://dl.optima-wms.com/android/paracrm_version.php</string>
+    
+    <string name="hello">Hello World, ParacrmActivity!</string>
+    <string name="app_name">ParaCRM</string>
+	<string name="hello22">sdfdsfsdfsdfsddfsdfsdfsd</string>
+	<string name="show">coucou</string>
+	    
+</resources>
