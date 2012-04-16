@@ -32,7 +32,6 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
-import android.util.Log;
 
 /**
  * Demonstration of using fragments to implement different activity layouts.

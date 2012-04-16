@@ -203,7 +203,6 @@ public class CrmFileTransaction {
 		tmpCursor.moveToNext();
 		String CrmFileCode = tmpCursor.getString(0) ;
 		this.CrmFileCode = CrmFileCode ;
-		//Log.w(TAG,"Pouet : "+CrmFileCode) ;
 		
 		// ******** Ajout de toutes les pages **********
 		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index FROM input_scen_page WHERE scen_id='%d' ORDER BY scen_page_index",CrmInputScenId) ) ;
@@ -288,8 +287,6 @@ public class CrmFileTransaction {
     		tFileinfo = mIter.next() ;
     		
     		CrmFileTransaction_initPage(tFileinfo) ;
-    		
-    		//Log.w(TAG,tmpIndex+" init done for "+tFileinfo.fileCode+" "+TransactionPageFields.get(tmpIndex).size()+" fields / "+TransactionPageRecords.get(tmpIndex).size()+" records ") ;
     		
     		tmpIndex++ ;
     	}
@@ -527,7 +524,6 @@ public class CrmFileTransaction {
     			int a = 0 ;
     	    	while( bibleIter.hasNext() ){
     	    		bibleEntry = bibleIter.next() ; 
-    	    		//Log.w(TAG,bibleEntry.displayStr) ;
     	    		
     	    		recordData = new HashMap<String,CrmFileFieldValue>() ;
     	    		
@@ -661,10 +657,8 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_bible( int pageId , int recordId, int fieldId, String entryKey ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
-		//Log.w(TAG,"Updating...") ;
 		String bibleCode = TransactionPageFields.get(pageId).get(fieldId).fieldLinkBible ;
 		
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
@@ -679,13 +673,11 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_date( int pageId , int recordId, int fieldId, Date date ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
 		
 		record.valueDate = date ;
-		// Log.w(TAG,"okkok "+date.getYear()) ;
 		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm") ;
 		record.displayStr = sdf.format(date) ;
 		record.isSet = true ;
@@ -695,7 +687,6 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_text( int pageId , int recordId, int fieldId, String text ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
@@ -710,13 +701,9 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_number( int pageId , int recordId, int fieldId, float num ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
-		
-		//Log.w(TAG,"jiejr "+num ) ;
-		//Log.w(TAG,"jiejr "+String.valueOf(num) ) ;
 		
 		record.valueFloat = num ;
 		if( num==Math.ceil(num) ) {
@@ -733,7 +720,6 @@ public class CrmFileTransaction {
 	}
 	public void page_setRecordFieldValue_unset( int pageId , int recordId, int fieldId ) {
 		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
-			//Log.w(TAG,"Aborting...") ;
 			return ;
 		}
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
@@ -767,8 +753,6 @@ public class CrmFileTransaction {
     	int a ;
     	for(a=0 ; a<data.length() ; a++ ){
     		jsonData = data.optJSONObject(a) ;
-    		
-    		//Log.w(TAG,jsonData.toString()) ;
     		
         	mIter = tFields.iterator() ;
         	HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
@@ -945,7 +929,7 @@ public class CrmFileTransaction {
 					if( fieldValue == null ) {
 						continue ;
 					}
-					Log.w(TAG,"Putting autovalue "+fieldDesc.fieldCode+" from "+fieldDesc.fieldAutovalueSrc) ;
+					// Log.w(TAG,"Putting autovalue "+fieldDesc.fieldCode+" from "+fieldDesc.fieldAutovalueSrc) ;
 					fieldDesc.fieldAutovalue = fieldValue.clone() ;
 					TransactionPageRecords.get(pageId).get(0).recordData.put(fieldDesc.fieldCode,fieldDesc.fieldAutovalue) ;
 				}
@@ -974,7 +958,7 @@ public class CrmFileTransaction {
 				continue ;
 			}
 			if( mRecord.recordData.get(fieldDesc.fieldCode).isSet ) {
-				Log.w(TAG,"Adding "+fieldDesc.fieldLinkBible+" "+mRecord.recordData.get(fieldDesc.fieldCode).valueString ) ;
+				// Log.w(TAG,"Adding "+fieldDesc.fieldLinkBible+" "+mRecord.recordData.get(fieldDesc.fieldCode).valueString ) ;
 				mArr.add( bh.getBibleEntry(fieldDesc.fieldLinkBible , mRecord.recordData.get(fieldDesc.fieldCode).valueString) ) ;
 			}
 		}
@@ -1046,9 +1030,6 @@ public class CrmFileTransaction {
     			if( TransactionPages.get(pageId).fileHasGmap && pageId==0 ) {
     				LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
     				Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-    				//Log.w(TAG,"Lat "+lastKnownLocation.getLatitude()) ;
-    				//Log.w(TAG,"Long "+lastKnownLocation.getLongitude()) ;
-    				
     				
     				if( lastKnownLocation != null ) {
     					JSONObject mJson = new JSONObject() ;

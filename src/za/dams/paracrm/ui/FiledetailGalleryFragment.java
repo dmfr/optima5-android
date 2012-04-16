@@ -38,7 +38,7 @@ public class FiledetailGalleryFragment extends FiledetailFragment {
     }
     
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-    	Log.w(TAG,"kokokok") ;
+    	// inflater = getActivity().getLayoutInflater() ;
     	return inflater.inflate(R.layout.filecapture_filedetail_gallery, container, false ) ;
     }
     public void onActivityCreated(Bundle savedInstanceState) {

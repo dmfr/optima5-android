@@ -9,7 +9,6 @@ import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,6 +22,7 @@ public class FiledetailListFragment extends FiledetailFragment {
 	
 	private ArrayList<HashMap<String,Object>> mList ;
 
+	@SuppressWarnings("unused")
 	private static final String TAG = "PARACRM/UI/FiledetailListFragment";
     
     public static FiledetailListFragment newInstance(int index) {

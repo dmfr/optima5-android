@@ -11,7 +11,6 @@ import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.ListFragment;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,7 +25,8 @@ public class FilelistFragment extends ListFragment {
 	
 	private ArrayList<HashMap<String,Object>> mList ;
 
-	private static final String TAG = "PARACRM/UI/FileCaptureActivity";
+	@SuppressWarnings("unused")
+	private static final String TAG = "PARACRM/UI/FilelistFragment";
     
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.filecapture_filelist, container, false ) ;
@@ -126,10 +126,10 @@ public class FilelistFragment extends ListFragment {
     void showDetails(int index) {
         mCurCheckPosition = index;
         
-        Log.w(TAG,"Changed! But Fragment Id is "+mCurCheckPosition );
+        //Log.w(TAG,"Changed! But Fragment Id is "+mCurCheckPosition );
         
         int tab_to_show = ((Integer)mList.get(index).get("tab_id")).intValue() ;
-        Log.w(TAG,"Tab to show is "+tab_to_show );
+        //Log.w(TAG,"Tab to show is "+tab_to_show );
         CrmFileTransaction.PageType pageType = mTransaction.list_getPageType(tab_to_show) ;
         
 
@@ -148,7 +148,7 @@ public class FilelistFragment extends ListFragment {
             // Check what fragment is currently shown, replace if needed.
             FiledetailFragment details = (FiledetailFragment) getFragmentManager().findFragmentById(R.id.filedetail);
             if (details == null || details.getShownIndex() != tab_to_show) {
-            	Log.w(TAG,"Creating a fragment !" );
+            	//Log.w(TAG,"Creating a fragment !" );
             	
                 // Make new fragment to show this selection.
                 details = FiledetailFragmentFactory.getFiledetailFragment(tab_to_show, pageType);
