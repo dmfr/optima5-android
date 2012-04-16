@@ -2,11 +2,9 @@ package za.dams.paracrm;
 
 import java.util.ArrayList;
 
-
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Handler;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,6 +70,11 @@ public class MainMenuStaticAdapter extends BaseAdapter {
 		MODULES_DICT.add(new StaticInfo("BIBLEDL", "Refresh DB", 
 				R.drawable.mainmenu_refreshdb, 
 				"myRefreshDb"));
+		/*
+		MODULES_DICT.add(new StaticInfo("BIBLEDL", "PrintTrees", 
+				R.drawable.mainmenu_refreshdb, 
+				"myPrintTrees"));
+		*/
 				
 		initDone = true ;
 	}
