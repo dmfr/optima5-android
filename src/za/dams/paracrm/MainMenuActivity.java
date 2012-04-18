@@ -28,6 +28,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -41,6 +42,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.GridView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainMenuActivity extends Activity {
@@ -109,6 +111,20 @@ public class MainMenuActivity extends Activity {
         Log.d(TAG,"Activity created") ;
         
         setContentView(R.layout.mainmenu);
+        
+    	try {
+			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
+			ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA) ;
+			String appLabel = (String)getPackageManager().getApplicationLabel(appInfo) ;
+			if( appLabel != null && pInfo.versionName != null ) {
+				((TextView)findViewById(R.id.versiontext)).setVisibility(View.VISIBLE) ;
+				((TextView)findViewById(R.id.versiontext)).setText(appLabel+" - "+"v"+pInfo.versionName);
+			}
+		} catch (NameNotFoundException e) {
+			// TODO Auto-generated catch block
+			// e.printStackTrace();
+		}
+        
         
         mContext = getApplicationContext();
         

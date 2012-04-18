@@ -17,4 +17,10 @@
         android:columnWidth="90dp"
         android:gravity="center" />
     
+    <TextView android:id="@+id/versiontext" 
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" 
+        android:textSize="16dp" android:textColor="#888888" android:textStyle="italic"
+        android:visibility="gone" />
+    
 </LinearLayout>

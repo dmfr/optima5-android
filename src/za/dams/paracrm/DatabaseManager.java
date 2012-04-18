@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import org.json.JSONArray;
@@ -388,7 +387,7 @@ public class DatabaseManager {
 					
 					jsonArr = new JSONArray(readLine) ;
 					if(jsonArr.length() == 0 ) {
-						Log.w(TAG,"Committing "+tableName) ;
+						//Log.w(TAG,"Committing "+tableName) ;
 						upgradeReferentielStream_bulkInsert(tableName,insertBuffer) ;
 						insertBuffer = new ArrayList<ContentValues>() ;
 						tableName = null ;
@@ -398,7 +397,7 @@ public class DatabaseManager {
 					}
 					
 					if( jsonArr.length() != remoteColumnNames.length ) {
-						Log.w(TAG,"Bad length !!!") ;
+						//Log.w(TAG,"Bad length !!!") ;
 						return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
 					}
 					
