@@ -383,6 +383,12 @@ public class MainMenuActivity extends Activity {
     	postParams.put("_domain", "paramount");
     	postParams.put("_moduleName", "paracrm");
     	postParams.put("_action", "android_getDbImageTimestamp");
+    	try {
+			postParams.put("__versionCode", String.valueOf( getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA).versionCode) ) ;
+		} catch (NameNotFoundException e1) {
+			// TODO Auto-generated catch block
+			//e1.printStackTrace();
+		}
     	String postString = HttpPostHelper.getPostString(postParams) ;
     	
 		try {
