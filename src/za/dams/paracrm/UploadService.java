@@ -284,6 +284,8 @@ public class UploadService extends Service {
 				try {
 					is = this.openFileInput(tmpCursor.getString(1));
 				} catch (FileNotFoundException e) {
+					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
+					mDbManager.execSQL(req) ;
 					// TODO Auto-generated catch block
 					//Log.w("Bin upload","Failed 1") ;
 					continue ;
