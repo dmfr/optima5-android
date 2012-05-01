@@ -23,4 +23,10 @@
         android:textSize="16dp" android:textColor="#888888" android:textStyle="italic"
         android:visibility="gone" />
     
+    <TextView android:id="@+id/warningtext" 
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" 
+        android:textSize="16dp" android:textColor="#FF0000" android:textStyle="bold"
+        android:visibility="gone" />
+    
 </LinearLayout>

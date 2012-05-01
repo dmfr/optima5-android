@@ -111,19 +111,25 @@ public class MainMenuActivity extends Activity {
         Log.d(TAG,"Activity created") ;
         
         setContentView(R.layout.mainmenu);
-        
-    	try {
-			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
-			ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA) ;
-			String appLabel = (String)getPackageManager().getApplicationLabel(appInfo) ;
-			if( appLabel != null && pInfo.versionName != null ) {
-				((TextView)findViewById(R.id.versiontext)).setVisibility(View.VISIBLE) ;
-				((TextView)findViewById(R.id.versiontext)).setText(appLabel+" - "+"v"+pInfo.versionName);
-			}
-		} catch (NameNotFoundException e) {
-			// TODO Auto-generated catch block
-			// e.printStackTrace();
-		}
+    	
+    	if( !getString(R.string.server_url).equals(getString(R.string.server_url_ref))) {
+			((TextView)findViewById(R.id.warningtext)).setVisibility(View.VISIBLE) ;
+			((TextView)findViewById(R.id.warningtext)).setText("URL : "+getString(R.string.server_url));
+    	}
+    	else {
+        	try {
+    			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
+    			ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA) ;
+    			String appLabel = (String)getPackageManager().getApplicationLabel(appInfo) ;
+    			if( appLabel != null && pInfo.versionName != null ) {
+    				((TextView)findViewById(R.id.versiontext)).setVisibility(View.VISIBLE) ;
+    				((TextView)findViewById(R.id.versiontext)).setText(appLabel+" - "+"v"+pInfo.versionName);
+    			}
+    		} catch (NameNotFoundException e) {
+    			// TODO Auto-generated catch block
+    			// e.printStackTrace();
+    		}
+    	}
         
         
         mContext = getApplicationContext();

@@ -2,6 +2,7 @@
 <resources>
 
     <string name="server_url">http://paracrm.kn-abbeville.fr/server/android.php</string>
+    <string name="server_url_ref">http://paracrm.kn-abbeville.fr/server/android.php</string>
     <string name="apk_update_url">http://dl.optima-wms.com/android/paracrm.apk</string>
     <string name="apk_update_version">http://dl.optima-wms.com/android/paracrm_version.php</string>
     
