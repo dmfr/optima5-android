@@ -47,26 +47,30 @@ public class UploadService extends Service {
 	}
 	public static boolean hasPendingUploads(Context c){
 		Cursor tmpCursor ;
+		boolean retValue = false ;
 		DatabaseManager mDbManager = DatabaseManager.getInstance(c) ;
 		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM store_file") ;
 		tmpCursor.moveToNext() ;
 		if( tmpCursor.getInt(0) > 0 ) {
-			return true ;
+			retValue = true ;
 		}
+		tmpCursor.close() ;
 		
 		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM store_file_field") ;
 		tmpCursor.moveToNext() ;
 		if( tmpCursor.getInt(0) > 0 ) {
-			return true ;
+			retValue = true ;
 		}
+		tmpCursor.close() ;
 		
 		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM upload_media") ;
 		tmpCursor.moveToNext() ;
 		if( tmpCursor.getInt(0) > 0 ) {
-			return true ;
+			retValue = true ;
 		}
+		tmpCursor.close() ;
 		
-		return false ;
+		return retValue ;
 	}
 
 	@Override
@@ -133,6 +137,7 @@ public class UploadService extends Service {
         				cv.put("media_filename",tmpCursor.getString(0)) ;
         				mDbManager.insert( "upload_media" , cv ) ;
         			}
+        			tmpCursor.close() ;
         		}
         		
           		req = String.format("DELETE FROM store_file WHERE filerecord_id='%d'",uploadEntry.localId) ;
@@ -264,17 +269,17 @@ public class UploadService extends Service {
 	
 	public void uploadBinaries() {
 		DatabaseManager mDbManager = DatabaseManager.getInstance(UploadService.this.getApplicationContext()) ;
-		
+
 		String req = String.format("SELECT filerecord_id, media_filename FROM upload_media") ;
-			Cursor tmpCursor = mDbManager.rawQuery(req) ;
-			if( tmpCursor.getCount() > 0 ) {
+		Cursor tmpCursor = mDbManager.rawQuery(req) ;
+		if( tmpCursor.getCount() > 0 ) {
 			while(!tmpCursor.isLast()) {
 				tmpCursor.moveToNext() ;
 				Log.w("Bin upload","Uploading "+tmpCursor.getString(1)) ;
-				
-				
-				
-				
+
+
+
+
 				InputStream is;
 				try {
 					is = this.openFileInput(tmpCursor.getString(1));
@@ -283,37 +288,37 @@ public class UploadService extends Service {
 					//Log.w("Bin upload","Failed 1") ;
 					continue ;
 				}
-        		ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+				ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
 
-      		  // this is storage overwritten on each iteration with bytes
-      		  int bufferSize = 1024;
-      		  byte[] buffer = new byte[bufferSize];
+				// this is storage overwritten on each iteration with bytes
+				int bufferSize = 1024;
+				byte[] buffer = new byte[bufferSize];
 
-      		  // we need to know how may bytes were read to write them to the byteBuffer
-      		  int len = 0;
-      		  try {
-				while ((len = is.read(buffer)) != -1) {
-				    byteBuffer.write(buffer, 0, len);
-				  }
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				//Log.w("Bin upload","Failed 2") ;
-				continue ;
-			}
- 				
-			
-	            ArrayList<NameValuePair> nameValuePairs = new  ArrayList<NameValuePair>();
-	            StringBuilder builder = new StringBuilder();
-	    		nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-	    		nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-	    		nameValuePairs.add(new BasicNameValuePair("_action", "android_postBinary"));
-	            nameValuePairs.add(new BasicNameValuePair("filerecord_id",tmpCursor.getString(0)));
-	            nameValuePairs.add(new BasicNameValuePair("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT)));
-	            try{
-	                HttpClient httpclient = new DefaultHttpClient();
-	                HttpPost httppost = new HttpPost(getString(R.string.server_url));
-	                httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-	                HttpResponse response = httpclient.execute(httppost);
+				// we need to know how may bytes were read to write them to the byteBuffer
+				int len = 0;
+				try {
+					while ((len = is.read(buffer)) != -1) {
+						byteBuffer.write(buffer, 0, len);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					//Log.w("Bin upload","Failed 2") ;
+					continue ;
+				}
+
+
+				ArrayList<NameValuePair> nameValuePairs = new  ArrayList<NameValuePair>();
+				StringBuilder builder = new StringBuilder();
+				nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
+				nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
+				nameValuePairs.add(new BasicNameValuePair("_action", "android_postBinary"));
+				nameValuePairs.add(new BasicNameValuePair("filerecord_id",tmpCursor.getString(0)));
+				nameValuePairs.add(new BasicNameValuePair("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT)));
+				try{
+					HttpClient httpclient = new DefaultHttpClient();
+					HttpPost httppost = new HttpPost(getString(R.string.server_url));
+					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+					HttpResponse response = httpclient.execute(httppost);
 					HttpEntity entity = response.getEntity();
 					InputStream content = entity.getContent();
 					BufferedReader reader = new BufferedReader(
@@ -323,32 +328,32 @@ public class UploadService extends Service {
 						builder.append(line);
 					}
 					//Log.w("upload ","Result "+builder.toString()) ;
-	                ///Toast.makeText(UploadImage.this, "Response " + the_string_response, Toast.LENGTH_LONG).show();
-	            }catch(Exception e){
-	            	//e.printStackTrace() ;
-	            	//Log.w("Bin upload","Failed 3") ;
-	            }
-	            
-	    		// do something with builder ;
-	            JSONObject jsonResp = new JSONObject() ;
-	            try {
-	            	jsonResp = new JSONObject(builder.toString()) ;
-	            } catch (JSONException e) {
-	            	
-	            }
-	            if( jsonResp.optBoolean("success",false) == true ) {
-	            	req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
-	            	mDbManager.execSQL(req) ;
-	            	
-	            	this.getFileStreamPath(tmpCursor.getString(1)).delete() ;
-	            }
-	            
-				
+					///Toast.makeText(UploadImage.this, "Response " + the_string_response, Toast.LENGTH_LONG).show();
+				}catch(Exception e){
+					//e.printStackTrace() ;
+					//Log.w("Bin upload","Failed 3") ;
+				}
+
+				// do something with builder ;
+				JSONObject jsonResp = new JSONObject() ;
+				try {
+					jsonResp = new JSONObject(builder.toString()) ;
+				} catch (JSONException e) {
+
+				}
+				if( jsonResp.optBoolean("success",false) == true ) {
+					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
+					mDbManager.execSQL(req) ;
+
+					this.getFileStreamPath(tmpCursor.getString(1)).delete() ;
+				}
+
+
 			}
-			}
-		
-			Log.w("Bin upload","All done ?") ;
-		
+		}
+		tmpCursor.close() ;
+		Log.w("Bin upload","All done ?") ;
+
 	}
     
     

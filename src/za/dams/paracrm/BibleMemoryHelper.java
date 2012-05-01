@@ -70,10 +70,14 @@ public class BibleMemoryHelper {
     
     private void loadMemDb( String bibleCode ) {
     	Cursor tmpCursor ;
+    	
 		tmpCursor = mDb.rawQuery( String.format("SELECT bible_code FROM define_bible WHERE bible_code='%s'",bibleCode) ) ;
 		if( tmpCursor.getCount() < 1 ) {
+			tmpCursor.close() ;
 			return ;
 		}
+		tmpCursor.close() ;
+		
 		ArrayList<String> mMap = new ArrayList<String>();
 		mMap.add("treenode_key") ;
 		mMap.add("entry_key") ;
@@ -83,6 +87,7 @@ public class BibleMemoryHelper {
     		tmpCursor.moveToNext();
     		mMap.add(tmpCursor.getString(0)) ;
     	}
+    	tmpCursor.close() ;
     	tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible FROM define_bible_entry WHERE bible_code='%s' ORDER BY entry_field_index",bibleCode) ) ;
     	while( !tmpCursor.isLast() ){
     		tmpCursor.moveToNext();
@@ -90,6 +95,7 @@ public class BibleMemoryHelper {
     			mForeign.put(tmpCursor.getString(2),tmpCursor.getString(0)) ;
     		}
     	}
+    	tmpCursor.close() ;
     	mapBible.put(bibleCode,mMap) ;
     	mapForeignLinks.put(bibleCode,mForeign) ;
     	
@@ -110,6 +116,7 @@ public class BibleMemoryHelper {
     		bibleHash.put(tmpCursor.getString(1),new Integer(a)) ;
     		a++ ;
     	}
+    	tmpCursor.close() ;
 		tmpCursor = mDb.rawQuery( String.format("SELECT entry_key,entry_field_code,entry_field_value_string,entry_field_value_number,entry_field_value_link FROM store_bible_entry_field WHERE bible_code='%s' ORDER BY entry_key",bibleCode) ) ;
 		String curEntryKey = "" ;
 		String tmpValue ; 
@@ -151,6 +158,7 @@ public class BibleMemoryHelper {
     		}
     		bibleEntry.put(tmpCursor.getString(1),tmpValue) ;
     	}
+    	tmpCursor.close() ;
     	memDb.put(bibleCode,bibleDb) ;
     	hashDb.put(bibleCode, bibleHash) ;
     }

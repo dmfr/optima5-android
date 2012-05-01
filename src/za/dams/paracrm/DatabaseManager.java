@@ -306,6 +306,7 @@ public class DatabaseManager {
     	    	db.setTransactionSuccessful() ;
     	    	db.endTransaction() ;
     		}
+    		tmpCursor.close() ;
     		
     		onCreate(db); 
     	}
@@ -496,6 +497,7 @@ public class DatabaseManager {
 	    	mDb.setTransactionSuccessful() ;
 	    	mDb.endTransaction() ;
 		}
+		tmpCursor.close() ;
     	
     	return new DatabaseUpgradeResult( true, 0, nbTables , 0 ) ;
     }
@@ -525,7 +527,7 @@ public class DatabaseManager {
 				jsonArray.put(cols.contentValueToJSON(cv)) ;
 			}
 		}
-    	
+		tmpCursor.close() ;
     	
     	return jsonArray ;
     }

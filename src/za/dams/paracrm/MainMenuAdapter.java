@@ -59,6 +59,7 @@ public class MainMenuAdapter extends BaseAdapter {
 	    				tmpCursor.getInt(tmpCursor.getColumnIndex("scen_id"))));
 	    	}
 		}
+		tmpCursor.close() ;
 		initDone = true ;
 	}
 	@Override

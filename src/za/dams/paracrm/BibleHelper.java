@@ -126,6 +126,7 @@ public class BibleHelper {
     		bibles[a] = new BibleCode(c.getString(0)) ;
     		a++ ;
     	}
+    	c.close() ;
     	
     	for( a=0 ; a<bibles.length ; a++ ) {
     		BibleCode bibleCode = bibles[a] ;
@@ -174,7 +175,7 @@ public class BibleHelper {
     				mForeign.put(bfc,new BibleCode(tmpCursor.getString(2))) ;
     			}
     		}
-    		
+    		tmpCursor.close() ;
     		
     		
     		
@@ -217,6 +218,7 @@ public class BibleHelper {
     				mForeign.put(bfc,new BibleCode(tmpCursor.getString(2))) ;
     			}
     		}
+    		tmpCursor.close() ;
 
     		mapBible.put(bibleCode,mMap) ;
     		mapForeignLinks.put(bibleCode,mForeign) ;
@@ -230,10 +232,12 @@ public class BibleHelper {
     	//Log.w(TAG, String.format("SELECT treenode_key FROM store_bible_entry WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
     	Cursor c = mDb.rawQuery(String.format("SELECT treenode_key FROM store_bible_entry WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
     	if( c.getCount() == 0 ) {
+    		c.close() ;
     		return null ;
     	}
     	c.moveToNext() ;
     	BibleEntry be = new BibleEntry(bibleCode,c.getString(0),entryKey) ;
+    	c.close() ;
     	
        	HashMap<String,BibleFieldCode> tmpMapFields = new HashMap<String,BibleFieldCode>() ;
 		for( BibleFieldCode bfc : mapBible.get(new BibleCode(be.bibleCode)) ) {
@@ -268,6 +272,7 @@ public class BibleHelper {
     			break ;
     		}
 		}
+    	c.close() ;
     	return prettifyEntry(be,tmpBufSub) ;
     }
     
@@ -463,7 +468,7 @@ public class BibleHelper {
        			break ;
        		}
        	}
-       	
+       	c.close() ;
        	
        	ArrayList<BibleEntry> retCollection = new ArrayList<BibleEntry>() ;
        	for( String entryKey : tmpOrder ) {
@@ -515,6 +520,7 @@ public class BibleHelper {
     		c.moveToNext() ;
     		bibles[a] = new BibleCode(c.getString(0)) ;
     	}
+    	c.close() ;
     	
     	
     	HashMap<BibleCode,Tree<String>> bibleTreemaps = new HashMap<BibleCode,Tree<String>>() ;
@@ -555,6 +561,7 @@ public class BibleHelper {
     		}
     		while( nbPushedThispass > 0 ) ;
     		
+    		c.close() ;
     		
     		//Log.w(TAG,"For bible "+bibleCode.bibleCode) ;
     		//Log.w(TAG,bibleTree.toString()) ;
@@ -654,6 +661,7 @@ public class BibleHelper {
     				bc.bibleCode, curTreeNode.getHead(), entry.getKey().fieldCode
     				)) ;
     		if( c.getCount() != 1 ) {
+    			c.close() ;
     			mCurrentNodeLinks.put(entry.getKey(), mParentNodeLinks.get(entry.getKey())) ;
     			continue ;
     		}
@@ -668,7 +676,9 @@ public class BibleHelper {
     		}
     		catch( Exception e ) {
     			mCurrentNodeLinks.put(entry.getKey(), mParentNodeLinks.get(entry.getKey())) ;
-    			continue ;
+    		}
+    		finally{
+    			c.close() ;
     		}
     	}
     	for (Map.Entry<BibleFieldCode, Collection<String>> entry : mCurrentNodeLinks.entrySet()) {
@@ -754,6 +764,7 @@ public class BibleHelper {
     				continue ;
     			}
     		}
+    		c.close() ;
     		
     	}
     	return insertRows ;

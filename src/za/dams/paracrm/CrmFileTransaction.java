@@ -198,11 +198,13 @@ public class CrmFileTransaction {
 		Cursor tmpInnerCursor ;	
 		tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode FROM input_scen WHERE scen_id='%d'",CrmInputScenId) ) ;
 		if( tmpCursor.getCount() < 1 ) {
+			tmpCursor.close() ;
 			return ;
 		}
 		tmpCursor.moveToNext();
 		String CrmFileCode = tmpCursor.getString(0) ;
 		this.CrmFileCode = CrmFileCode ;
+		tmpCursor.close() ;
 		
 		// ******** Ajout de toutes les pages **********
 		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index FROM input_scen_page WHERE scen_id='%d' ORDER BY scen_page_index",CrmInputScenId) ) ;
@@ -238,6 +240,7 @@ public class CrmFileTransaction {
     		
     		tmpInnerCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on, file_parent_code FROM define_file WHERE file_code='%s'",tmpCursor.getString(1)) ) ;
     		if( tmpInnerCursor.getCount() < 1 ) {
+    			tmpInnerCursor.close() ;
     			continue ;
     		}
     		tmpInnerCursor.moveToNext() ;
@@ -257,7 +260,9 @@ public class CrmFileTransaction {
     			TransactionPages.add( new CrmFilePageinfo( pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ) ;
     		}
     		*/
+    		tmpInnerCursor.close() ;
     	}
+    	tmpCursor.close() ;
 		
 		/*
 		tmpCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on FROM define_file WHERE file_code='%s'",CrmFileCode) ) ;
@@ -419,6 +424,7 @@ public class CrmFileTransaction {
     		}
     		tFields.add( tmpField ) ;
     	}
+    	tmpCursor.close() ;
     	TransactionPageFields.add( tFields ) ;
 		
     	if( tFileinfo.pageType == PageType.PAGETYPE_TABLE ) {
