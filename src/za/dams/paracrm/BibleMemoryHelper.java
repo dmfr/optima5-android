@@ -207,6 +207,7 @@ public class BibleMemoryHelper {
     	Iterator<HashMap<String,String>> mIter = memDb.get(bibleCode).iterator() ; 
     	HashMap<String,String> mtmp ;
     	// String pretty ;
+    	ArrayList<String> pretty ;
     	ArrayList<String> pretty1 ;
     	ArrayList<String> pretty2 ;
     	boolean goSearch = false ;
@@ -286,11 +287,13 @@ public class BibleMemoryHelper {
     			}
     		}
     		
+    		pretty = new ArrayList<String>() ;
     		pretty1 = new ArrayList<String>() ;
     		pretty2 = new ArrayList<String>() ;
     		for( a=0 ; a<fieldsSize ; a++ ) {
     			if( a > 1 ){
     				pretty2.add(mtmp.get(fields[a])) ;
+    				pretty.add(mtmp.get(fields[a])) ;
     			}
     			else{
     				if( a == 0 ) { // treenode_key
@@ -298,13 +301,14 @@ public class BibleMemoryHelper {
     				}
     				else{ // entry_key
     					pretty1.add(mtmp.get(fields[a])) ;
+    					pretty.add(mtmp.get(fields[a])) ;
     				}
     				
     			}
     		}
     		
     		mResult.add(new BibleEntry(bibleCode,mtmp.get("entry_key"),
-    				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
+    				implodeArray(pretty.toArray(new String[pretty.size()]), " "),
     				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
     				implodeArray(pretty2.toArray(new String[pretty2.size()]), " "))) ;
     	}
@@ -331,6 +335,7 @@ public class BibleMemoryHelper {
     	
     	HashMap<String,String> mtmp ;
     	// String pretty ;
+    	ArrayList<String> pretty ;
     	ArrayList<String> pretty1 ;
     	ArrayList<String> pretty2 ;
     	
@@ -340,11 +345,13 @@ public class BibleMemoryHelper {
 	  	int fieldsSize = fields.length ;
     	int a ;
   	
+		pretty = new ArrayList<String>() ;
 		pretty1 = new ArrayList<String>() ;
 		pretty2 = new ArrayList<String>() ;
 		for( a=0 ; a<fieldsSize ; a++ ) {
 			if( a > 1 ){
 				pretty2.add(mtmp.get(fields[a])) ;
+				pretty.add(mtmp.get(fields[a])) ;
 			}
 			else{
 				if( a == 0 ) { // treenode_key
@@ -352,13 +359,14 @@ public class BibleMemoryHelper {
 				}
 				else{ // entry_key
 					pretty1.add(mtmp.get(fields[a])) ;
+					pretty.add(mtmp.get(fields[a])) ;
 				}
 				
 			}
 		}
 		
     	return new BibleEntry(bibleEntry.bibleCode,mtmp.get("entry_key"),
-				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
+				implodeArray(pretty.toArray(new String[pretty.size()]), " "),
 				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
 				implodeArray(pretty2.toArray(new String[pretty2.size()]), " ")) ;
     }

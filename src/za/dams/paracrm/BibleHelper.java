@@ -289,9 +289,18 @@ public class BibleHelper {
        			pretty2.add(bibleEntryFields.get("field_"+bfc.fieldCode)) ;
        		}
        	}
+       	
+       	ArrayList<String> pretty = new ArrayList<String>() ;
+       	for( BibleFieldCode bfc : mapBible.get(new BibleCode(bibleEntry.bibleCode)) ) {
+       		if( bfc.recordType == RecordType.BIBLE_ENTRY && bfc.isHeader )
+       		{
+       			pretty.add(bibleEntryFields.get("field_"+bfc.fieldCode)) ;
+       		}
+       	}
+       	
     	
        	bibleEntry.setDisplayStr(
-				implodeArray(pretty1.toArray(new String[pretty1.size()]), " ")+" "+implodeArray(pretty2.toArray(new String[pretty2.size()]), " "),
+				implodeArray(pretty.toArray(new String[pretty.size()]), " "),
 				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
 				implodeArray(pretty2.toArray(new String[pretty2.size()]), " ")) ;
     	
