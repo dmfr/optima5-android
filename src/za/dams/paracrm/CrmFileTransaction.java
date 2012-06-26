@@ -512,7 +512,7 @@ public class CrmFileTransaction {
 		
 		ArrayList<CrmFileRecord> tRecords = new ArrayList<CrmFileRecord>();
 		
-		Iterator<BibleMemoryHelper.BibleEntry> bibleIter ;
+		Iterator<BibleHelper.BibleEntry> bibleIter ;
     	Iterator<CrmFileFieldDesc> mIter = tFields.iterator() ;
     	CrmFileFieldDesc tFieldDesc ;
     	HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
@@ -524,9 +524,9 @@ public class CrmFileTransaction {
     			
     			
     			// appel a bible helper
-    			BibleMemoryHelper bibleHelper = BibleMemoryHelper.getInstance(mContext) ;
+    			BibleHelper bibleHelper = new BibleHelper(mContext) ;
     			bibleIter = bibleHelper.queryBible(tFieldDesc.fieldLinkBible).iterator() ;
-    			BibleMemoryHelper.BibleEntry bibleEntry ;
+    			BibleHelper.BibleEntry bibleEntry ;
     			int a = 0 ;
     	    	while( bibleIter.hasNext() ){
     	    		bibleEntry = bibleIter.next() ; 
@@ -919,7 +919,8 @@ public class CrmFileTransaction {
 		
 		// ****** Each page => Autofill FIELD_AUTOVALUEs ******
 		// ******     => if different, destroy Data
-		Iterator<CrmFilePageinfo> pageIter = TransactionPages.iterator() ;
+		Iterator<CrmFilePageinfo> pageIter ;
+		pageIter = TransactionPages.iterator() ;
 		pageId = -1 ;
 		while(pageIter.hasNext()){
 			pageId++ ;
@@ -945,6 +946,20 @@ public class CrmFileTransaction {
 		}
 		
 		
+		// ****** Each page => Gestion des tables AUTOFILL ******
+		// ******     => if LINKS differents, mask/unmask table entries
+		pageIter = TransactionPages.iterator() ;
+		pageId = -1 ;
+		while(pageIter.hasNext()){
+			pageId++ ;
+			CrmFilePageinfo pageInfo = pageIter.next() ;
+			if( pageInfo.pageType != PageType.PAGETYPE_TABLE ) {
+				continue ;
+			}
+			
+			// @TODO
+			
+		}
 		
 		
 	}
