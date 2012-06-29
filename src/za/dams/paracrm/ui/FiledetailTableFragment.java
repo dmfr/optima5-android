@@ -105,10 +105,16 @@ public class FiledetailTableFragment extends FiledetailFragment {
     	ArrayList<CrmFileTransaction.CrmFileRecord> records = mTransaction.pageTable_getRecords(pageId) ;
     	Iterator<CrmFileTransaction.CrmFileRecord> mIter2 = records.iterator() ;
     	CrmFileTransaction.CrmFileRecord mrecord ;
-    	int a = 0 ;
+    	int a = -1 ;
     	int b ;
        	while( mIter2.hasNext() ){
+       		a++ ;
+       		
        		mrecord = mIter2.next() ;
+       		
+       		if( mrecord.recordIsHidden ) {
+       			continue ;
+       		}
        		
        		row = new TableRow(getActivity()) ;
        		
@@ -192,7 +198,6 @@ public class FiledetailTableFragment extends FiledetailFragment {
             	mTabLayout.addView(view);
         		
         	}
-        	a++ ;
        	}
 	}
 	

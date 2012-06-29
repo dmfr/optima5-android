@@ -158,16 +158,19 @@ public class CrmFileTransaction {
     	public HashMap<String,CrmFileFieldValue> recordData ;
     	public CrmFilePhoto recordPhoto ;
     	public boolean recordIsDisabled ;
+    	public boolean recordIsHidden ;
     	
     	public CrmFileRecord( int recordTmpId, HashMap<String,CrmFileFieldValue> recordData, boolean recordIsDisabled )  {
     		this.recordTmpId = recordTmpId ;
     		this.recordData = recordData ;
     		this.recordIsDisabled = recordIsDisabled ;
+    		this.recordIsHidden = false ;
     	}
     	public CrmFileRecord( int recordTmpId, CrmFilePhoto recordPhoto, boolean recordIsDisabled )  {
     		this.recordTmpId = recordTmpId ;
     		this.recordPhoto = recordPhoto ;
     		this.recordIsDisabled = recordIsDisabled ;
+    		this.recordIsHidden = false ;
     	}
 	}
 	
@@ -852,6 +855,9 @@ public class CrmFileTransaction {
 				if( list_getPageType( pageId )==PageType.PAGETYPE_TABLE && record.recordIsDisabled ) {
 					continue ;
 				}
+				if( list_getPageType( pageId )==PageType.PAGETYPE_TABLE && record.recordIsHidden ) {
+					continue ;
+				}
 				if( record.recordData != null ) {
 					iter3 = record.recordData.keySet().iterator() ;
 					while( iter3.hasNext() ){
@@ -869,6 +875,7 @@ public class CrmFileTransaction {
 	}
 	
 	public void links_refresh() {
+		
 		// ****** Cache des valeurs de la 1ere page *****
 		HashMap<String,CrmFileFieldValue> valuesCache = new HashMap<String,CrmFileFieldValue>() ;
 		
@@ -958,6 +965,34 @@ public class CrmFileTransaction {
 			}
 			
 			// @TODO
+			// field pivot ?
+	    	Iterator<CrmFileFieldDesc> mIter = TransactionPageFields.get(pageId).iterator() ;
+	    	CrmFileFieldDesc tFieldDesc ;
+	    	while( mIter.hasNext() ){
+	    		tFieldDesc = mIter.next() ;
+	    		
+	    		if(tFieldDesc.fieldIsPivot) {
+	    			ArrayList<String> activatedPivotKeys = new ArrayList<String>() ;
+	    			
+	    			// appel a bible helper
+	    			BibleHelper bibleHelper = new BibleHelper(mContext) ;
+	    			Iterator<BibleHelper.BibleEntry> bibleIter = bibleHelper.queryBible(tFieldDesc.fieldLinkBible,links_getBibleConditions()).iterator() ;
+	    	    	while( bibleIter.hasNext() ){
+	    	    		BibleHelper.BibleEntry bibleEntry = bibleIter.next() ;
+	    	    		activatedPivotKeys.add( bibleEntry.entryKey ) ;
+	    	    	}
+	    	    	
+	    	    	// iteration sur tous les elements du tableau => activation / desactivation
+	    	    	Iterator<CrmFileRecord> recordsIter = TransactionPageRecords.get(pageId).iterator() ;
+	    	    	while( recordsIter.hasNext() ){
+	    	    		CrmFileRecord tableRecord = recordsIter.next() ;
+	    	    		String tableRecordPivotvalue = tableRecord.recordData.get(tFieldDesc.fieldCode).valueString ;
+	    	    		tableRecord.recordIsHidden = !(activatedPivotKeys.contains(tableRecordPivotvalue)) ;
+	    	    	}
+	    		}
+	    	}
+	    	
+	    	
 			
 		}
 		
@@ -1014,7 +1049,7 @@ public class CrmFileTransaction {
         	while( iter2.hasNext() ){
         		recId++ ;
         		record = iter2.next() ;
-        		if( pageType==PageType.PAGETYPE_TABLE && record.recordIsDisabled ) {
+        		if( pageType==PageType.PAGETYPE_TABLE && (record.recordIsDisabled||record.recordIsHidden) ) {
         			continue ;
         		}
         		if( pageType==PageType.PAGETYPE_LOGLIST && recId > 0 ) {
