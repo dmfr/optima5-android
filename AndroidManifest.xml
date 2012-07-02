@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     
     <application
         android:icon="@drawable/ic_launcher"
@@ -37,7 +39,15 @@
             android:name=".ui.FileCaptureActivity$DetailsActivity"
             android:label="VISIT Transaction" >
         </activity>
-
+        <activity
+            android:name=".calendar.CalendarActivity"
+            android:label="Calendar"
+            android:screenOrientation="landscape" 
+            android:theme="@style/CalendarTheme.WithActionBar"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustPan" >
+        </activity>
+        
         <service
             android:name=".UploadService"
             android:enabled="true" />
