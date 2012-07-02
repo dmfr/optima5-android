@@ -5,6 +5,12 @@
     android:orientation="vertical"
     android:background="@drawable/background">
 
+    <GridView android:id="@+id/modulesgridview" android:numColumns="auto_fit"
+        android:horizontalSpacing="10dip" android:verticalSpacing="10dip"
+        android:stretchMode="columnWidth" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:columnWidth="90dp"
+        android:gravity="center" />
+    
     <GridView android:id="@+id/dynamicgridview" android:numColumns="auto_fit"
         android:horizontalSpacing="10dip" android:verticalSpacing="10dip"
         android:stretchMode="columnWidth" android:layout_width="wrap_content" android:layout_height="wrap_content"
