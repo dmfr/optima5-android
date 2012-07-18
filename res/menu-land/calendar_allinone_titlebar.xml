@@ -23,6 +23,14 @@
         android:icon="@drawable/ic_menu_today_holo_light"
         android:showAsAction="withText|ifRoom" />
     <item
+        android:id="@+id/action_subscriptions"
+        android:alphabeticShortcut="a"
+        android:title="Accounts"
+        android:icon="@drawable/ic_menu_account_list"
+        android:enabled="false"
+        android:visible="false"
+        android:showAsAction="withText|ifRoom" />
+    <item
         android:id="@+id/action_create_event"
         android:alphabeticShortcut="n"
         android:title="New Event"
