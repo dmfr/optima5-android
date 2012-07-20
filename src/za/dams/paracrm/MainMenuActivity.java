@@ -615,7 +615,10 @@ public class MainMenuActivity extends Activity {
     	}
     	
         protected DatabaseManager.DatabaseUpgradeResult doInBackground(Void... Params ) {
+            DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
+            
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
+        	postParams.put("__DBversionCode", String.valueOf(mDbManager.getDbVersion()));
         	postParams.put("_domain", "paramount");
         	postParams.put("_moduleName", "paracrm");
         	postParams.put("_action", "android_getDbImageTab");
@@ -636,7 +639,6 @@ public class MainMenuActivity extends Activity {
     				out.close();
 
     				InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
-    	            DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
     	            dbUpResult = mDbManager.upgradeReferentielStream( in ) ;
     				// return dbUpResult ;
     			}

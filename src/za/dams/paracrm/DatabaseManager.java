@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 6;
+    private final int DB_VERSION = 7;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -55,6 +55,9 @@ public class DatabaseManager {
             instance = new DatabaseManager(context.getApplicationContext());
         }
         return instance;
+    }
+    public int getDbVersion() {
+    	return DB_VERSION ;
     }
     private class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -115,6 +118,19 @@ public class DatabaseManager {
                     + "file_type" + " VARCHAR(50),"
                     + "file_specdata" + " VARCHAR(10),"
                     + "gmap_is_on" + " VARCHAR(1)"
+                    + ");";
+            db.execSQL(createTableQuery);
+
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "define_file_cfg_calendar" + " ("
+                    + "file_code" + " VARCHAR(50) PRIMARY KEY, "
+                    + "eventstart_filefield" + " VARCHAR(20),"
+                    + "eventend_filefield" + " VARCHAR(20),"
+                    + "account_is_on" + " VARCHAR(1),"
+                    + "account_filefield" + " VARCHAR(20),"
+                    + "duration_is_fixed" + " VARCHAR(1),"
+                    + "duration_src_filefield" + " VARCHAR(20),"
+                    + "duration_src_biblefield" + " VARCHAR(20)"
                     + ");";
             db.execSQL(createTableQuery);
 
@@ -287,6 +303,16 @@ public class DatabaseManager {
                     + "PRIMARY KEY( scen_id , scen_page_index , scen_page_field_index )"
                     + ");";
             db.execSQL(createTableQuery);
+            
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_calendar" + " ("
+                    + "calendar_id" + " INTEGER, "
+                    + "calendar_name" + " VARCHAR(100),"
+                    + "target_filecode" + " VARCHAR(100),"
+                    + "PRIMARY KEY( calendar_id )"
+                    + ");";
+            db.execSQL(createTableQuery);
     	}
 
     	@Override
@@ -323,9 +349,17 @@ public class DatabaseManager {
     	
     	int nbRowstmp = 0 ;
     	
+    	ArrayList<String> DBtables = new ArrayList<String>() ;
+    	Cursor tmpCursor = mDb.rawQuery( String.format("SELECT name FROM sqlite_master WHERE type='table'"),null) ;
+    	while( tmpCursor.moveToNext() ) {
+    		DBtables.add(tmpCursor.getString(0)) ;
+    	}
+    	tmpCursor.close() ;
+    	
     	ArrayList<ContentValues> insertBuffer = new ArrayList<ContentValues>() ;
     	
     	String tableName = null ;
+    	boolean skipTable = false ;
     	try {
     		BufferedReader r = new BufferedReader(new InputStreamReader(is));
     		String readLine ;
@@ -358,7 +392,12 @@ public class DatabaseManager {
 							return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
 						}
 						tableName = jsonArr.getString(0) ;
-						
+						skipTable = false ;
+						if( !DBtables.contains(tableName) ) {
+							skipTable = true ;
+							readLine = r.readLine() ;
+							continue ;
+						}
 						
 						Collection<String> localColumnNames = new ArrayList<String>() ;
 						try{
@@ -387,6 +426,21 @@ public class DatabaseManager {
 					}
 					
 					jsonArr = new JSONArray(readLine) ;
+					
+					if( skipTable ) {
+						if(jsonArr.length() == 0 ) {
+							insertBuffer = new ArrayList<ContentValues>() ;
+							tableName = null ;
+							nbRowstmp = 0 ;
+							nbTables++ ;
+							continue ;
+						}
+						else {
+							nbRows++ ;
+							continue ;
+						}
+					}
+					
 					if(jsonArr.length() == 0 ) {
 						//Log.w(TAG,"Committing "+tableName) ;
 						upgradeReferentielStream_bulkInsert(tableName,insertBuffer) ;
