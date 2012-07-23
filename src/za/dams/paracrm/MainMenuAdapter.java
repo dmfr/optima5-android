@@ -2,6 +2,7 @@ package za.dams.paracrm;
 
 import java.util.ArrayList;
 
+import za.dams.paracrm.calendar.CalendarActivity;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.content.Context;
 import android.database.Cursor;
@@ -46,13 +47,17 @@ public class MainMenuAdapter extends BaseAdapter {
 	private void initModules() {
 		MODULES_DICT.clear();
 		
+		Cursor tmpCursor ;
+		int aId = 0 ;
+		
 		DatabaseManager mDbManager = DatabaseManager.getInstance(mContext) ;
-		Cursor tmpCursor = mDbManager.rawQuery("SELECT * FROM input_scen ORDER BY scen_name") ;
+		
+		tmpCursor = mDbManager.rawQuery("SELECT * FROM input_scen ORDER BY scen_name") ;
 		if( tmpCursor.getCount() > 0 ) {
 	    	while( !tmpCursor.isLast() ){
 	    		tmpCursor.moveToNext();
-	    		
-	    		MODULES_DICT.add(new ModuleInfo(tmpCursor.getInt(tmpCursor.getColumnIndex("scen_id")),
+	    		aId++ ;
+	    		MODULES_DICT.add(new ModuleInfo(aId,
 	    				tmpCursor.getString(tmpCursor.getColumnIndex("scen_name")), 
 	    				R.drawable.mainmenu_visit, 
 	    				FileCaptureActivity.class,
@@ -60,6 +65,21 @@ public class MainMenuAdapter extends BaseAdapter {
 	    	}
 		}
 		tmpCursor.close() ;
+		
+		tmpCursor = mDbManager.rawQuery("SELECT * FROM input_calendar ORDER BY calendar_name") ;
+		if( tmpCursor.getCount() > 0 ) {
+	    	while( !tmpCursor.isLast() ){
+	    		tmpCursor.moveToNext();
+	    		aId++ ;
+	    		MODULES_DICT.add(new ModuleInfo(aId,
+	    				tmpCursor.getString(tmpCursor.getColumnIndex("calendar_name")), 
+	    				R.drawable.mainmenu_calendar, 
+	    				CalendarActivity.class,
+	    				tmpCursor.getInt(tmpCursor.getColumnIndex("calendar_id"))));
+	    	}
+		}
+		tmpCursor.close() ;
+		
 		initDone = true ;
 	}
 	@Override

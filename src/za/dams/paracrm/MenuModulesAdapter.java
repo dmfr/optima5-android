@@ -52,9 +52,10 @@ public class MenuModulesAdapter extends BaseAdapter {
 		MODULES_DICT.add(new ModuleInfo("CFG", "FilesDB", 
 				R.drawable.mainmenu_filemanager, 
 				null));
+		/*
 		MODULES_DICT.add(new ModuleInfo("BIBLEDL", "Calendar", 
 				R.drawable.mainmenu_calendar, 
-				CalendarActivity.class));
+				CalendarActivity.class));*/
 				
 		initDone = true ;
 	}
