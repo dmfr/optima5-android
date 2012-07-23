@@ -16,22 +16,15 @@
 
 package za.dams.paracrm.calendar;
 
-import static za.dams.paracrm.calendar.CalendarController.EVENT_ATTENDEE_RESPONSE;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.ViewType;
-//import com.android.calendar.agenda.AgendaFragment;
-//import com.android.calendar.month.MonthByWeekFragment;
-//import com.android.calendar.selectcalendars.SelectVisibleCalendarsFragment;
-
-import android.accounts.AccountManager;
-import android.accounts.AccountManagerCallback;
-import android.accounts.AccountManagerFuture;
-import android.accounts.AuthenticatorException;
-import android.accounts.OperationCanceledException;
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
 import android.animation.ObjectAnimator;
@@ -41,21 +34,16 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
-import android.content.AsyncQueryHandler;
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
 import android.database.ContentObserver;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.CalendarContract;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
@@ -70,11 +58,6 @@ import android.widget.RelativeLayout.LayoutParams;
 import android.widget.SearchView;
 import android.widget.SearchView.OnSuggestionListener;
 import android.widget.TextView;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 
 public class CalendarActivity extends Activity implements EventHandler,
         OnSharedPreferenceChangeListener, SearchView.OnQueryTextListener, ActionBar.TabListener,
@@ -145,6 +128,13 @@ public class CalendarActivity extends Activity implements EventHandler,
     private CalendarViewAdapter mActionBarMenuSpinnerAdapter;
     //private QueryHandler mHandler;
     private boolean mCheckForAccounts = true;
+    
+    
+    // ******** Fields for PARACRM ********
+    private static final String BUNDLE_KEY_CRM_ID = "crmId";
+    private int mCrmInputId ;
+    private CrmCalendarManager mCrmCalendarManager ;
+    
 
     private String mHideString;
     private String mShowString;
@@ -272,10 +262,28 @@ public class CalendarActivity extends Activity implements EventHandler,
         }
         */
         super.onCreate(icicle);
-
+        
+        if( icicle == null ){
+        	icicle = this.getIntent().getExtras();
+        }
+        
         if (icicle != null && icicle.containsKey(BUNDLE_KEY_CHECK_ACCOUNTS)) {
             mCheckForAccounts = icicle.getBoolean(BUNDLE_KEY_CHECK_ACCOUNTS);
         }
+        
+
+        if (icicle != null && icicle.containsKey(BUNDLE_KEY_CRM_ID)) {
+        	mCrmInputId = icicle.getInt(BUNDLE_KEY_CRM_ID);
+
+        	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
+        }
+        
+        if( mCrmCalendarManager == null || !mCrmCalendarManager.isValid() ){
+        	Log.w(TAG,"CrmCalendarManager reports non valid !");
+        	this.finish() ;
+        }
+        
+        
         // Launch add google account if this is first time and there are no
         // accounts yet
 //        if (mCheckForAccounts
@@ -424,11 +432,18 @@ public class CalendarActivity extends Activity implements EventHandler,
         } else {
             createButtonsSpinner(viewType);
         }
-        if (mIsMultipane) {
+        if (mIsMultipane) {	
             mActionBar.setDisplayOptions(
-                    ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_SHOW_HOME);
+                    ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_SHOW_HOME | ActionBar.DISPLAY_SHOW_TITLE);
         } else {
             mActionBar.setDisplayOptions(0);
+        }
+        //mActionBar.setDisplayShowTitleEnabled(true) ;
+        
+        if( mCrmCalendarManager.isValid() ) {
+        	String title = mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
+        	mActionBar.setSubtitle("Calendar") ;
+        	mActionBar.setTitle(title) ;
         }
     }
 
@@ -521,6 +536,10 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (mControlsMenu != null) {
             mControlsMenu.setTitle(mHideControls ? mShowString : mHideString);
         }
+        
+     // Query for mCrmAgendaLib
+        
+        
         mPaused = false;
 
         if (mViewEventId != -1 && mIntentEventStartMillis != -1 && mIntentEventEndMillis != -1) {
@@ -579,6 +598,7 @@ public class CalendarActivity extends Activity implements EventHandler,
             outState.putLong(BUNDLE_KEY_EVENT_ID, mController.getEventId());
         }
         outState.putBoolean(BUNDLE_KEY_CHECK_ACCOUNTS, mCheckForAccounts);
+        outState.putInt(BUNDLE_KEY_CRM_ID, mCrmInputId);
     }
 
     @Override
@@ -714,6 +734,18 @@ public class CalendarActivity extends Activity implements EventHandler,
         } else if (mControlsMenu != null){
             mControlsMenu.setTitle(mHideControls ? mShowString : mHideString);
         }
+        
+        
+        // ParaCRM, get AgendaId / AgendaInfos and unmask "Accounts" button
+        if( mCrmCalendarManager != null && mCrmCalendarManager.isValid() ) {
+        	MenuItem mAccountsMenuItem = menu.findItem(R.id.action_subscriptions);
+        	if( mAccountsMenuItem != null ) {
+        		boolean accountIsOn = mCrmCalendarManager.getCalendarInfos().mAccountIsOn ;
+        		mAccountsMenuItem.setVisible(accountIsOn);
+        		mAccountsMenuItem.setEnabled(accountIsOn);
+        	}
+        }
+        
         return true;
     }
 
@@ -955,11 +987,11 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (event.eventType != EventType.UPDATE_TITLE || mActionBar == null) {
             return;
         }
-
-        final long start = event.startTime.toMillis(false /* use isDst */);
+        
+        final long start = event.startTime.toMillis(false); // use isDst
         final long end;
         if (event.endTime != null) {
-            end = event.endTime.toMillis(false /* use isDst */);
+            end = event.endTime.toMillis(false); // use isDst
         } else {
             end = start;
         }
