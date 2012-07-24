@@ -39,6 +39,7 @@ public class CrmCalendarManager {
 		public ArrayList<CrmFileFieldDesc> mCrmFields ;
 		
 		public boolean mAccountIsOn ;
+		public String mAccountSrcBibleCode ;
 		
 		public CrmCalendarAccount(){
 			// empty constructor
@@ -143,7 +144,16 @@ public class CrmCalendarManager {
     		tmpCursor.moveToNext() ;
     		mCrmAgendaInfos.mAccountIsOn = tmpCursor.getString(tmpCursor.getColumnIndex("account_is_on")).equals("O") ? true : false ;
     		if( mCrmAgendaInfos.mAccountIsOn ) {
-    			
+    			String accountFileField = tmpCursor.getString(tmpCursor.getColumnIndex("account_filefield")) ;
+    			Cursor accCursor = mDb.rawQuery( String.format("SELECT entry_field_linkbible FROM define_file_entry WHERE file_code='%s' AND entry_field_code='%s' AND entry_field_type='link'",localFileCode,accountFileField ) ) ;
+    			if( accCursor.getCount() == 1 ) {
+    				accCursor.moveToNext() ;
+    				mCrmAgendaInfos.mAccountSrcBibleCode = accCursor.getString(0) ;
+    			}
+    			else {
+    				mCrmAgendaInfos.mAccountIsOn = false ;
+    			}
+    			accCursor.close() ;
     		}
     		
     	}

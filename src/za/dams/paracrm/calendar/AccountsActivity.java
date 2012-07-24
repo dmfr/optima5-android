@@ -32,8 +32,6 @@ public class AccountsActivity extends PreferenceActivity {
         if (icicle != null && icicle.containsKey(BUNDLE_KEY_CRM_ID)) {
         	mCrmInputId = icicle.getInt(BUNDLE_KEY_CRM_ID);
         	
-        	Log.w(TAG,"Pouet") ;
-
         	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
         }
 
@@ -44,14 +42,17 @@ public class AccountsActivity extends PreferenceActivity {
     public void onBuildHeaders(List<Header> target) {
         loadHeadersFromResource(R.xml.calendar_settings_headers, target);
         
-        if( mCrmCalendarManager != null ){
+        if( mCrmCalendarManager != null 
+        		&& mCrmCalendarManager.isValid() 
+        		&& mCrmCalendarManager.getCalendarInfos().mAccountIsOn ){
+        	
             Header accountHeader = new Header();
             accountHeader.title = mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
             accountHeader.fragment =
                     "za.dams.paracrm.calendar.AccountSubscribeFragment";
 
             Bundle args = new Bundle();
-            args.putString(BUNDLE_KEY_BIBLECODE, "myBibleCode");
+            args.putString(BUNDLE_KEY_BIBLECODE, mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode);
             accountHeader.fragmentArguments = args;
             target.add(accountHeader);
         }
