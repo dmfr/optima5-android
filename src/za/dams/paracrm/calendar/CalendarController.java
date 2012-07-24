@@ -66,6 +66,11 @@ public class CalendarController {
     public static final int ATTENDEE_NO_RESPONSE = -1;
 
     private Context mContext;
+    
+    // ******** Fields for PARACRM ********
+    private static final String BUNDLE_KEY_CRM_ID = "crmId";
+    private int mCrmInputId ;
+    
 
     // This uses a LinkedHashMap so that we can replace fragments based on the
     // view id they are being expanded into since we can't guarantee a reference
@@ -133,6 +138,9 @@ public class CalendarController {
 
         // select which calendars to display
         final long LAUNCH_SELECT_VISIBLE_CALENDARS = 1L << 11;
+        
+        // ParaCRM
+        final long LAUNCH_ACCOUNTS = 1L << 12;
     }
 
     /**
@@ -213,11 +221,21 @@ public class CalendarController {
      *
      * @param context The activity if at all possible.
      */
-    public static CalendarController getInstance(Context context) {
+    public static CalendarController getInstance(Context context ) {
         synchronized (instances) {
             CalendarController controller = instances.get(context);
             if (controller == null) {
-                controller = new CalendarController(context);
+                controller = new CalendarController(context,0);
+                instances.put(context, controller);
+            }
+            return controller;
+        }
+    }
+    public static CalendarController getInstance(Context context, int crmInputId ) {
+        synchronized (instances) {
+            CalendarController controller = instances.get(context);
+            if (controller == null) {
+                controller = new CalendarController(context,crmInputId);
                 instances.put(context, controller);
             }
             return controller;
@@ -234,10 +252,12 @@ public class CalendarController {
         instances.remove(context);
     }
 
-    private CalendarController(Context context) {
+    private CalendarController(Context context, int crmInputId ) {
         mContext = context;
         mUpdateTimezone.run();
         mTime.setToNow();
+        
+        mCrmInputId = crmInputId ;
         /*
         mDetailViewType = Utils.getSharedPreference(mContext,
                 GeneralPreferences.KEY_DETAILED_VIEW,
@@ -490,6 +510,12 @@ public class CalendarController {
         }
 
         if (!handled) {
+            // Launch Accounts
+            if (event.eventType == EventType.LAUNCH_ACCOUNTS) {
+                launchAccounts();
+                return;
+            }
+
             // Launch Settings
             if (event.eventType == EventType.LAUNCH_SETTINGS) {
                 //launchSettings();
@@ -640,6 +666,19 @@ public class CalendarController {
         mContext.startActivity(intent);
     }
     */
+    
+    private void launchAccounts() {
+    	
+    	
+    	final Bundle bundle = new Bundle();
+    	bundle.putInt(BUNDLE_KEY_CRM_ID, mCrmInputId);
+    	
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setClass(mContext, AccountsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtras(bundle) ;
+        mContext.startActivity(intent);
+    }
 
     /*
     private void launchCreateEvent(long startMillis, long endMillis, boolean allDayEvent) {

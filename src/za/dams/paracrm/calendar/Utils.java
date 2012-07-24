@@ -103,6 +103,9 @@ public class Utils {
     private static final String SHARED_PREFS_NAME = "com.android.calendar_preferences";
 
     public static final String APPWIDGET_DATA_TYPE = "vnd.android.data/update";
+    
+    // Paracrm
+    private static final String BUNDLE_KEY_CRM_ID = "crmId";
 
     // private static final TimeZoneUtils mTZUtils = new TimeZoneUtils(SHARED_PREFS_NAME);
     private static boolean mAllowWeekForDetailView = false;
@@ -1049,11 +1052,16 @@ public class Utils {
      *
      * @param context
      */
-    public static void returnToCalendarHome(Context context) {
+    public static void returnToCalendarHome(Context context, int crmInputId ) {
+    	final Bundle bundle = new Bundle();
+    	bundle.putInt(BUNDLE_KEY_CRM_ID, crmInputId);
+    	bundle.putBoolean(INTENT_KEY_HOME, true);
+    	
         Intent launchIntent = new Intent(context, CalendarActivity.class);
         launchIntent.setAction(Intent.ACTION_DEFAULT);
         launchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        launchIntent.putExtra(INTENT_KEY_HOME, true);
+        //launchIntent.putExtra(INTENT_KEY_HOME, true);
+        launchIntent.putExtras(bundle) ;
         context.startActivity(launchIntent);
     }
 

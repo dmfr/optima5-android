@@ -296,7 +296,7 @@ public class CalendarActivity extends Activity implements EventHandler,
 //        }
 
         // This needs to be created before setContentView
-        mController = CalendarController.getInstance(this);
+        mController = CalendarController.getInstance(this,mCrmInputId);
 
 
         // Get time from intent or icicle
@@ -511,7 +511,7 @@ public class CalendarActivity extends Activity implements EventHandler,
     @Override
     protected void onResume() {
         super.onResume();
-
+        
         // Must register as the first activity because this activity can modify
         // the list of event handlers in it's handle method. This affects who
         // the rest of the handlers the controller dispatches to are.
@@ -782,6 +782,9 @@ public class CalendarActivity extends Activity implements EventHandler,
                 return true;
             case R.id.action_settings:
                 mController.sendEvent(this, EventType.LAUNCH_SETTINGS, null, null, 0, 0);
+                return true;
+            case R.id.action_subscriptions:
+                mController.sendEvent(this, EventType.LAUNCH_ACCOUNTS, null, null, 0, 0);
                 return true;
             case R.id.action_hide_controls:
                 mHideControls = !mHideControls;
