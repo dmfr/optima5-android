@@ -17,7 +17,8 @@ public class AccountsActivity extends PreferenceActivity {
 	
     // ******** Fields for PARACRM ********
     private static final String BUNDLE_KEY_CRM_ID = "crmId";
-    private static final String BUNDLE_KEY_BIBLECODE = "bibleCode";
+    private static final String BUNDLE_KEY_CALFILECODE = "fileCode";
+    private static final String BUNDLE_KEY_SRCBIBLECODE = "srcBibleCode";
     private int mCrmInputId ;
     private CrmCalendarManager mCrmCalendarManager ;
 
@@ -52,7 +53,8 @@ public class AccountsActivity extends PreferenceActivity {
                     "za.dams.paracrm.calendar.AccountSubscribeFragment";
 
             Bundle args = new Bundle();
-            args.putString(BUNDLE_KEY_BIBLECODE, mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode);
+            args.putString(BUNDLE_KEY_CALFILECODE, mCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode);
+            args.putString(BUNDLE_KEY_SRCBIBLECODE, mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode);
             accountHeader.fragmentArguments = args;
             target.add(accountHeader);
         }

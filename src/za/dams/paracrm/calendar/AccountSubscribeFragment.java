@@ -1,8 +1,9 @@
 package za.dams.paracrm.calendar;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
@@ -14,12 +15,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.shapes.RectShape;
 import android.os.Bundle;
-import android.provider.CalendarContract.Calendars;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,8 +38,18 @@ public class AccountSubscribeFragment extends ListFragment
     private Button mAccountsButton;
     
     // ******** Fields for PARACRM ********
-	private static final String BUNDLE_KEY_BIBLECODE = "bibleCode";
+    private static final String BUNDLE_KEY_CALFILECODE = "fileCode";
+    private static final String BUNDLE_KEY_SRCBIBLECODE = "srcBibleCode";
+    private String mCalendarFileCode ;
     private String mStrBibleCode ;
+    
+	public class CalendarRow {
+		String id;
+		String displayName;
+		int color;
+		boolean synced;
+		boolean originalSynced;
+	}
 	
     public AccountSubscribeFragment() {
     }
@@ -51,8 +59,11 @@ public class AccountSubscribeFragment extends ListFragment
         super.onAttach(activity);
 
         Bundle bundle = getArguments();
-        if (bundle != null && bundle.containsKey(BUNDLE_KEY_BIBLECODE) ) {
-        	mStrBibleCode = bundle.getString(BUNDLE_KEY_BIBLECODE);
+        if (bundle != null 
+        		&& bundle.containsKey(BUNDLE_KEY_CALFILECODE)
+        		&& bundle.containsKey(BUNDLE_KEY_SRCBIBLECODE) ) {
+        	mCalendarFileCode = bundle.getString(BUNDLE_KEY_CALFILECODE);
+        	mStrBibleCode = bundle.getString(BUNDLE_KEY_SRCBIBLECODE);
         	// Log.w(TAG,"Bible code is "+mStrBibleCode) ;
         }
     }
@@ -91,28 +102,28 @@ public class AccountSubscribeFragment extends ListFragment
         	Log.w(TAG,"Save changes !") ;
         	// **** Save changes ****
         	
-        	/*
-            HashMap<Long, CalendarRow> changes = ((SelectCalendarsSyncAdapter) listAdapter)
+            HashMap<String, CalendarRow> changes = ((AccountSubscribeAdapter) listAdapter)
                     .getChanges();
             if (changes != null && changes.size() > 0) {
+            	Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), mCalendarFileCode) ;
+            	
                 for (CalendarRow row : changes.values()) {
-                    if (row.synced == row.originalSynced) {
-                        continue;
+                	presets.remove(row.id) ;
+                    if( row.synced  ) {
+                    	presets.put(row.id, row.color) ;
                     }
-                    long id = row.id;
-                    mService.cancelOperation((int) id);
-                    // Use the full long id in case it makes a difference
-                    Uri uri = ContentUris.withAppendedId(Calendars.CONTENT_URI, row.id);
-                    ContentValues values = new ContentValues();
-                    // Toggle the current setting
-                    int synced = row.synced ? 1 : 0;
-                    values.put(Calendars.SYNC_EVENTS, synced);
-                    values.put(Calendars.VISIBLE, synced);
-                    mService.startUpdate((int) id, null, uri, values, null, null, 0);
                 }
                 changes.clear();
+                PrefsCrm.setAccountsColor(getActivity(), mCalendarFileCode, presets) ;
+                
+                
+                Set<String> accountsSet = presets.keySet() ;
+                PrefsCrm.setSubscribedAccounts(getActivity(), mCalendarFileCode, accountsSet) ;
             }
-            */
+            
+            
+            
+            
         }
         super.onPause();
     }
@@ -128,10 +139,13 @@ public class AccountSubscribeFragment extends ListFragment
     @Override
     public void onLoadFinished(Loader<List<BibleHelper.BibleEntry>> loader, List<BibleHelper.BibleEntry> data) {
         AccountSubscribeAdapter adapter = (AccountSubscribeAdapter) getListAdapter();
+        
+        Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), mCalendarFileCode) ;
+        
         if (adapter == null) {
-            adapter = new AccountSubscribeAdapter(getActivity(), data);
+            adapter = new AccountSubscribeAdapter(getActivity(), data, presets);
         } else {
-            adapter.changeCursor(data);
+            adapter.changeCursor(data, presets);
         }
         setListAdapter(adapter);
         getListView().setOnItemClickListener(adapter);
@@ -164,68 +178,58 @@ public class AccountSubscribeFragment extends ListFragment
     	private CalendarRow[] mData;
     	private HashMap<String, CalendarRow> mChanges = new HashMap<String, CalendarRow>();
     	private int mRowCount = 0;
-
-    	private int mIdColumn;
-    	private int mNameColumn;
-    	private int mColorColumn;
-    	private int mSyncedColumn;
+    	private int mRowSyncedCount = 0 ;
 
     	private final String mSyncedString;
     	private final String mNotSyncedString;
 
-    	public class CalendarRow {
-    		String id;
-    		String displayName;
-    		int color;
-    		boolean synced;
-    		boolean originalSynced;
-    	}
 
-    	public AccountSubscribeAdapter(Context context, List<BibleHelper.BibleEntry> data) {
+    	public AccountSubscribeAdapter(Context context, List<BibleHelper.BibleEntry> data, Map<String,Integer> presets ) {
     		super();
-    		initData(data);
+    		initData(data,presets);
     		mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     		COLOR_CHIP_SIZE *= context.getResources().getDisplayMetrics().density;
     		r.resize(COLOR_CHIP_SIZE, COLOR_CHIP_SIZE);
     		Resources res = context.getResources();
     		mSyncedString = "Synced";
-    		mNotSyncedString = "Not Synced";
+    		mNotSyncedString = "";
     	}
 
-    	private void initData(List<BibleHelper.BibleEntry> data) {
+    	private void initData(List<BibleHelper.BibleEntry> data, Map<String,Integer> presets) {
     		if (data == null) {
     			mRowCount = 0;
     			mData = null;
     			return;
     		}
 
-    		/*
-    		mIdColumn = c.getColumnIndexOrThrow(Calendars._ID);
-    		mNameColumn = c.getColumnIndexOrThrow(Calendars.CALENDAR_DISPLAY_NAME);
-    		mColorColumn = c.getColumnIndexOrThrow(Calendars.CALENDAR_COLOR);
-    		mSyncedColumn = c.getColumnIndexOrThrow(Calendars.SYNC_EVENTS);
-    		*/
-
     		mRowCount = data.size();
+    		mRowSyncedCount = 0 ;
     		mData = new CalendarRow[mRowCount];
     		int p = 0;
     		for (BibleHelper.BibleEntry be : data) {
     			mData[p] = new CalendarRow();
     			mData[p].id = be.entryKey ;
-    			mData[p].color = Color.BLUE ;
+    			//mData[p].color = Color.BLUE ;
     			mData[p].displayName = be.displayStr ;
-    			mData[p].originalSynced = false ;
+    			mData[p].originalSynced = presets.containsKey(be.entryKey) ;
+    			if( mData[p].originalSynced ) {
+    				mData[p].color = presets.get(be.entryKey).intValue() ;
+    			}
     			if (mChanges.containsKey(be.entryKey)) {
     				mData[p].synced = mChanges.get(be.entryKey).synced;
+    				mData[p].color = mChanges.get(be.entryKey).color;
     			} else {
     				mData[p].synced = mData[p].originalSynced;
+    			}
+    			if( mData[p].synced ) {
+    				mRowSyncedCount++ ;
     			}
     			p++ ;
     		}
     	}
 
-    	public void changeCursor(List<BibleHelper.BibleEntry> data) {
-    		initData(data);
+    	public void changeCursor(List<BibleHelper.BibleEntry> data, Map<String,Integer> presets) {
+    		initData(data,presets);
     		notifyDataSetChanged();
     	}
 
@@ -257,7 +261,13 @@ public class AccountSubscribeFragment extends ListFragment
 
     		View colorView = view.findViewById(R.id.color);
 
-    		colorView.setBackgroundColor(color);
+    		if( selected ) {
+    			colorView.setVisibility(View.VISIBLE) ;
+    			colorView.setBackgroundColor(color);
+    		}
+    		else {
+    			colorView.setVisibility(View.INVISIBLE) ;
+    		}
 
     		setText(view, R.id.calendar, name);
     		return view;
@@ -303,18 +313,30 @@ public class AccountSubscribeFragment extends ListFragment
     	public void onItemClick(AdapterView<?> parent, View view, int position, long id)  {
     		CalendarRow row = (CalendarRow) view.getTag();
     		row.synced = !row.synced;
-
+    		row.color = getColor() ;
     		String status;
     		if (row.synced) {
     			status = mSyncedString;
+    			mRowSyncedCount++ ;
     		} else {
     			status = mNotSyncedString;
+    			mRowSyncedCount-- ;
     		}
     		setText(view, R.id.status, status);
 
     		CheckBox cb = (CheckBox) view.findViewById(R.id.sync);
     		cb.setChecked(row.synced);
 
+    		
+    		View colorView = view.findViewById(R.id.color);
+    		if( row.synced ) {
+    			int color = Utils.getDisplayColorFromColor(mData[position].color);
+    			colorView.setVisibility(View.VISIBLE) ;
+    			colorView.setBackgroundColor(color);
+    		}
+    		else {
+    			colorView.setVisibility(View.INVISIBLE) ;
+    		}
     		// There is some data loss in long -> int, but we should never see it in
     		// practice regarding calendar ids.
     		mChanges.put(row.id, row);
@@ -322,6 +344,23 @@ public class AccountSubscribeFragment extends ListFragment
 
     	public HashMap<String, CalendarRow> getChanges() {
     		return mChanges;
+    	}
+    	
+    	private int getColor(){
+    		switch( mRowSyncedCount % 5 ) {
+    		case 0 :
+    			return Color.BLUE ;
+    		case 1 :
+    			return Color.CYAN ;
+    		case 2 :
+    			return Color.MAGENTA ;
+    		case 3 :
+    			return Color.GREEN ;
+    		case 4 :
+    			return Color.RED ;
+    		default :
+    			return 0 ;
+    		}
     	}
     }
 	
