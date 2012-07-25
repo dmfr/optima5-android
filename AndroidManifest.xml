@@ -42,22 +42,31 @@
         
         <activity
             android:name=".calendar.CalendarActivity"
-            android:label="Calendar"
             android:icon="@drawable/mainmenu_calendar"
-            android:screenOrientation="landscape" 
-            android:theme="@style/CalendarTheme.WithActionBar"
+            android:label="Calendar"
             android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@style/CalendarTheme.WithActionBar"
             android:windowSoftInputMode="adjustPan" >
         </activity>
-        <activity android:name=".calendar.AccountsActivity"
-            android:label="Calendar Subscriptions"
+        <activity
+            android:name=".calendar.AccountsActivity"
             android:icon="@drawable/mainmenu_calendar"
-            android:theme="@android:style/Theme.Holo.Light"
-            android:screenOrientation="landscape" />
-        
-        <service
+            android:label="Calendar Subscriptions"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.Light" >
+        </activity>
+        <activity
+            android:name=".calendar.EditEventActivity"
+            android:icon="@drawable/mainmenu_calendar"
+            android:screenOrientation="landscape"
+            android:theme="@style/CalendarTheme.WithActionBar" >
+        </activity>
+		
+		<service
             android:name=".UploadService"
             android:enabled="true" />
+
     </application>
 
 </manifest>

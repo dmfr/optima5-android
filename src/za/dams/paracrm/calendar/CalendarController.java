@@ -16,10 +16,6 @@
 
 package za.dams.paracrm.calendar;
 
-import static android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME;
-import static android.provider.CalendarContract.EXTRA_EVENT_END_TIME;
-import static android.provider.CalendarContract.EXTRA_EVENT_ALL_DAY;
-
 
 import android.accounts.Account;
 import android.app.Activity;
@@ -531,8 +527,8 @@ public class CalendarController {
             // Create/View/Edit/Delete Event
             long endTime = (event.endTime == null) ? -1 : event.endTime.toMillis(false);
             if (event.eventType == EventType.CREATE_EVENT) {
-                /*launchCreateEvent(event.startTime.toMillis(false), endTime,
-                        event.extraLong == EXTRA_CREATE_ALL_DAY);*/
+                launchCreateEvent(event.startTime.toMillis(false), endTime,
+                        event.extraLong == EXTRA_CREATE_ALL_DAY);
                 return;
             } else if (event.eventType == EventType.VIEW_EVENT) {
                 //launchViewEvent(event.id, event.startTime.toMillis(false), endTime);
@@ -680,17 +676,18 @@ public class CalendarController {
         mContext.startActivity(intent);
     }
 
-    /*
+   
     private void launchCreateEvent(long startMillis, long endMillis, boolean allDayEvent) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setClass(mContext, EditEventActivity.class);
-        intent.putExtra(EXTRA_EVENT_BEGIN_TIME, startMillis);
-        intent.putExtra(EXTRA_EVENT_END_TIME, endMillis);
-        intent.putExtra(EXTRA_EVENT_ALL_DAY, allDayEvent);
+        intent.putExtra("EXTRA_EVENT_BEGIN_TIME", startMillis);
+        intent.putExtra("EXTRA_EVENT_END_TIME", endMillis);
+        intent.putExtra("EXTRA_EVENT_ALL_DAY", allDayEvent);
         mEventId = -1;
         mContext.startActivity(intent);
     }
 
+	/*
     public void launchViewEvent(long eventId, long startMillis, long endMillis) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         Uri eventUri = ContentUris.withAppendedId(Events.CONTENT_URI, eventId);

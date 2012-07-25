@@ -16,8 +16,6 @@
 
 package za.dams.paracrm.calendar;
 
-import static android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME;
-
 import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CalendarController.ViewType;
 
@@ -360,7 +358,7 @@ public class Utils {
         // If the time was specified, then use that. Otherwise, use the current
         // time.
         Uri data = intent.getData();
-        long millis = intent.getLongExtra(EXTRA_EVENT_BEGIN_TIME, -1);
+        long millis = intent.getLongExtra("EXTRA_EVENT_BEGIN_TIME", -1);
         if (millis == -1 && data != null && data.isHierarchical()) {
             List<String> path = data.getPathSegments();
             if (path.size() == 2 && path.get(0).equals("time")) {
