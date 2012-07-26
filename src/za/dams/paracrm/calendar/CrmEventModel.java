@@ -11,6 +11,7 @@ import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 
 
@@ -48,6 +49,9 @@ public class CrmEventModel implements Serializable {
 
     public CrmEventModel(Context context) {
         this();
+    }
+    public CrmEventModel(Context context, Intent intent) {
+        this(context);
     }
     
     

@@ -9,7 +9,9 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -29,7 +31,10 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	
 	private Activity mContext;
 	
+	CrmEventModel mModel;
 	EditEventView mView;
+	
+	EventLoadTask mLoadTask ;
 	
 	private InputMethodManager mInputMethodManager;
 	
@@ -44,6 +49,24 @@ public class EditEventFragment extends Fragment implements EventHandler {
 		}
 	};
 	
+	private class EventLoadTask extends AsyncTask<Void, Void, Void> {
+		protected Void doInBackground(Void... arg0) {
+			
+			
+			
+			return null;
+		}
+		protected void onPostExecute(Void arg0) {
+			setModelIfDone() ;
+		}
+	}
+	private void startQuery() {
+		if( mLoadTask != null && !mLoadTask.isCancelled() ) {
+			mLoadTask.cancel(true) ;
+		}
+		mLoadTask = new EventLoadTask() ;
+		mLoadTask.execute() ;
+	}
 	
     public EditEventFragment() {
         this(null, false, null);
@@ -56,6 +79,14 @@ public class EditEventFragment extends Fragment implements EventHandler {
         setHasOptionsMenu(true);
     }
     
+    
+    private void setModelIfDone() {
+        synchronized (this) {
+        	mView.setModel(mModel);
+        }
+    }
+    
+    
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
@@ -63,7 +94,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
 
         //mHelper = new EditEventHelper(activity, null);
         //mHandler = new QueryHandler(activity.getContentResolver());
-        //mModel = new CalendarEventModel(activity, mIntent);
+        mModel = new CrmEventModel(activity, mIntent);
         mInputMethodManager = (InputMethodManager)
                 activity.getSystemService(Context.INPUT_METHOD_SERVICE);
 
@@ -81,9 +112,11 @@ public class EditEventFragment extends Fragment implements EventHandler {
             view = inflater.inflate(R.layout.calendar_editevent, null);
         }
         mView = new EditEventView(mContext, view, mOnDone);
-        // startQuery(); **** chargement des données ??? ***
+        startQuery(); // **** chargement des données ??? ***
+        
 
         if (mUseCustomActionBar) {
+        	// ******* Pas utilisé sur ParaCRM tablette
         	/*
             View actionBarButtons = inflater.inflate(R.layout.edit_event_custom_actionbar,
                     new LinearLayout(mContext), false);
@@ -194,6 +227,27 @@ public class EditEventFragment extends Fragment implements EventHandler {
         return true;
     }
     
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        mView.prepareForSave();
+        /*
+        outState.putSerializable(BUNDLE_KEY_MODEL, mModel);
+        outState.putInt(BUNDLE_KEY_EDIT_STATE, mModification);
+        if (mEventBundle == null && mEvent != null) {
+            mEventBundle = new EventBundle();
+            mEventBundle.id = mEvent.id;
+            if (mEvent.startTime != null) {
+                mEventBundle.start = mEvent.startTime.toMillis(true);
+            }
+            if (mEvent.endTime != null) {
+                mEventBundle.end = mEvent.startTime.toMillis(true);
+            }
+        }
+        outState.putBoolean(BUNDLE_KEY_EDIT_ON_LAUNCH, mShowModifyDialogOnLaunch);
+        outState.putSerializable(BUNDLE_KEY_EVENT, mEventBundle);
+        outState.putBoolean(BUNDLE_KEY_READ_ONLY, mIsReadOnly);
+        */
+    }
     
     
 	@Override
