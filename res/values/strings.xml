@@ -10,5 +10,7 @@
     <string name="app_name">ParaCRM</string>
 	<string name="hello22">sdfdsfsdfsdfsddfsdfsdfsd</string>
 	<string name="show">coucou</string>
+	
+    <string name="edit_event_calendar_label">Calendar</string>
 	    
 </resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/crm_row">
+    <TextView
+	android:id="@+id/crm_label"
+	android:text=""
+	style="@style/TextAppearance.EditEvent_Label" />
+    <LinearLayout
+	android:orientation="horizontal"
+	android:animateLayoutChanges="false">
+	<Button
+	    android:id="@+id/crm_button"
+	    android:layout_width="0px"
+	    android:layout_height="wrap_content"
+	    android:layout_weight="1"
+	    style="@style/TextAppearance.EditEvent_SpinnerButton" />
+    </LinearLayout>
+</TableRow>
