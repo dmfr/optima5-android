@@ -221,5 +221,25 @@ public class CrmCalendarManager {
 		}
 	}
 	
+	
+	
+	public boolean doneCheckModel( CrmEventModel crmEventModel ) {
+		if( crmEventModel.mStart <= 0 || crmEventModel.mStart > crmEventModel.mEnd ) {
+			return false ;
+		}
+		
+		boolean noneSet = true ;
+		for( CrmFileFieldValue fv : crmEventModel.mCrmValues ) {
+			if( fv.isSet ) {
+				noneSet = false ;
+			}
+		}
+		if( noneSet ) {
+			return false ;
+		}
+		
+		return true ;
+	}
+	
 
 }

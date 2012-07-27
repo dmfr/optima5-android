@@ -10,6 +10,7 @@ import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleCode;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
@@ -38,6 +39,7 @@ import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ScrollView;
@@ -290,6 +292,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             }
             else{
             	((Button)mView).setText("") ;
+            	mModel.mCrmValues.get(mCrmFieldIndex).isSet = false ;
                 mModel.mCrmValues.get(mCrmFieldIndex).displayStr = "" ;
                 mModel.mCrmValues.get(mCrmFieldIndex).valueString = "" ;
             }
@@ -555,6 +558,22 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     	    	mViewgroupTable.addView(newView) ;
     			break ;
     			
+    		case FIELD_TEXT :
+    	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_text,null) ;
+    	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
+    	    	//((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	mCrmFieldViews.add(newView) ;
+    	    	mViewgroupTable.addView(newView) ;
+    			break ;
+    			
+    		case FIELD_NUMBER :
+    	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_number,null) ;
+    	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
+    	    	//((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	mCrmFieldViews.add(newView) ;
+    	    	mViewgroupTable.addView(newView) ;
+    			break ;
+    			
     		default:
     			newView = new View(mActivity);
     			newView.setVisibility(View.GONE) ;
@@ -572,6 +591,63 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	
 	
 	public boolean prepareForSave(){
+		Log.w(TAG,"Prepare for save !!") ;
+		fillModelFromUI() ;
+		return true ;
+	}
+	private boolean fillModelFromUI(){
+		
+		// Champs spécifiques : dates (start/end) + accounts => capture en direct (date/spinner listeners) 
+		
+		// Champs dynamiques CRM
+		int crmFieldIndex = 0 ;
+		String capturedStr ;
+		for( CrmFileFieldDesc fd : mModel.mCrmFields ) {
+			CrmFileFieldValue record = mModel.mCrmValues.get(crmFieldIndex) ;
+			
+			switch( fd.fieldType ) {
+			case FIELD_BIBLE :
+				// bible capturée en direct : BibleListener => rien à faire
+				break ;
+				
+			case FIELD_TEXT :
+				capturedStr = ((EditText)mCrmFieldViews.get(crmFieldIndex).findViewById(R.id.crm_text)).getText().toString() ;
+				record.valueString = capturedStr ;
+				record.displayStr = capturedStr ;
+				if( capturedStr.length() > 0 ) {
+					record.isSet = true ;
+				}
+				else {
+					record.isSet = false ;
+				}
+				break ;
+				
+			case FIELD_NUMBER :
+				capturedStr = ((EditText)mCrmFieldViews.get(crmFieldIndex).findViewById(R.id.crm_text)).getText().toString() ;
+				float num = Float.parseFloat(capturedStr) ;
+				record.valueFloat = num ;
+				if( num==Math.ceil(num) ) {
+					record.displayStr = String.valueOf((int)num) ;
+				}
+				else {
+					record.displayStr = String.valueOf(num) ;
+				}
+				if( capturedStr.length() > 0 ) {
+					record.isSet = true ;
+				}
+				else {
+					record.isSet = false ;
+				}
+				break ;
+				
+			default :
+				// non supporté => skip
+				break ;
+			}
+			
+			crmFieldIndex++ ;
+		}
+		
 		return true ;
 	}
 

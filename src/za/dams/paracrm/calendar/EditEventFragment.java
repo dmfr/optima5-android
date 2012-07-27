@@ -10,10 +10,14 @@ import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.EditEventView.AccountRow;
+import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -50,6 +54,8 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	public boolean mShowModifyDialogOnLaunch = false;
 	private boolean mUseCustomActionBar = false ;
 	private boolean mSaveOnDetach = true;
+	
+	ProgressDialog mProgressDialog ;
 	
 	
 	private Runnable mOnDone = new Runnable(){
@@ -137,6 +143,65 @@ public class EditEventFragment extends Fragment implements EventHandler {
 			setModelIfDone() ;
 		}
 	}
+	private class EventSaveTask extends AsyncTask<Void, Void, Boolean> {
+    	protected void onPreExecute(){
+    		if( EditEventFragment.this.isAdded() ) {
+    		mProgressDialog = ProgressDialog.show(
+    				EditEventFragment.this.getActivity(),
+    	    		"Saving event",
+    	            "Please wait...",
+    	            true);
+    		}
+    	}
+		
+		protected Boolean doInBackground(Void... arg0) {
+			try{
+				Thread.sleep(1000) ;
+			}
+			catch(Exception e){
+			}
+			
+			if( !EditEventFragment.this.asyncCheckModel()  ) {
+				return false ;
+			}
+			EditEventFragment.this.asyncSaveModel() ;
+			return true ;
+		}
+		protected void onPostExecute(Boolean success) {
+			if( !EditEventFragment.this.isAdded() )
+				return ;
+			if( mProgressDialog != null ){
+				mProgressDialog.dismiss() ;
+			}
+			if( !success ) {
+	           	AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+	        	builder.setMessage("Event incomplete. Please Check")
+	        	       .setCancelable(false)
+	        	       .setIcon(android.R.drawable.stat_notify_error)
+	        	       .setTitle("Error")
+	        	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+	        	           public void onClick(DialogInterface dialog, int id) {
+	        	                dialog.cancel();
+	        	           }
+	        	       });
+	        	AlertDialog alert = builder.create();            
+	        	alert.show();
+	        	return ;
+			}
+			Activity a = EditEventFragment.this.getActivity() ;
+            if (a != null) {
+                a.finish();
+            }
+		}
+	}
+	private synchronized boolean asyncCheckModel(){
+		return mCrmCalendarManager.doneCheckModel(mModel) ;
+	}
+	private synchronized boolean asyncSaveModel(){
+		return true ;
+	}
+	
+	
 	private void startQuery() {
 		if( mLoadTask != null && !mLoadTask.isCancelled() ) {
 			mLoadTask.cancel(true) ;
@@ -280,34 +345,15 @@ public class EditEventFragment extends Fragment implements EventHandler {
     private boolean onActionBarItemSelected(int itemId) {
         switch (itemId) {
             case R.id.action_done:
-            	/*
-                if (EditEventHelper.canModifyEvent(mModel) || EditEventHelper.canRespond(mModel)) {
-                    if (mView != null && mView.prepareForSave()) {
-                        if (mModification == Utils.MODIFY_UNINITIALIZED) {
-                            mModification = Utils.MODIFY_ALL;
-                        }
-                        mOnDone.setDoneCode(Utils.DONE_SAVE | Utils.DONE_EXIT);
-                        mOnDone.run();
-                    } else {
-                        mOnDone.setDoneCode(Utils.DONE_REVERT);
-                        mOnDone.run();
-                    }
-                } else if (EditEventHelper.canAddReminders(mModel) && mModel.mId != -1
-                        && mOriginalModel != null && mView.prepareForSave()) {
-                    saveReminders();
-                    mOnDone.setDoneCode(Utils.DONE_EXIT);
-                    mOnDone.run();
-                } else {
-                    mOnDone.setDoneCode(Utils.DONE_REVERT);
-                    mOnDone.run();
-                }
-                */
+            	if(mView != null && mView.prepareForSave()) {
+            		new EventSaveTask().execute() ;
+            	}
                 break;
             case R.id.action_cancel:
-            	/*
-                mOnDone.setDoneCode(Utils.DONE_REVERT);
-                mOnDone.run();
-                */
+                Activity a = EditEventFragment.this.getActivity();
+                if (a != null) {
+                    a.finish();
+                }
                 break;
         }
         return true;
