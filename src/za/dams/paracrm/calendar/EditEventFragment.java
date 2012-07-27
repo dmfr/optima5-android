@@ -180,6 +180,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
         //mHelper = new EditEventHelper(activity, null);
         //mHandler = new QueryHandler(activity.getContentResolver());
         mModel = new CrmEventModel(activity, mIntent);
+        mCrmCalendarManager.populateModelEmpty(mModel) ;
         mInputMethodManager = (InputMethodManager)
                 activity.getSystemService(Context.INPUT_METHOD_SERVICE);
 

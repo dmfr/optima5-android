@@ -1,8 +1,10 @@
 package za.dams.paracrm.calendar;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
@@ -39,6 +41,7 @@ public class CrmCalendarManager {
 		public ArrayList<CrmFileFieldDesc> mCrmFields ;
 		
 		public boolean mAccountIsOn ;
+		public String mAccountTargetFileField ;
 		public String mAccountSrcBibleCode ;
 		
 		public CrmCalendarAccount(){
@@ -139,6 +142,10 @@ public class CrmCalendarManager {
     	mCrmAgendaInfos.mCrmFields = tFields ;
     	
     	
+    	// **** Examen de la config particulière de l'agenda 
+    	///       + suppression des crmFields spécifiques (start,end,account,...) 
+    	ArrayList<CrmFileFieldDesc> fieldsToRemove = new ArrayList<CrmFileFieldDesc>() ;
+    	
     	tmpCursor = mDb.rawQuery( String.format("SELECT * FROM define_file_cfg_calendar WHERE file_code='%s'",localFileCode ) ) ;
     	if( tmpCursor.getCount() == 1 ) {
     		tmpCursor.moveToNext() ;
@@ -149,15 +156,40 @@ public class CrmCalendarManager {
     			if( accCursor.getCount() == 1 ) {
     				accCursor.moveToNext() ;
     				mCrmAgendaInfos.mAccountSrcBibleCode = accCursor.getString(0) ;
+    				mCrmAgendaInfos.mAccountTargetFileField = accountFileField ;
     			}
     			else {
     				mCrmAgendaInfos.mAccountIsOn = false ;
     			}
     			accCursor.close() ;
+    			
+    			
+    			
+    			if( mCrmAgendaInfos.mAccountIsOn && mCrmAgendaInfos.mAccountTargetFileField != null ) {
+    				// ***** suppr du champ particulier des crmFields génériques ****
+    				for( CrmFileFieldDesc fd : tFields ) {
+    					if( fd.fieldCode.equals(mCrmAgendaInfos.mAccountTargetFileField) ) {
+    						fieldsToRemove.add(fd) ;
+    						break  ;
+    					}
+    				}
+    			}
     		}
     		
     	}
     	tmpCursor.close() ;
+    	
+    	/// Suppression des crmFields spécifiques (start,end,account,...) 
+    	int toRemove = fieldsToRemove.size() ;
+    	int removed = 0 ;
+    	for( CrmFileFieldDesc fdToRemove : fieldsToRemove ) {
+    		if( mCrmAgendaInfos.mCrmFields.remove(fdToRemove) ) {
+    			removed++ ;
+    		}
+    	}
+    	if( toRemove != removed ){
+    		Log.w(TAG,"Big problem !") ;
+    	}
 	}
 	
 	public boolean isValid() {
@@ -168,6 +200,25 @@ public class CrmCalendarManager {
 	}
 	public CrmCalendarAccount getCalendarInfos() {
 		return mCrmAgendaInfos ;
+	}
+	
+	
+	
+	
+	
+	public void populateModelEmpty( CrmEventModel crmEventModel ) {
+		crmEventModel.mCrmFields = new ArrayList<CrmFileFieldDesc>() ;
+		crmEventModel.mCrmValues = new ArrayList<CrmFileFieldValue>() ;
+		for( CrmFileFieldDesc fd : mCrmAgendaInfos.mCrmFields ) {
+			crmEventModel.mCrmFields.add(fd.clone()) ;
+			crmEventModel.mCrmValues.add(
+					new CrmFileFieldValue(fd.fieldType,
+							new Float(0),false,"",new Date(),
+							"",
+							false
+							)
+					) ;
+		}
 	}
 	
 

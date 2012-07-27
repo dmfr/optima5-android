@@ -37,11 +37,10 @@ public class CrmEventModel implements Serializable {
     public boolean mAllDay = false;
     public boolean mHalfDay = false;
     
-    public boolean mAccountIsOn = false ;
     public BibleHelper.BibleEntry mAccountEntry ;
     
     public ArrayList<CrmFileFieldDesc> mCrmFields ;
-    public HashMap<String,CrmFileFieldValue> mCrmData ;
+    public ArrayList<CrmFileFieldValue> mCrmValues ;
 
     
     public CrmEventModel() {

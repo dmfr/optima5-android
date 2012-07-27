@@ -1,35 +1,29 @@
 package za.dams.paracrm.calendar;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Formatter;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TimeZone;
 
 import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleCode;
 import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.R;
-import za.dams.paracrm.calendar.AccountSubscribeFragment.CalendarRow;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.app.DatePickerDialog.OnDateSetListener;
 import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
-import android.app.DatePickerDialog.OnDateSetListener;
 import android.app.TimePickerDialog.OnTimeSetListener;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.res.Resources;
 import android.database.Cursor;
-import android.graphics.drawable.shapes.RectShape;
-import android.provider.CalendarContract.Calendars;
-import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
@@ -38,18 +32,18 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
+import android.widget.LinearLayout;
 import android.widget.ListAdapter;
-import android.widget.ResourceCursorAdapter;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.AdapterView.OnItemSelectedListener;
 
 public class EditEventView implements View.OnClickListener, DialogInterface.OnCancelListener,
 	DialogInterface.OnClickListener, OnItemSelectedListener {
@@ -78,18 +72,13 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     Button mEndTimeButton;
     Button mTimezoneButton;
     View mTimezoneRow;
-    TextView mStartTimeHome;
-    TextView mStartDateHome;
-    TextView mEndTimeHome;
-    TextView mEndDateHome;
     CheckBox mAllDayCheckBox;
     Spinner mCalendarsSpinner;
     View mCalendarSelectorGroup;
     View mCalendarSelectorWrapper;
     View mCalendarStaticGroup;
     View mAllDayRow ;
-    
-    
+    ArrayList<View> mCrmFieldViews ;
     
     
     private String mTimezone ;
@@ -283,30 +272,49 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     
     private class BibleListener implements OnBibleSetListener {
         View mView;
+        int mCrmFieldIndex ;
 
-        public BibleListener(View view) {
+        public BibleListener(View view, int crmFieldIndex) {
+        	mCrmFieldIndex = crmFieldIndex ;
             mView = view;
         }
 
         @Override
         public void onBibleSet(BibleEntry be) {
-        	if( be == null ) {
-        		((Button)mView).setText("") ;
-        	}
-            Log.d(TAG, "onBibleSet: " + be.displayStr);
-            ((Button)mView).setText(be.displayStr) ;
+            if( be != null ) {
+            	Log.d(TAG, "onBibleSet: " + be.displayStr + " for field idx "+mCrmFieldIndex);
+            	((Button)mView).setText(be.displayStr) ;
+            	mModel.mCrmValues.get(mCrmFieldIndex).isSet = true ;
+            	mModel.mCrmValues.get(mCrmFieldIndex).displayStr = be.displayStr ;
+            	mModel.mCrmValues.get(mCrmFieldIndex).valueString = be.entryKey ;
+            }
+            else{
+            	((Button)mView).setText("") ;
+                mModel.mCrmValues.get(mCrmFieldIndex).displayStr = "" ;
+                mModel.mCrmValues.get(mCrmFieldIndex).valueString = "" ;
+            }
         }
     }
 	
     private class BibleClickListener implements View.OnClickListener {
-
-        public BibleClickListener() {
+    	BibleCode mBc ;
+    	int mCrmFieldIndex ;
+    	
+        public BibleClickListener( BibleCode bc, int crmFieldIndex ) {
+        	mBc = bc ;
+        	mCrmFieldIndex = crmFieldIndex ;
         }
 
         public void onClick(View v) {
         	FragmentTransaction ft = mActivity.getFragmentManager().beginTransaction();
         	
-            BiblePickerDialog bpd = new BiblePickerDialog(mActivity, new BibleListener(v), new BibleHelper.BibleCode("STORE"));
+        	ArrayList<BibleEntry> bibleConditions = null ;
+        	if( mModel.mAccountEntry != null ) {
+        		bibleConditions = new ArrayList<BibleEntry>() ;
+        		bibleConditions.add(mModel.mAccountEntry) ;
+        	}
+        	
+            BiblePickerDialog bpd = new BiblePickerDialog(mActivity, new BibleListener(v,mCrmFieldIndex), mBc,bibleConditions);
             //bpd.setTargetFragment(this, 0);
             //bpd.setCanceledOnTouchOutside(true);
             bpd.show(ft, "dialog") ;
@@ -520,14 +528,42 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mEndTimeButton.setOnClickListener(new TimeClickListener(mEndTime));
     }
     private void populateCrmFields() {
+    	// ***** Detach de toutes les fields CRM ****
+    	if( mCrmFieldViews != null ){
+    		for( View v : mCrmFieldViews ) {
+    			if( v.getParent() != null ) {
+    				((LinearLayout)v.getParent()).removeView(v);
+    			}
+    		}
+    		mCrmFieldViews.clear() ;
+    	}
+    	else {
+    		mCrmFieldViews = new ArrayList<View>();
+    	}
+    	// Fin du detach 
+    	
     	LayoutInflater inflater = mActivity.getLayoutInflater() ;
-    	
-    	// mViewgroupCrmFields.removeAllViews() ;
-    	
-    	View newView = inflater.inflate(R.layout.calendar_editevent_crmfield_bible,null) ;
-    	((TextView)newView.findViewById(R.id.crm_label)).setText("Pouet pouet pouet") ;
-    	((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener());
-    	mViewgroupTable.addView(newView) ;
+    	View newView ;
+    	int crmFieldsIndex = 0 ;
+    	for( CrmFileFieldDesc fd : mModel.mCrmFields ) {
+    		switch( fd.fieldType ) {
+    		case FIELD_BIBLE :
+    	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_bible,null) ;
+    	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
+    	    	((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	mCrmFieldViews.add(newView) ;
+    	    	mViewgroupTable.addView(newView) ;
+    			break ;
+    			
+    		default:
+    			newView = new View(mActivity);
+    			newView.setVisibility(View.GONE) ;
+    	    	mCrmFieldViews.add(newView) ;
+    	    	mViewgroupTable.addView(newView) ;
+    			break ;
+    		}
+    		crmFieldsIndex++ ;
+    	}
     }
     private void updateView(){
         mCalendarSelectorGroup.setVisibility(View.VISIBLE);
