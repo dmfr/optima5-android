@@ -8,13 +8,11 @@ import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleCode;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.R;
-import za.dams.paracrm.ui.BiblepickerFragment;
 import android.app.DialogFragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +24,7 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 
 public class BiblePickerDialog extends DialogFragment {
+	@SuppressWarnings("unused")
 	private static final String TAG = "Widget/BiblePickerDialog";
 	
     public interface OnBibleSetListener {
@@ -33,6 +32,7 @@ public class BiblePickerDialog extends DialogFragment {
     }
     
     private BibleCode mBibleCode ;
+    private ArrayList<BibleHelper.BibleEntry> mBibleConditions ;
     
 	private ArrayList<HashMap<String,Object>> mList ;
 	private ArrayList<BibleEntry> mEntries ;
@@ -44,6 +44,12 @@ public class BiblePickerDialog extends DialogFragment {
     public BiblePickerDialog( Context c, OnBibleSetListener listener, BibleCode bc ) {
     	mBibleCode = bc ;
     	mListener = listener ;
+    	mBibleConditions = null ;
+    }
+    public BiblePickerDialog( Context c, OnBibleSetListener listener, BibleCode bc, ArrayList<BibleHelper.BibleEntry> bibleConditions ) {
+    	mBibleCode = bc ;
+    	mListener = listener ;
+    	mBibleConditions = bibleConditions ;
     }
     
     
@@ -145,7 +151,7 @@ public class BiblePickerDialog extends DialogFragment {
     	final ArrayList<HashMap<String,Object>> mListNew = new ArrayList<HashMap<String,Object>>() ;
     	final ArrayList<BibleEntry> mEntriesNew = new ArrayList<BibleEntry>() ;
     	for( BibleHelper.BibleEntry bibleEntry : 
-    		bh.queryBible(mBibleCode.bibleCode, null, typedText, 25 ) ){
+    		bh.queryBible(mBibleCode.bibleCode, mBibleConditions, typedText, 25 ) ){
     		
     		HashMap<String,Object> mPoint = new HashMap<String,Object>() ;
     		mPoint.put("entry_key",bibleEntry.entryKey) ;
@@ -176,7 +182,7 @@ public class BiblePickerDialog extends DialogFragment {
     
     public void chooseItem( int position ) {
     	BibleEntry entry = mEntries.get(position) ;
-    	Log.w(TAG,"Selected "+entry.entryKey) ;
+    	// Log.w(TAG,"Selected "+entry.entryKey) ;
     	
     	if( mListener != null ){
     		mListener.onBibleSet(entry) ;
@@ -185,7 +191,7 @@ public class BiblePickerDialog extends DialogFragment {
     	getDialog().dismiss() ;
     }
     public void chooseNullItem() {
-    	Log.w(TAG,"Selected nothing") ;
+    	// Log.w(TAG,"Selected nothing") ;
     	if( mListener != null ){
     		mListener.onBibleSet(null) ;
     	}
