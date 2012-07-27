@@ -2,30 +2,51 @@ package za.dams.paracrm.calendar;
 
 import java.util.Calendar;
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
+
+import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.AccountSubscribeFragment.CalendarRow;
+import za.dams.paracrm.widget.BiblePickerDialog;
+import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog.OnDateSetListener;
 import android.app.TimePickerDialog.OnTimeSetListener;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.res.Resources;
 import android.database.Cursor;
+import android.graphics.drawable.shapes.RectShape;
+import android.provider.CalendarContract.Calendars;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
+import android.widget.ListAdapter;
+import android.widget.ResourceCursorAdapter;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.AdapterView.OnItemSelectedListener;
@@ -48,6 +69,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     private Time mStartTime;
     private Time mEndTime;
     
+    ViewGroup mViewgroupTable ;
     TextView mLoadingMessage;
     ScrollView mScrollView;
     Button mStartDateButton;
@@ -61,9 +83,14 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     TextView mEndTimeHome;
     TextView mEndDateHome;
     CheckBox mAllDayCheckBox;
+    Spinner mCalendarsSpinner;
+    View mCalendarSelectorGroup;
+    View mCalendarSelectorWrapper;
+    View mCalendarStaticGroup;
+    View mAllDayRow ;
     
-    View mStartHomeGroup;
-    View mEndHomeGroup;
+    
+    
     
     private String mTimezone ;
     
@@ -71,8 +98,32 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     private static Formatter mF = new Formatter(mSB, Locale.getDefault());
 	
 	public EditEventView(Activity activity, View view, Runnable done) {
+        mActivity = activity;
+        mView = view;
+        mDone = done;
+        
+        // System timezone
 		mTimezone = Utils.getTimeZone(mActivity, null); 
 		
+        // cache top level view elements
+        mLoadingMessage = (TextView) view.findViewById(R.id.loading_message);
+        mScrollView = (ScrollView) view.findViewById(R.id.scroll_view);
+
+        // cache all the widgets
+        mViewgroupTable = (ViewGroup)view.findViewById(R.id.calendar_editevent_table);
+        
+        mCalendarsSpinner = (Spinner) view.findViewById(R.id.calendars_spinner);
+        mStartDateButton = (Button) view.findViewById(R.id.start_date);
+        mEndDateButton = (Button) view.findViewById(R.id.end_date);
+        mStartTimeButton = (Button) view.findViewById(R.id.start_time);
+        mEndTimeButton = (Button) view.findViewById(R.id.end_time);
+        mCalendarSelectorGroup = view.findViewById(R.id.calendar_selector_group);
+        mCalendarSelectorWrapper = view.findViewById(R.id.calendar_selector_wrapper);
+        mCalendarStaticGroup = view.findViewById(R.id.calendar_group);
+        mAllDayRow = view.findViewById(R.id.all_day_row);
+        
+        mStartTime = new Time(mTimezone);
+        mEndTime = new Time(mTimezone);
 	}
 	
 	
@@ -124,7 +175,6 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             setDate(mEndDateButton, endMillis);
             setTime(mStartTimeButton, startMillis);
             setTime(mEndTimeButton, endMillis);
-            updateHomeTime();
         }
     }
 
@@ -201,8 +251,6 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             setDate(mStartDateButton, startMillis);
             setDate(mEndDateButton, endMillis);
             setTime(mEndTimeButton, endMillis); // In case end time had to be
-            // reset
-            updateHomeTime(); 
         }
     }
 	
@@ -232,6 +280,132 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             dpd.show();
         }
     }
+    
+    private class BibleListener implements OnBibleSetListener {
+        View mView;
+
+        public BibleListener(View view) {
+            mView = view;
+        }
+
+        @Override
+        public void onBibleSet(BibleEntry be) {
+        	if( be == null ) {
+        		((Button)mView).setText("") ;
+        	}
+            Log.d(TAG, "onBibleSet: " + be.displayStr);
+            ((Button)mView).setText(be.displayStr) ;
+        }
+    }
+	
+    private class BibleClickListener implements View.OnClickListener {
+
+        public BibleClickListener() {
+        }
+
+        public void onClick(View v) {
+        	FragmentTransaction ft = mActivity.getFragmentManager().beginTransaction();
+        	
+            BiblePickerDialog bpd = new BiblePickerDialog(mActivity, new BibleListener(v), new BibleHelper.BibleCode("STORE"));
+            //bpd.setTargetFragment(this, 0);
+            //bpd.setCanceledOnTouchOutside(true);
+            bpd.show(ft, "dialog") ;
+        }
+    }
+    
+    
+	public static class AccountRow {
+		String id;
+		String displayName;
+		int color;
+		boolean synced;
+		boolean originalSynced;
+		BibleHelper.BibleEntry be ;
+	}
+    private class AccountsAdapter extends BaseAdapter
+    	implements ListAdapter {
+
+    	private LayoutInflater mInflater;
+    	private static final int LAYOUT = R.layout.calendar_accounts_dropdown_item;
+    	private AccountRow[] mData;
+    	private int mRowCount = 0;
+
+
+    	public AccountsAdapter(Context context, AccountRow[] accountRows ) {
+    		super();
+    		initData(accountRows);
+    		mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    	}
+
+    	private void initData(AccountRow[] accountRows) {
+    		if (accountRows == null) {
+    			mRowCount = 0;
+    			mData = null;
+    			return;
+    		}
+    		mRowCount = accountRows.length ;
+     		mData = accountRows ;
+    	}
+
+    	@Override
+    	public View getView(int position, View convertView, ViewGroup parent) {
+    		if (position >= mRowCount) {
+    			return null;
+    		}
+     		int color = Utils.getDisplayColorFromColor(mData[position].color);
+    		View view;
+    		if (convertView == null) {
+    			view = mInflater.inflate(LAYOUT, parent, false);
+    		} else {
+    			view = convertView;
+    		}
+    		
+            View colorBar = view.findViewById(R.id.color);
+            if (colorBar != null) {
+                colorBar.setBackgroundColor(color);
+            }
+
+            TextView name = (TextView) view.findViewById(R.id.calendar_name);
+            if (name != null) {
+                name.setText(mData[position].displayName);
+
+                TextView accountName = (TextView) view.findViewById(R.id.account_name);
+                if (accountName != null) {
+                    accountName.setText(mData[position].displayName);
+                    accountName.setVisibility(TextView.VISIBLE);
+                }
+            }
+
+    		view.setTag(mData[position]);
+
+    		return view;
+    	}
+
+    	@Override
+    	public int getCount() {
+    		return mRowCount;
+    	}
+
+    	@Override
+    	public Object getItem(int position) {
+    		if (position >= mRowCount) {
+    			return null;
+    		}
+    		AccountRow item = mData[position];
+    		return item;
+    	}
+
+    	@Override
+    	public long getItemId(int position) {
+    		if (position >= mRowCount) {
+    			return 0;
+    		}
+    		return position ;
+    	}
+    }
+   
+    
+    
     
     private void setDate(TextView view, long millis) {
         int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR
@@ -278,73 +452,6 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     }
 	
     /**
-     * Checks if the start and end times for this event should be displayed in
-     * the Calendar app's time zone as well and formats and displays them.
-     */
-    private void updateHomeTime() {
-        String tz = Utils.getTimeZone(mActivity, null);
-        if (!mAllDayCheckBox.isChecked() && !TextUtils.equals(tz, mTimezone) ) {
-                //&& mModification != EditEventHelper.MODIFY_UNINITIALIZED) {
-            int flags = DateUtils.FORMAT_SHOW_TIME;
-            boolean is24Format = DateFormat.is24HourFormat(mActivity);
-            if (is24Format) {
-                flags |= DateUtils.FORMAT_24HOUR;
-            }
-            long millisStart = mStartTime.toMillis(false);
-            long millisEnd = mEndTime.toMillis(false);
-
-            boolean isDSTStart = mStartTime.isDst != 0;
-            boolean isDSTEnd = mEndTime.isDst != 0;
-
-            // First update the start date and times
-            String tzDisplay = TimeZone.getTimeZone(tz).getDisplayName(
-                    isDSTStart, TimeZone.SHORT, Locale.getDefault());
-            StringBuilder time = new StringBuilder();
-
-            mSB.setLength(0);
-            time.append(DateUtils
-                    .formatDateRange(mActivity, mF, millisStart, millisStart, flags, tz))
-                    .append(" ").append(tzDisplay);
-            mStartTimeHome.setText(time.toString());
-
-            flags = DateUtils.FORMAT_ABBREV_ALL | DateUtils.FORMAT_SHOW_DATE
-                    | DateUtils.FORMAT_SHOW_YEAR | DateUtils.FORMAT_SHOW_WEEKDAY;
-            mSB.setLength(0);
-            mStartDateHome
-                    .setText(DateUtils.formatDateRange(
-                            mActivity, mF, millisStart, millisStart, flags, tz).toString());
-
-            // Make any adjustments needed for the end times
-            if (isDSTEnd != isDSTStart) {
-                tzDisplay = TimeZone.getTimeZone(tz).getDisplayName(
-                        isDSTEnd, TimeZone.SHORT, Locale.getDefault());
-            }
-            flags = DateUtils.FORMAT_SHOW_TIME;
-            if (is24Format) {
-                flags |= DateUtils.FORMAT_24HOUR;
-            }
-
-            // Then update the end times
-            time.setLength(0);
-            mSB.setLength(0);
-            time.append(DateUtils.formatDateRange(
-                    mActivity, mF, millisEnd, millisEnd, flags, tz)).append(" ").append(tzDisplay);
-            mEndTimeHome.setText(time.toString());
-
-            flags = DateUtils.FORMAT_ABBREV_ALL | DateUtils.FORMAT_SHOW_DATE
-                    | DateUtils.FORMAT_SHOW_YEAR | DateUtils.FORMAT_SHOW_WEEKDAY;
-            mSB.setLength(0);
-            mEndDateHome.setText(DateUtils.formatDateRange(
-                            mActivity, mF, millisEnd, millisEnd, flags, tz).toString());
-
-            mStartHomeGroup.setVisibility(View.VISIBLE);
-            mEndHomeGroup.setVisibility(View.VISIBLE);
-        } else {
-            mStartHomeGroup.setVisibility(View.GONE);
-            mEndHomeGroup.setVisibility(View.GONE);
-        }
-    }
-    /**
      * Configures the Calendars (Accounts) spinner.  This is only done for new events, because only new
      * events allow you to select a calendar while editing an event.
      * <p>
@@ -352,53 +459,14 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
      * we can easily extract calendar-specific values when the value changes (the spinner's
      * onItemSelected callback is configured).
      */
-    public void setCalendarsCursor(Cursor cursor, boolean userVisible) {
-    	/*
-        // If there are no syncable calendars, then we cannot allow
-        // creating a new event.
-        mCalendarsCursor = cursor;
-        if (cursor == null || cursor.getCount() == 0) {
-            // Cancel the "loading calendars" dialog if it exists
-            if (mSaveAfterQueryComplete) {
-                mLoadingCalendarsDialog.cancel();
-            }
-            if (!userVisible) {
-                return;
-            }
-            // Create an error message for the user that, when clicked,
-            // will exit this activity without saving the event.
-            AlertDialog.Builder builder = new AlertDialog.Builder(mActivity);
-            builder.setTitle(R.string.no_syncable_calendars).setIconAttribute(
-                    android.R.attr.alertDialogIcon).setMessage(R.string.no_calendars_found)
-                    .setPositiveButton(R.string.add_account, this)
-                    .setNegativeButton(android.R.string.no, this).setOnCancelListener(this);
-            mNoCalendarsDialog = builder.show();
-            return;
-        }
-
-        int defaultCalendarPosition = findDefaultCalendarPosition(cursor);
-
+    public void setAccountsData( AccountRow[] accountRows ) {
+    	Log.w(TAG,"Spinner size = "+accountRows.length ) ;
+    	
         // populate the calendars spinner
-        CalendarsAdapter adapter = new CalendarsAdapter(mActivity, cursor);
+        AccountsAdapter adapter = new AccountsAdapter(mActivity, accountRows);
         mCalendarsSpinner.setAdapter(adapter);
-        mCalendarsSpinner.setSelection(defaultCalendarPosition);
+        // mCalendarsSpinner.setSelection(defaultCalendarPosition);
         mCalendarsSpinner.setOnItemSelectedListener(this);
-
-        if (mSaveAfterQueryComplete) {
-            mLoadingCalendarsDialog.cancel();
-            if (prepareForSave() && fillModelFromUI()) {
-                int exit = userVisible ? Utils.DONE_EXIT : 0;
-                mDone.setDoneCode(Utils.DONE_SAVE | exit);
-                mDone.run();
-            } else if (userVisible) {
-                mDone.setDoneCode(Utils.DONE_EXIT);
-                mDone.run();
-            } else if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "SetCalendarsCursor:Save failed and unable to exit view");
-            }
-            return;
-        }
-        */
     }
     
     public void setModel(CrmEventModel model) {
@@ -413,10 +481,58 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             return;
         }
         
+        long begin = model.mStart;
+        long end = model.mEnd;
+        // Set up the starting times
+        if (begin > 0) {
+            mStartTime.timezone = mTimezone;
+            mStartTime.set(begin);
+            mStartTime.normalize(true);
+        }
+        if (end > 0) {
+            mEndTime.timezone = mTimezone;
+            mEndTime.set(end);
+            mEndTime.normalize(true);
+        }
+        
+        populateWhen();
+        populateCrmFields() ;
+        updateView();
         mScrollView.setVisibility(View.VISIBLE);
         mLoadingMessage.setVisibility(View.GONE);
+        mAllDayRow.setVisibility(View.GONE);
     }
     
+    // Fills in the date and time fields
+    private void populateWhen() {
+        long startMillis = mStartTime.toMillis(false /* use isDst */);
+        long endMillis = mEndTime.toMillis(false /* use isDst */);
+        setDate(mStartDateButton, startMillis);
+        setDate(mEndDateButton, endMillis);
+
+        setTime(mStartTimeButton, startMillis);
+        setTime(mEndTimeButton, endMillis);
+
+        mStartDateButton.setOnClickListener(new DateClickListener(mStartTime));
+        mEndDateButton.setOnClickListener(new DateClickListener(mEndTime));
+
+        mStartTimeButton.setOnClickListener(new TimeClickListener(mStartTime));
+        mEndTimeButton.setOnClickListener(new TimeClickListener(mEndTime));
+    }
+    private void populateCrmFields() {
+    	LayoutInflater inflater = mActivity.getLayoutInflater() ;
+    	
+    	// mViewgroupCrmFields.removeAllViews() ;
+    	
+    	View newView = inflater.inflate(R.layout.calendar_editevent_crmfield_bible,null) ;
+    	((TextView)newView.findViewById(R.id.crm_label)).setText("Pouet pouet pouet") ;
+    	((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener());
+    	mViewgroupTable.addView(newView) ;
+    }
+    private void updateView(){
+        mCalendarSelectorGroup.setVisibility(View.VISIBLE);
+        mCalendarStaticGroup.setVisibility(View.GONE);
+    }
 	
 	
 	public boolean prepareForSave(){
@@ -424,10 +540,12 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	}
 
 	@Override
-	public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2,
-			long arg3) {
-		// TODO Auto-generated method stub
-		
+	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+		if( parent == mCalendarsSpinner ) {
+			if( view.getTag() != null ) {
+				mModel.mAccountEntry = ((AccountRow)view.getTag()).be ;
+			}
+		}
 	}
 
 	@Override

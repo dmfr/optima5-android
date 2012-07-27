@@ -47,7 +47,7 @@ public class EditEventActivity extends Activity {
     // ******** Fields for PARACRM ********
     private static final String BUNDLE_KEY_CRM_ID = "crmId";
     private int mCrmInputId ;
-    
+    private CrmCalendarManager mCrmCalendarManager ;
     
     @Override
     protected void onCreate(Bundle icicle) {
@@ -56,6 +56,8 @@ public class EditEventActivity extends Activity {
 
         if (getIntent() != null && getIntent().getExtras().containsKey(BUNDLE_KEY_CRM_ID)) {
         	mCrmInputId = getIntent().getExtras().getInt(BUNDLE_KEY_CRM_ID);
+        	Log.w(TAG,"Creating CrmCalendarManager") ;
+        	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
         }
         
         mEventInfo = getEventInfoFromIntent(icicle);
@@ -85,8 +87,11 @@ public class EditEventActivity extends Activity {
                 intent = getIntent();
             }
 
+            Log.w(TAG,"Creating fragment") ;
             mEditFragment = new EditEventFragment(mEventInfo, false, intent);
-
+            
+            mEditFragment.setCrmCalendarManager( mCrmCalendarManager ) ;
+            
             mEditFragment.mShowModifyDialogOnLaunch = getIntent().getBooleanExtra(
                     CalendarController.EVENT_EDIT_ON_LAUNCH, false);
 

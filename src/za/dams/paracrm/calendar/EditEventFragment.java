@@ -1,17 +1,25 @@
 package za.dams.paracrm.calendar;
 
 
+import java.util.List;
+import java.util.Map;
+
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
+import za.dams.paracrm.calendar.EditEventView.AccountRow;
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.CalendarContract.Events;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -30,6 +38,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	private Intent mIntent ;
 	
 	private Activity mContext;
+	private CrmCalendarManager mCrmCalendarManager ;
 	
 	CrmEventModel mModel;
 	EditEventView mView;
@@ -52,7 +61,75 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	private class EventLoadTask extends AsyncTask<Void, Void, Void> {
 		protected Void doInBackground(Void... arg0) {
 			
+	        if (mEvent != null) {
+	            if (mEvent.id != -1) {
+	            	/*
+	                mModel.mId = mEvent.id;
+	                mUri = ContentUris.withAppendedId(Events.CONTENT_URI, mEvent.id);
+	                */
+	            } else {
+	                // New event. All day?
+	                mModel.mAllDay = (mEvent.extraLong == CalendarController.EXTRA_CREATE_ALL_DAY);
+	            }
+	            if (mEvent.startTime != null) {
+	            	mModel.mStart = mEvent.startTime.toMillis(true);
+	            }
+	            if (mEvent.endTime != null) {
+	            	mModel.mEnd = mEvent.endTime.toMillis(true);
+	            }
+	        }/* else if (mEventBundle != null) {
+	            if (mEventBundle.id != -1) {
+	                mModel.mId = mEventBundle.id;
+	                mUri = ContentUris.withAppendedId(Events.CONTENT_URI, mEventBundle.id);
+	            }
+	            mBegin = mEventBundle.start;
+	            mEnd = mEventBundle.end;
+	        }*/
+	        if (mModel.mStart <= 0) {
+	            // use a default value instead
+	        	// mModel.mStart = mHelper.constructDefaultStartTime(System.currentTimeMillis());
+	        }
+	        if (mModel.mEnd < mModel.mStart) {
+	            // use a default value instead
+	        	mModel.mEnd = mModel.mStart + DateUtils.HOUR_IN_MILLIS ;
+	        }
+ 
+	        
 			
+			if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
+				BibleHelper bh = new BibleHelper(mContext) ;
+				List<BibleHelper.BibleEntry> entries = bh.queryBible(mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode) ;
+
+				String calendarFileCode = mCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode ;
+				Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), calendarFileCode) ;
+
+	    		int mRowCount = 0 ;
+	    		for (BibleHelper.BibleEntry be : entries) {
+	    			if( !presets.containsKey(be.entryKey) ) {
+	    				continue ;
+	    			}
+	    			mRowCount++ ;
+	    		}
+	    		AccountRow[] accountRows = new AccountRow[mRowCount];
+	    		int p = 0;
+	    		for (BibleHelper.BibleEntry be : entries) {
+	    			if( !presets.containsKey(be.entryKey) ) {
+	    				continue ;
+	    			}
+	    			accountRows[p] = new AccountRow();
+	    			accountRows[p].id = be.entryKey ;
+	    			//mData[p].color = Color.BLUE ;
+	    			accountRows[p].displayName = be.displayStr ;
+	    			accountRows[p].color = presets.get(be.entryKey).intValue() ;
+	    			accountRows[p].originalSynced = true ;
+	    			accountRows[p].synced = true ;
+	    			accountRows[p].be = be ;
+	    			p++ ;
+	    		}
+
+				
+				mView.setAccountsData( accountRows ) ;
+			}
 			
 			return null;
 		}
@@ -73,12 +150,15 @@ public class EditEventFragment extends Fragment implements EventHandler {
     }
 
     public EditEventFragment(EventInfo event, boolean readOnly, Intent intent) {
+    	// mCrmCalendarManager = crmCalendarManager ;
         mEvent = event;
         mIsReadOnly = readOnly;
         mIntent = intent;
         setHasOptionsMenu(true);
     }
-    
+    public void setCrmCalendarManager( CrmCalendarManager crmCalendarManager ){
+    	mCrmCalendarManager = crmCalendarManager ;
+    }
     
     private void setModelIfDone() {
         synchronized (this) {
@@ -91,6 +171,11 @@ public class EditEventFragment extends Fragment implements EventHandler {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         mContext = activity;
+        
+        if( mCrmCalendarManager == null || !mCrmCalendarManager.isValid() ) {
+        	Log.e(TAG,"CrmCalendarManager missing or invalid !") ;
+        	mCrmCalendarManager.isValid() ;
+        }
 
         //mHelper = new EditEventHelper(activity, null);
         //mHandler = new QueryHandler(activity.getContentResolver());

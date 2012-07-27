@@ -683,6 +683,7 @@ public class CalendarController {
         intent.putExtra("EXTRA_EVENT_BEGIN_TIME", startMillis);
         intent.putExtra("EXTRA_EVENT_END_TIME", endMillis);
         intent.putExtra("EXTRA_EVENT_ALL_DAY", allDayEvent);
+        intent.putExtra(BUNDLE_KEY_CRM_ID, mCrmInputId);
         mEventId = -1;
         mContext.startActivity(intent);
     }
