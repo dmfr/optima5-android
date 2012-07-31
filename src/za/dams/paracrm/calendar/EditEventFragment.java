@@ -198,7 +198,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
 		return mCrmCalendarManager.doneCheckModel(mModel) ;
 	}
 	private synchronized boolean asyncSaveModel(){
-		return true ;
+		return mCrmCalendarManager.doneSaveModel(mModel) ;
 	}
 	
 	

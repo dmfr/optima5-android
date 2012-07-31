@@ -240,6 +240,16 @@ public class CrmCalendarManager {
 		
 		return true ;
 	}
+	public boolean doneSaveModel( CrmEventModel crmEventModel ) {
+		
+		// ***** Revue de tous les champs à partir du define *****
+		
+		
+		
+		
+		
+		return true ;
+	}
 	
 
 }
