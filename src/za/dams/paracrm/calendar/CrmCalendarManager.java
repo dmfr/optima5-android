@@ -37,7 +37,7 @@ public class CrmCalendarManager {
 		public CrmCalendarInput( int crmInputId, String crmAgendaId, String crmAgendaLib ) {
 			mCrmInputId = crmInputId ;
 			mCrmAgendaId = crmAgendaId ;
-			mCrmAgendaId = crmAgendaLib ;
+			mCrmAgendaLib = crmAgendaLib ;
 		}
 	}
 	public static class CrmCalendarAccount {
