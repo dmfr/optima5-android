@@ -1,6 +1,8 @@
 package za.dams.paracrm.calendar;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -9,6 +11,7 @@ import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
@@ -22,6 +25,9 @@ public class CrmCalendarManager {
 	private String mCrmAgendaFileCode ;
 	private CrmCalendarAccount mCrmAgendaInfos ;
 	
+	public enum CalendarField {
+		CALFIELD_START, CALFIELD_END, CALFIELD_ACCOUNT
+	}
 	public static class CrmCalendarInput {
 		public int mCrmInputId ;
 		public String mCrmAgendaId ;
@@ -241,10 +247,133 @@ public class CrmCalendarManager {
 		return true ;
 	}
 	public boolean doneSaveModel( CrmEventModel crmEventModel ) {
+		String localFileCode = mCrmAgendaFileCode ;
 		
+		Cursor tmpCursor ;
+		
+		// ***** Catalogue des champs spéciaux *****
+		HashMap<String,CalendarField> calFields = null ;
+		
+    	tmpCursor = mDb.rawQuery( String.format("SELECT * FROM define_file_cfg_calendar WHERE file_code='%s'",localFileCode ) ) ;
+    	if( tmpCursor.getCount() == 1 ) {
+    		tmpCursor.moveToNext() ;
+    		calFields = new HashMap<String,CalendarField>() ;
+    		
+    		// startdate
+    		String startField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstart_filefield")) ;
+    		if( !startField.equals("") ) {
+    			calFields.put(startField, CalendarField.CALFIELD_START) ;
+    		}
+    		// enddate
+    		String endField = tmpCursor.getString(tmpCursor.getColumnIndex("eventend_filefield")) ;
+    		if( !endField.equals("") ) {
+    			calFields.put(endField, CalendarField.CALFIELD_END) ;
+    		}
+    		// account
+    		String accountOn = tmpCursor.getString(tmpCursor.getColumnIndex("account_is_on")) ;
+    		String accountField = tmpCursor.getString(tmpCursor.getColumnIndex("account_filefield")) ;
+    		if( accountOn.equals("O") && !accountField.equals("") ) {
+    			calFields.put(accountField, CalendarField.CALFIELD_ACCOUNT) ;
+    		}
+    	}
+    	tmpCursor.close() ;
+    	
+    	if( calFields == null ) {
+    		return false ;
+    	}
+    	if( !calFields.values().contains(CalendarField.CALFIELD_START) 
+    			|| !calFields.values().contains(CalendarField.CALFIELD_END) ){
+    		return false ;
+    	}
+    	
+    	Log.w(TAG,"Saving !!!") ;
+    	ContentValues cv ;
+    	
+    	// **** Entete fichier ***** 
+    	cv = new ContentValues() ;
+		cv.put("file_code", localFileCode);
+		long currentFileId = mDb.insert("store_file", cv);
+    	
+    	
 		// ***** Revue de tous les champs à partir du define *****
-		
-		
+		tmpCursor = mDb.rawQuery( String.format("SELECT * FROM define_file_entry WHERE file_code='%s' ORDER BY entry_field_index",localFileCode ) ) ;
+		while( tmpCursor.moveToNext() ) {
+			String fileFieldCode = tmpCursor.getString(tmpCursor.getColumnIndex("entry_field_code")) ;
+			if( calFields.containsKey(fileFieldCode) ) {
+				switch( calFields.get(fileFieldCode) ) {
+				case CALFIELD_START :
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
+					Calendar tmpDate = Calendar.getInstance() ;
+					tmpDate.setTimeInMillis(crmEventModel.mStart) ;
+					cv = new ContentValues() ;
+					cv.put("filerecord_id", currentFileId);
+					cv.put("filerecord_field_code", fileFieldCode);
+					cv.put("filerecord_field_value_date",sdf.format(tmpDate.getTime())) ;
+					mDb.insert("store_file_field", cv);
+					break ;
+				case CALFIELD_END :
+					SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss") ;
+					Calendar tmpDateEnd = Calendar.getInstance() ;
+					tmpDateEnd.setTimeInMillis(crmEventModel.mEnd) ;
+					cv = new ContentValues() ;
+					cv.put("filerecord_id", currentFileId);
+					cv.put("filerecord_field_code", fileFieldCode);
+					cv.put("filerecord_field_value_date",sdf2.format(tmpDateEnd.getTime())) ;
+					mDb.insert("store_file_field", cv);
+					break ;
+				case CALFIELD_ACCOUNT :
+					cv = new ContentValues() ;
+					cv.put("filerecord_id", currentFileId);
+					cv.put("filerecord_field_code", fileFieldCode);
+					cv.put("filerecord_field_value_link",crmEventModel.mAccountEntry.entryKey) ;
+					mDb.insert("store_file_field", cv);
+					break ;
+				}
+				continue ;
+			}
+			
+			
+			CrmFileFieldValue fv = null ;
+			int fieldIdx = -1 ;
+			for( CrmFileFieldDesc fd : crmEventModel.mCrmFields ) {
+				fieldIdx++ ;
+				if( fd.fieldCode.equals(fileFieldCode) ) {
+					fv = crmEventModel.mCrmValues.get(fieldIdx) ;
+					break ;
+				}
+			}
+			if( fv == null ) { // rien trouvé 
+				cv = new ContentValues() ;
+				cv.put("filerecord_id", currentFileId);
+				cv.put("filerecord_field_code", fileFieldCode);
+				mDb.insert("store_file_field", cv);
+				continue ;
+			}
+			
+			
+			cv = new ContentValues() ;
+			cv.put("filerecord_id", currentFileId);
+			cv.put("filerecord_field_code", fileFieldCode);
+			switch(fv.fieldType) {
+			case FIELD_BIBLE :
+				cv.put("filerecord_field_value_link", fv.valueString);
+				break ;
+			case FIELD_DATE :
+			case FIELD_DATETIME :
+				SimpleDateFormat sdf3 = new SimpleDateFormat("yyyy-MM-dd HH:mm") ;
+				cv.put("filerecord_field_value_date", sdf3.format(fv.valueDate)+":00");
+				break ;
+			case FIELD_NUMBER :
+				cv.put("filerecord_field_value_number", fv.valueFloat);
+				break ;
+			case FIELD_TEXT :
+				cv.put("filerecord_field_value_string", fv.valueString);
+				break ;
+			default :
+				break ;
+			}
+			mDb.insert("store_file_field", cv);
+		}
 		
 		
 		
