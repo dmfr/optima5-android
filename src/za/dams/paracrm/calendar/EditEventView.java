@@ -591,7 +591,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	
 	
 	public boolean prepareForSave(){
-		Log.w(TAG,"Prepare for save !!") ;
+		// Log.w(TAG,"Prepare for save !!") ;
 		fillModelFromUI() ;
 		return true ;
 	}
