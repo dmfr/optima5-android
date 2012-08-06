@@ -86,11 +86,16 @@ public class UploadService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		isRunning = true ;
 		
+		/*
 		Log.w("UploadService", "Received start id " + startId + ": " + intent);
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
 		new UploadTask().execute() ;
 		return START_STICKY;
+		*/
+    	isRunning = false ;
+    	UploadService.this.stopSelf() ;
+    	return START_STICKY;
 	}
 	
 	
