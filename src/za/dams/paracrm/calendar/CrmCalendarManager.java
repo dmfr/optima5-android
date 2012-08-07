@@ -1,10 +1,13 @@
 package za.dams.paracrm.calendar;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
@@ -14,6 +17,7 @@ import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.text.format.Time;
 import android.util.Log;
 
 public class CrmCalendarManager {
@@ -43,6 +47,9 @@ public class CrmCalendarManager {
 	public static class CrmCalendarAccount {
 		public String mCrmAgendaFilecode ;
 		public String mCrmAgendaLib ;
+		
+		public String mEventStartFileField ;
+		public String mEventEndFileField ;
 		
 		public ArrayList<CrmFileFieldDesc> mCrmFields ;
 		
@@ -111,7 +118,7 @@ public class CrmCalendarManager {
 		
 		
 		ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
-		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
+		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible, entry_field_is_highlight " +
 				"FROM define_file_entry " +
 				"WHERE file_code='%s' ORDER BY entry_field_index",
 				localFileCode) ) ;
@@ -138,7 +145,7 @@ public class CrmCalendarManager {
     		
     		
     		tFields.add( new CrmFileFieldDesc( tFieldType, tmpCursor.getString(3),
-    				tmpCursor.getString(1) , tmpCursor.getString(2) , false, false ) ) ;
+    				tmpCursor.getString(1) , tmpCursor.getString(2) , tmpCursor.getString(4).equals("O")?true:false ) ) ;
     	}
     	tmpCursor.close() ;
     	
@@ -182,6 +189,9 @@ public class CrmCalendarManager {
     			}
     		}
     		
+    		
+    		mCrmAgendaInfos.mEventStartFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstart_filefield"));
+    		mCrmAgendaInfos.mEventEndFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventend_filefield"));
     	}
     	tmpCursor.close() ;
     	
@@ -225,6 +235,72 @@ public class CrmCalendarManager {
 							)
 					) ;
 		}
+	}
+	public void populateModelLoad( CrmEventModel crmEventModel, int filerecordId ) {
+		class StoreFileFieldRecord {
+			public String fieldCode ;
+			public float valueNumber ;
+			public String valueString ;
+			public String valueDate ;
+			public String valueLink ;
+			
+			public StoreFileFieldRecord(){
+				
+			}
+		}
+		
+		Cursor tCursor ;
+		
+		tCursor = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_id='%d'", mCrmAgendaInfos.mCrmAgendaFilecode,filerecordId));
+		if( tCursor.getCount() != 1 ) {
+			tCursor.close() ;
+			return ;
+		}
+		tCursor.close() ;
+		
+		HashMap<String,StoreFileFieldRecord> fields = new HashMap<String,StoreFileFieldRecord>() ;
+		tCursor = mDb.rawQuery(String.format("SELECT * FROM store_file_field WHERE filerecord_id='%d'", filerecordId));
+		while( tCursor.moveToNext() ) {
+			StoreFileFieldRecord field = new StoreFileFieldRecord() ;
+			field.fieldCode = tCursor.getString(tCursor.getColumnIndex("filerecord_field_code")) ;
+			field.valueNumber = tCursor.getFloat(tCursor.getColumnIndex("filerecord_field_value_number")) ;
+			field.valueString = tCursor.getString(tCursor.getColumnIndex("filerecord_field_value_string")) ;
+			field.valueDate = tCursor.getString(tCursor.getColumnIndex("filerecord_field_value_date")) ;
+			field.valueLink = tCursor.getString(tCursor.getColumnIndex("filerecord_field_value_link")) ;
+			
+			fields.put(field.fieldCode, field) ;
+		}
+		tCursor.close() ;
+		
+		SimpleDateFormat datetimeParser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		crmEventModel.mCrmFileCode = mCrmAgendaInfos.mCrmAgendaFilecode ;
+		crmEventModel.mCalendarId = filerecordId ;
+		crmEventModel.mCrmFileId = filerecordId ;
+		if( fields.containsKey(mCrmAgendaInfos.mEventStartFileField) ) {
+			try {
+				Calendar startDate = Calendar.getInstance() ;
+				startDate.setTime( datetimeParser.parse(fields.get(mCrmAgendaInfos.mEventStartFileField).valueDate) ) ;
+				crmEventModel.mStart = startDate.getTimeInMillis() ;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+			}
+		}
+		if( fields.containsKey(mCrmAgendaInfos.mEventEndFileField) ) {
+			try {
+				Calendar endDate = Calendar.getInstance() ;
+				endDate.setTime( datetimeParser.parse(fields.get(mCrmAgendaInfos.mEventEndFileField).valueDate) ) ;
+				crmEventModel.mEnd = endDate.getTimeInMillis() ;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+			}
+		}
+		
+		Log.w(TAG,"Load, start is "+crmEventModel.mStart) ;
+		Log.w(TAG,"Load, end is "+crmEventModel.mEnd) ;
+		
 	}
 	
 	
@@ -286,7 +362,7 @@ public class CrmCalendarManager {
     		return false ;
     	}
     	
-    	Log.w(TAG,"Saving !!!") ;
+    	//Log.w(TAG,"Saving !!!") ;
     	ContentValues cv ;
     	
     	// **** Entete fichier ***** 
@@ -378,6 +454,82 @@ public class CrmCalendarManager {
 		
 		
 		return true ;
+	}
+	
+	
+	
+	public List<CrmEventModel> queryModels(int julianDayStart, int julianDayEnd) {
+		if( this.mCrmAgendaInfos.mAccountIsOn ) {
+			return null ;
+		}
+		return queryModels(julianDayStart,julianDayEnd,null) ;
+	}
+	public List<CrmEventModel> queryModels( int julianDayStart, int julianDayEnd, Set<String> accounts ) {
+		
+		
+		
+		ArrayList<CrmEventModel> models = new ArrayList<CrmEventModel>() ;
+		
+		//Log.w(TAG,"Loading for "+this.mCrmAgendaInfos.mCrmAgendaFilecode ) ;
+		//Log.w(TAG,"Accounts : "+Utils.implodeArray(accounts.toArray(new String[accounts.size()]), ", ") ) ;
+		
+    	// ******* Construction de la requête *********
+    	StringBuilder sbEnt = new StringBuilder() ;
+    	sbEnt.append("SELECT ent.filerecord_id FROM store_file ent") ;
+    	sbEnt.append(String.format(" JOIN store_file_field det_start ON det_start.filerecord_id=ent.filerecord_id AND det_start.filerecord_field_code='%s'",this.mCrmAgendaInfos.mEventStartFileField)) ;
+    	sbEnt.append(String.format(" JOIN store_file_field det_end ON det_end.filerecord_id=ent.filerecord_id AND det_end.filerecord_field_code='%s'",this.mCrmAgendaInfos.mEventEndFileField)) ;
+    	if( this.mCrmAgendaInfos.mAccountIsOn ) {
+    		sbEnt.append(String.format(" JOIN store_file_field det_acct ON det_acct.filerecord_id=ent.filerecord_id AND det_acct.filerecord_field_code='%s'",this.mCrmAgendaInfos.mAccountTargetFileField)) ;
+    	}
+    	sbEnt.append(String.format(" AND ent.file_code='%s'",this.mCrmAgendaInfos.mCrmAgendaFilecode)) ;
+		
+    	Time timeStart = new Time() ;
+    	timeStart.setJulianDay(julianDayStart) ;
+    	String sqlTimeStart = timeStart.format("%Y-%m-%d");
+    	sbEnt.append(String.format(" AND det_start.filerecord_field_value_date >= '%s'",sqlTimeStart)) ;
+		
+    	Time timeEnd = new Time() ;
+    	timeEnd.setJulianDay(julianDayEnd+1) ;
+    	String sqlTimeEnd = timeEnd.format("%Y-%m-%d");
+    	sbEnt.append(String.format(" AND det_end.filerecord_field_value_date < '%s'",sqlTimeEnd)) ;
+    	
+    	if( this.mCrmAgendaInfos.mAccountIsOn && accounts.size() > 0 ) {
+    		StringBuilder sbAcct = new StringBuilder() ;
+    		sbAcct.append("(") ;
+    		boolean isFirst = true ;
+    		for( String acct : accounts ) {
+    			if( !isFirst ) {
+    				sbAcct.append(",") ;
+    			}
+    			else{
+    				isFirst = false ;
+    			}
+    			sbAcct.append("'"+acct+"'") ;
+    		}
+    		sbAcct.append(")") ;
+    		
+    		sbEnt.append(" AND det_acct.filerecord_field_value_link IN "+sbAcct.toString()) ;
+    	}
+    	else if( this.mCrmAgendaInfos.mAccountIsOn ) {
+    		sbEnt.append(" AND 0") ;
+    	}
+    	
+    	// Log.w(TAG,"Query is "+sbEnt.toString()) ;
+    	
+    	Cursor tCursor = mDb.rawQuery(sbEnt.toString()) ;
+    	while( tCursor.moveToNext() ) {
+    		// Log.w(TAG,"Row is "+tCursor.getInt(0)) ;
+    		
+    		int filerecordId = tCursor.getInt(0) ;
+    		
+    		CrmEventModel model = new CrmEventModel() ;
+    		populateModelLoad( model , filerecordId ) ;
+    		models.add(model) ;
+    	}
+    	tCursor.close() ;
+    	
+		
+		return models ;
 	}
 	
 

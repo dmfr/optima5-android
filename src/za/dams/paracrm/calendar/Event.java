@@ -35,9 +35,12 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 
 // TODO: should Event be Parcelable so it can be passed via Intents?
 public class Event implements Cloneable {
@@ -217,133 +220,36 @@ public class Event implements Cloneable {
      * Loads <i>days</i> days worth of instances starting at <i>startDay</i>.
      */
     public static void loadEvents(Context context, ArrayList<Event> events, int startDay, int days,
-            int requestId, AtomicInteger sequenceNumber) {
+    		int requestId, AtomicInteger sequenceNumber) {
 
-        if (PROFILE) {
-            Debug.startMethodTracing("loadEvents");
-        }
+    	int endDay = startDay + days - 1;
 
-        Cursor cEvents = null;
-        Cursor cAllday = null;
-
-        events.clear();
-        try {
-            int endDay = startDay + days - 1;
-
-            // We use the byDay instances query to get a list of all events for
-            // the days we're interested in.
-            // The sort order is: events with an earlier start time occur
-            // first and if the start times are the same, then events with
-            // a later end time occur first. The later end time is ordered
-            // first so that long rectangles in the calendar views appear on
-            // the left side.  If the start and end times of two events are
-            // the same then we sort alphabetically on the title.  This isn't
-            // required for correctness, it just adds a nice touch.
-
-            // Respect the preference to show/hide declined events
-            // SharedPreferences prefs = GeneralPreferences.getSharedPreferences(context);
-            //boolean hideDeclined = prefs.getBoolean(GeneralPreferences.KEY_HIDE_DECLINED,
-            //        false);
-            
-            boolean hideDeclined = false ;
-
-            String where = EVENTS_WHERE;
-            String whereAllday = ALLDAY_WHERE;
-            if (hideDeclined) {
-                String hideString = " AND " + Instances.SELF_ATTENDEE_STATUS + "!="
-                        + Attendees.ATTENDEE_STATUS_DECLINED;
-                where += hideString;
-                whereAllday += hideString;
-            }
-
-            cEvents = instancesQuery(context.getContentResolver(), EVENT_PROJECTION, startDay,
-                    endDay, where, null, SORT_EVENTS_BY);
-            cAllday = instancesQuery(context.getContentResolver(), EVENT_PROJECTION, startDay,
-                    endDay, whereAllday, null, SORT_ALLDAY_BY);
-
-            // Check if we should return early because there are more recent
-            // load requests waiting.
-            if (requestId != sequenceNumber.get()) {
-                return;
-            }
-
-            buildEventsFromCursor(events, cEvents, context, startDay, endDay);
-            buildEventsFromCursor(events, cAllday, context, startDay, endDay);
-
-        } finally {
-            if (cEvents != null) {
-                cEvents.close();
-            }
-            if (cAllday != null) {
-                cAllday.close();
-            }
-            if (PROFILE) {
-                Debug.stopMethodTracing();
-            }
-        }
+    	// Principe de la requête : pour chaque domaine, avec les comptes configurés
+    	for( CrmCalendarInput ci : CrmCalendarManager.inputsList(context) ) {
+    		List<CrmEventModel> models ;
+    		
+    		CrmCalendarManager lCalManager = new CrmCalendarManager(context,ci.mCrmInputId) ;
+    		if( lCalManager.getCalendarInfos().mAccountIsOn ) {
+    			models = lCalManager.queryModels(startDay,endDay,PrefsCrm.getSubscribedAccounts(context, ci.mCrmAgendaId)) ;
+    		}
+    		else{
+    			models = lCalManager.queryModels(startDay,endDay) ;
+    		}
+    		
+    		
+    		buildEventsFromModelArray( events, models, context, startDay, endDay ) ;
+    	}
+        
     }
-
-    /**
-     * Performs a query to return all visible instances in the given range
-     * that match the given selection. This is a blocking function and
-     * should not be done on the UI thread. This will cause an expansion of
-     * recurring events to fill this time range if they are not already
-     * expanded and will slow down for larger time ranges with many
-     * recurring events.
-     *
-     * @param cr The ContentResolver to use for the query
-     * @param projection The columns to return
-     * @param begin The start of the time range to query in UTC millis since
-     *            epoch
-     * @param end The end of the time range to query in UTC millis since
-     *            epoch
-     * @param selection Filter on the query as an SQL WHERE statement
-     * @param selectionArgs Args to replace any '?'s in the selection
-     * @param orderBy How to order the rows as an SQL ORDER BY statement
-     * @return A Cursor of instances matching the selection
-     */
-    private static final Cursor instancesQuery(ContentResolver cr, String[] projection,
-            int startDay, int endDay, String selection, String[] selectionArgs, String orderBy) {
-        String WHERE_CALENDARS_SELECTED = Calendars.VISIBLE + "=?";
-        String[] WHERE_CALENDARS_ARGS = {"1"};
-        String DEFAULT_SORT_ORDER = "begin ASC";
-
-        Uri.Builder builder = Instances.CONTENT_BY_DAY_URI.buildUpon();
-        ContentUris.appendId(builder, startDay);
-        ContentUris.appendId(builder, endDay);
-        if (TextUtils.isEmpty(selection)) {
-            selection = WHERE_CALENDARS_SELECTED;
-            selectionArgs = WHERE_CALENDARS_ARGS;
-        } else {
-            selection = "(" + selection + ") AND " + WHERE_CALENDARS_SELECTED;
-            if (selectionArgs != null && selectionArgs.length > 0) {
-                selectionArgs = Arrays.copyOf(selectionArgs, selectionArgs.length + 1);
-                selectionArgs[selectionArgs.length - 1] = WHERE_CALENDARS_ARGS[0];
-            } else {
-                selectionArgs = WHERE_CALENDARS_ARGS;
-            }
-        }
-        return cr.query(builder.build(), projection, selection, selectionArgs,
-                orderBy == null ? DEFAULT_SORT_ORDER : orderBy);
-    }
-
-    /**
-     * Adds all the events from the cursors to the events list.
-     *
-     * @param events The list of events
-     * @param cEvents Events to add to the list
-     * @param context
-     * @param startDay
-     * @param endDay
-     */
-    public static void buildEventsFromCursor(
-            ArrayList<Event> events, Cursor cEvents, Context context, int startDay, int endDay) {
-        if (cEvents == null || events == null) {
+    
+    public static void buildEventsFromModelArray(
+            ArrayList<Event> events, List<CrmEventModel> models, Context context, int startDay, int endDay) {
+        if (models == null || events == null) {
             Log.e(TAG, "buildEventsFromCursor: null cursor or null events list!");
             return;
         }
 
-        int count = cEvents.getCount();
+        int count = models.size();
 
         if (count == 0) {
             return;
@@ -354,8 +260,8 @@ public class Event implements Cloneable {
         mNoColorColor = res.getColor(R.color.event_center);
         // Sort events in two passes so we ensure the allday and standard events
         // get sorted in the correct order
-        while (cEvents.moveToNext()) {
-            Event e = generateEventFromCursor(cEvents);
+        for( CrmEventModel model : models ) {
+            Event e = generateEventFromModel(model);
             if (e.startDay > endDay || e.endDay < startDay) {
                 continue;
             }

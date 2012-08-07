@@ -31,6 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class EventLoader {
+	private static final String TAG = "EventLoader";
 
     private Context mContext;
     private Handler mHandler = new Handler();
@@ -53,73 +54,6 @@ public class EventLoader {
         }
     }
 
-    /**
-     *
-     * Code for handling requests to get whether days have an event or not
-     * and filling in the eventDays array.
-     *
-     */
-    private static class LoadEventDaysRequest implements LoadRequest {
-        public int startDay;
-        public int numDays;
-        public boolean[] eventDays;
-        public Runnable uiCallback;
-
-        /**
-         * The projection used by the EventDays query.
-         */
-        private static final String[] PROJECTION = {
-                CalendarContract.EventDays.STARTDAY, CalendarContract.EventDays.ENDDAY
-        };
-
-        public LoadEventDaysRequest(int startDay, int numDays, boolean[] eventDays,
-                final Runnable uiCallback)
-        {
-            this.startDay = startDay;
-            this.numDays = numDays;
-            this.eventDays = eventDays;
-            this.uiCallback = uiCallback;
-        }
-
-        @Override
-        public void processRequest(EventLoader eventLoader)
-        {
-            final Handler handler = eventLoader.mHandler;
-            ContentResolver cr = eventLoader.mResolver;
-
-            // Clear the event days
-            Arrays.fill(eventDays, false);
-
-            //query which days have events
-            Cursor cursor = EventDays.query(cr, startDay, numDays, PROJECTION);
-            try {
-                int startDayColumnIndex = cursor.getColumnIndexOrThrow(EventDays.STARTDAY);
-                int endDayColumnIndex = cursor.getColumnIndexOrThrow(EventDays.ENDDAY);
-
-                //Set all the days with events to true
-                while (cursor.moveToNext()) {
-                    int firstDay = cursor.getInt(startDayColumnIndex);
-                    int lastDay = cursor.getInt(endDayColumnIndex);
-                    //we want the entire range the event occurs, but only within the month
-                    int firstIndex = Math.max(firstDay - startDay, 0);
-                    int lastIndex = Math.min(lastDay - startDay, 30);
-
-                    for(int i = firstIndex; i <= lastIndex; i++) {
-                        eventDays[i] = true;
-                    }
-                }
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-            handler.post(uiCallback);
-        }
-
-        @Override
-        public void skipRequest(EventLoader eventLoader) {
-        }
-    }
 
     private static class LoadEventsRequest implements LoadRequest {
 
@@ -238,6 +172,8 @@ public class EventLoader {
      */
     public void loadEventsInBackground(final int numDays, final ArrayList<Event> events,
             int startDay, final Runnable successCallback, final Runnable cancelCallback) {
+    	
+    	Log.w(TAG,"Load "+numDays+" days, starting at "+startDay) ;
 
         // Increment the sequence number for requests.  We don't care if the
         // sequence numbers wrap around because we test for equality with the
@@ -258,29 +194,4 @@ public class EventLoader {
         }
     }
 
-    /**
-     * Sends a request for the days with events to be marked. Loads "numDays"
-     * worth of days, starting at start, and fills in eventDays to express which
-     * days have events.
-     *
-     * @param startDay First day to check for events
-     * @param numDays Days following the start day to check
-     * @param eventDay Whether or not an event exists on that day
-     * @param uiCallback What to do when done (log data, redraw screen)
-     */
-    void loadEventDaysInBackground(int startDay, int numDays, boolean[] eventDays,
-        final Runnable uiCallback)
-    {
-        // Send load request to the background thread
-        LoadEventDaysRequest request = new LoadEventDaysRequest(startDay, numDays,
-                eventDays, uiCallback);
-        try {
-            mLoaderQueue.put(request);
-        } catch (InterruptedException ex) {
-            // The put() method fails with InterruptedException if the
-            // queue is full. This should never happen because the queue
-            // has no limit.
-            Log.e("Cal", "loadEventDaysInBackground() interrupted!");
-        }
-    }
 }
