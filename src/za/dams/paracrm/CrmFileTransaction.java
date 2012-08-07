@@ -135,6 +135,8 @@ public class CrmFileTransaction {
     	public boolean fieldIsPivot ;
     	public boolean fieldIsReadonly ;
     	
+    	public boolean fieldIsHighlight ;
+    	
     	public boolean fieldAutovalueIsOn ;
     	public String fieldAutovalueSrc ;
     	public CrmFileFieldValue fieldAutovalue ;
@@ -150,6 +152,13 @@ public class CrmFileTransaction {
     		this.fieldName = fieldName ;
     		this.fieldIsPivot = fieldIsPivot ;
     		this.fieldIsReadonly = fieldIsReadonly ;
+    	}
+    	public CrmFileFieldDesc( FieldType fieldType, String fieldLinkBible, String fieldCode, String fieldName, boolean fieldIsHighlight )  {
+    		this.fieldType = fieldType ;
+    		this.fieldLinkBible = fieldLinkBible ;
+    		this.fieldCode = fieldCode ;
+    		this.fieldName = fieldName ;
+    		this.fieldIsHighlight = fieldIsHighlight ;
     	}
     	public CrmFileFieldDesc clone() {
     		Object o = null;
