@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Debug;
 import android.provider.CalendarContract.Attendees;
@@ -30,6 +31,7 @@ import android.provider.CalendarContract.Events;
 import android.provider.CalendarContract.Instances;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
+import android.text.format.Time;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -237,13 +239,13 @@ public class Event implements Cloneable {
     		}
     		
     		
-    		buildEventsFromModelArray( events, models, context, startDay, endDay ) ;
+    		buildEventsFromModelArray( events, lCalManager, models, context, startDay, endDay ) ;
     	}
         
     }
     
     public static void buildEventsFromModelArray(
-            ArrayList<Event> events, List<CrmEventModel> models, Context context, int startDay, int endDay) {
+            ArrayList<Event> events, CrmCalendarManager calManager, List<CrmEventModel> models, Context context, int startDay, int endDay) {
         if (models == null || events == null) {
             Log.e(TAG, "buildEventsFromCursor: null cursor or null events list!");
             return;
@@ -261,13 +263,54 @@ public class Event implements Cloneable {
         // Sort events in two passes so we ensure the allday and standard events
         // get sorted in the correct order
         for( CrmEventModel model : models ) {
-            Event e = generateEventFromModel(model);
+            Event e = generateEventFromModel(calManager,model);
             if (e.startDay > endDay || e.endDay < startDay) {
                 continue;
             }
             events.add(e);
         }
     }
+    
+    private static Event generateEventFromModel( CrmCalendarManager calManager, CrmEventModel model ){
+    	Event e = new Event();
+    	
+    	e.id = model.mCalendarId ;
+    	
+    	Time currentTime = new Time();
+    	currentTime.setToNow() ;
+    	
+    	Time startTime = new Time() ;
+    	startTime.set(model.mStart) ;
+    	e.startMillis = model.mStart ;
+    	e.startTime = startTime.hour * 60 + startTime.minute ;
+    	e.startDay = Time.getJulianDay(e.startMillis, currentTime.gmtoff) ;
+    	
+    	
+    	Time endTime = new Time() ;
+    	endTime.set(model.mEnd) ;
+    	e.endMillis = model.mEnd ;
+    	e.endTime = endTime.hour * 60 + endTime.minute ;
+    	e.endDay = Time.getJulianDay(e.endMillis, currentTime.gmtoff) ;
+    	
+    	
+    	e.allDay = false ;
+    	
+    	e.title = "Test title" ;
+    	e.location = "Test location" ;
+    	
+    	e.organizer = "" ;
+    	e.guestsCanModify = false ;
+    	e.isRepeating = false ;
+    	e.hasAlarm = false ;
+    	e.selfAttendeeStatus = 0 ;
+    	
+    	e.color = Color.BLUE ;
+    	
+    	
+    	return e ;
+    }
+    
+    
 
     /**
      * @param cEvents Cursor pointing at event
