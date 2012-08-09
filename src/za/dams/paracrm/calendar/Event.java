@@ -295,7 +295,7 @@ public class Event implements Cloneable {
     	
     	e.allDay = false ;
     	
-    	e.title = "Test title" ;
+    	e.title = "Title "+e.id ;
     	e.location = Utils.implodeArray(model.mCrmTitle, System.getProperty("line.separator")) ;
     	
     	e.organizer = "" ;
@@ -554,6 +554,7 @@ public class Event implements Cloneable {
     }
 
     public int getColumn() {
+    	//return 1 ; // @DAMS
         return mColumn;
     }
 
@@ -562,7 +563,8 @@ public class Event implements Cloneable {
     }
 
     public int getMaxColumns() {
-        return mMaxColumns;
+    	// return 1 ; // @DAMS
+        return mMaxColumns; 
     }
 
     public void setStartMillis(long startMillis) {

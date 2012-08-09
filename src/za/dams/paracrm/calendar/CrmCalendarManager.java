@@ -626,6 +626,8 @@ public class CrmCalendarManager {
     		sbEnt.append(" AND 0") ;
     	}
     	
+    	sbEnt.append(" ORDER BY det_start.filerecord_field_value_date") ;
+    	
     	// Log.w(TAG,"Query is "+sbEnt.toString()) ;
     	
     	Cursor tCursor = mDb.rawQuery(sbEnt.toString()) ;
