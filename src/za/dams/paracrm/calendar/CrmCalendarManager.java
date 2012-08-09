@@ -9,11 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.DatabaseManager;
-import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -25,6 +26,7 @@ public class CrmCalendarManager {
 	
 	private Context mContext ;
 	private DatabaseManager mDb ;
+	private BibleHelper mBibleHelper ;
 	
 	private String mCrmAgendaFileCode ;
 	private CrmCalendarAccount mCrmAgendaInfos ;
@@ -192,6 +194,13 @@ public class CrmCalendarManager {
     		
     		mCrmAgendaInfos.mEventStartFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstart_filefield"));
     		mCrmAgendaInfos.mEventEndFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventend_filefield"));
+			for( CrmFileFieldDesc fd : tFields ) {
+				if( fd.fieldCode.equals(mCrmAgendaInfos.mEventStartFileField) 
+						|| fd.fieldCode.equals(mCrmAgendaInfos.mEventEndFileField) ) {
+					fieldsToRemove.add(fd) ;
+				}
+			}
+    		
     	}
     	tmpCursor.close() ;
     	
@@ -301,6 +310,109 @@ public class CrmCalendarManager {
 		Log.w(TAG,"Load, start is "+crmEventModel.mStart) ;
 		Log.w(TAG,"Load, end is "+crmEventModel.mEnd) ;
 		
+		if( this.mCrmAgendaInfos.mAccountIsOn && fields.containsKey(mCrmAgendaInfos.mAccountTargetFileField) ) {
+			if( mBibleHelper==null ) {
+				mBibleHelper = new BibleHelper(mContext) ;
+			}
+		
+			crmEventModel.mAccountEntry = mBibleHelper.getBibleEntry(mCrmAgendaInfos.mAccountSrcBibleCode
+					, fields.get(mCrmAgendaInfos.mAccountTargetFileField).valueLink ) ;
+			
+			Log.w(TAG,"Load account "+crmEventModel.mAccountEntry.entryKey) ;
+		}
+		
+		crmEventModel.mCrmFields = new ArrayList<CrmFileFieldDesc>() ;
+		crmEventModel.mCrmValues = new ArrayList<CrmFileFieldValue>() ;
+		ArrayList<String> tCrmTitle = new ArrayList<String>() ;
+		for( CrmFileFieldDesc fd : mCrmAgendaInfos.mCrmFields ) {
+			crmEventModel.mCrmFields.add(fd.clone()) ;
+			if( !fields.containsKey(fd.fieldCode) ) {
+				crmEventModel.mCrmValues.add(
+						new CrmFileFieldValue(fd.fieldType,
+								new Float(0),false,"",new Date(),
+								"",
+								false
+								)
+						) ;
+				continue ;
+			}
+			
+			switch( fd.fieldType ) {
+			case FIELD_BIBLE :
+				if( mBibleHelper==null ) {
+					mBibleHelper = new BibleHelper(mContext) ;
+				}
+				String bibleCode = fd.fieldLinkBible ;
+				String bibleEntryKey = fields.get(fd.fieldCode).valueLink ;
+				BibleEntry tBe = mBibleHelper.getBibleEntry(bibleCode, bibleEntryKey) ;
+				String displayStr = "" ;
+				if( tBe != null ) {
+					displayStr = tBe.displayStr ;
+				}
+				crmEventModel.mCrmValues.add(
+						new CrmFileFieldValue(fd.fieldType,
+								new Float(0),false,bibleEntryKey,new Date(),
+								displayStr,
+								true
+								)
+						) ;
+				if( fd.fieldIsHighlight && tBe != null ){
+					tCrmTitle.add( tBe.displayStr2 ) ; 
+				}
+				break ;
+			
+			case FIELD_DATE :
+			case FIELD_DATETIME :
+    			Date tDate = new Date() ;
+    			try {
+					tDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(fields.get(fd.fieldCode).valueDate) ;
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					//e.printStackTrace();
+				}
+				crmEventModel.mCrmValues.add(
+						new CrmFileFieldValue(fd.fieldType,
+								new Float(0),false,null,tDate,
+								new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate),
+								true
+								)
+						) ;
+				if( fd.fieldIsHighlight ) {
+					tCrmTitle.add( new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate) ) ;
+				}
+				break ;
+			
+			case FIELD_TEXT :
+				String tText = fields.get(fd.fieldCode).valueString ;
+				crmEventModel.mCrmValues.add(
+						new CrmFileFieldValue(fd.fieldType,
+								new Float(0),false,tText,new Date(),
+								tText,
+								true
+								)
+						) ;				
+				if( fd.fieldIsHighlight ) {
+					tCrmTitle.add( tText ) ;
+				}
+				break ;
+			
+			case FIELD_NUMBER :
+				Float tFloat = fields.get(fd.fieldCode).valueNumber ;
+				crmEventModel.mCrmValues.add(
+						new CrmFileFieldValue(fd.fieldType,
+								tFloat,false,null,new Date(),
+								new Float(tFloat).toString(),
+								true
+								)
+						) ;								
+				if( fd.fieldIsHighlight ) {
+					tCrmTitle.add( new Float(tFloat).toString() ) ;
+				}
+				break ;
+			}
+		}
+		
+		crmEventModel.mCrmTitle = tCrmTitle.toArray(new String[tCrmTitle.size()]) ;
 	}
 	
 	

@@ -41,6 +41,7 @@ public class CrmEventModel implements Serializable {
     
     public ArrayList<CrmFileFieldDesc> mCrmFields ;
     public ArrayList<CrmFileFieldValue> mCrmValues ;
+    public String[] mCrmTitle ;
 
     
     public CrmEventModel() {

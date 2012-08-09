@@ -296,7 +296,7 @@ public class Event implements Cloneable {
     	e.allDay = false ;
     	
     	e.title = "Test title" ;
-    	e.location = "Test location" ;
+    	e.location = Utils.implodeArray(model.mCrmTitle, System.getProperty("line.separator")) ;
     	
     	e.organizer = "" ;
     	e.guestsCanModify = false ;
