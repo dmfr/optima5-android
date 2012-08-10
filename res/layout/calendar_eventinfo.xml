@@ -119,6 +119,16 @@
                 android:textColorLink="@color/event_info_headline_link_color"
                 style="?android:attr/textAppearanceLarge" />
         </LinearLayout>
+        
+	<View
+	    style="@style/EditEventSeparator"/>
+        
+	<TableLayout
+	    xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:stretchColumns="1"
+	    android:shrinkColumns="1"
+	    android:id="@+id/calendar_editevent_table">
+        </TableLayout>
 
 
     </LinearLayout>
