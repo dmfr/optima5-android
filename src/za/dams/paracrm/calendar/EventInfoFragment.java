@@ -2,58 +2,37 @@ package za.dams.paracrm.calendar;
 
 import java.util.ArrayList;
 import java.util.Formatter;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
-import za.dams.paracrm.BibleHelper.BibleCode;
-import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
-import za.dams.paracrm.calendar.EditEventView.AccountRow;
-
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.content.ActivityNotFoundException;
-import android.content.ContentUris;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
-import android.provider.CalendarContract.Reminders;
-import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.View.OnClickListener;
-import android.view.View.OnTouchListener;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.AdapterView.OnItemSelectedListener;
 
 public class EventInfoFragment extends DialogFragment {
 
@@ -124,8 +103,6 @@ public class EventInfoFragment extends DialogFragment {
             updateEvent(mView);
         }
     };
-
-    private OnItemSelectedListener mReminderChangeListener;
 
     private static int mDialogWidth = 500;
     private static int mDialogHeight = 600;
