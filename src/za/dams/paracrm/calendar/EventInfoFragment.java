@@ -32,6 +32,7 @@ import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -135,19 +136,25 @@ public class EventInfoFragment extends DialogFragment {
 	
 	private class EventLoadTask extends AsyncTask<Void, Void, Void> {
 		protected Void doInBackground(Void... arg0) {
-			if(true){
-				return null ;
-			}
 			
 			if (mEventId != -1) {
 				/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
-
+				Log.w(TAG,"Loading event "+mEventId) ;
 
 				/*
 	                mModel.mId = mEvent.id;
 	                mUri = ContentUris.withAppendedId(Events.CONTENT_URI, mEvent.id);
 				 */
-			} 
+				
+				
+			}
+			else{
+				return null ;
+			}
+			
+			if( true ) {
+				return null ;
+			}
 			
 	        if (mModel.mStart <= 0) {
 	            // use a default value instead

@@ -125,6 +125,8 @@
         
 	<TableLayout
 	    xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
 	    android:stretchColumns="1"
 	    android:shrinkColumns="1"
 	    android:id="@+id/calendar_editevent_table">
