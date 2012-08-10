@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import za.dams.paracrm.calendar.EditEventView.AccountRow;
 
 import android.app.Activity;
@@ -21,6 +22,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -138,42 +140,36 @@ public class EventInfoFragment extends DialogFragment {
 		protected Void doInBackground(Void... arg0) {
 			
 			if (mEventId != -1) {
+				int eventId = (int)mEventId ;
+				
 				/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
-				Log.w(TAG,"Loading event "+mEventId) ;
-
-				/*
-	                mModel.mId = mEvent.id;
-	                mUri = ContentUris.withAppendedId(Events.CONTENT_URI, mEvent.id);
-				 */
+				CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(mContext, eventId) ;
+				if( crmCalendarInput == null ){
+					return null ;
+				}
+				mModel = new CrmEventModel( mContext ) ; 
+				mCrmCalendarManager = new CrmCalendarManager( mContext, crmCalendarInput.mCrmAgendaId ) ;
+				if( mCrmCalendarManager == null ) {
+					return null ;
+				}
+				mCrmCalendarManager.populateModelLoad(mModel, eventId) ;
+				if( mModel.mAccountEntry != null ) {
+					//Log.w(TAG,"Example : account is "+mModel.mAccountEntry.displayStr) ;
+				}
 				
-				
+				Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), crmCalendarInput.mCrmAgendaId ) ;
+				if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
+					mColor = presets.get(mModel.mAccountEntry.entryKey) ;
+				}
+				else if( presets.size() > 0 ) {
+					mColor = presets.get("&") ;
+				}
+				if( mColor == 0 ) {
+					mColor = Color.WHITE ;
+				}
 			}
 			else{
 				return null ;
-			}
-			
-			if( true ) {
-				return null ;
-			}
-			
-	        if (mModel.mStart <= 0) {
-	            // use a default value instead
-	        	// mModel.mStart = mHelper.constructDefaultStartTime(System.currentTimeMillis());
-	        }
-	        if (mModel.mEnd < mModel.mStart) {
-	            // use a default value instead
-	        	mModel.mEnd = mModel.mStart + DateUtils.HOUR_IN_MILLIS ;
-	        } 
-	        
-			
-			if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
-				BibleHelper bh = new BibleHelper(mContext) ;
-				List<BibleHelper.BibleEntry> entries = bh.queryBible(mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode) ;
-
-				String calendarFileCode = mCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode ;
-				Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), calendarFileCode) ;
-
-				
 			}
 			
 			return null;
@@ -420,33 +416,24 @@ public class EventInfoFragment extends DialogFragment {
     }
     
     
+    private void setTextCommon(View view, int id, CharSequence text) {
+        TextView textView = (TextView) view.findViewById(id);
+        if (textView == null)
+            return;
+        textView.setText(text);
+    }
     private void updateEvent(View view) {
         if (mModel == null || view == null) {
             return;
         }
 
-        /*
-        String eventName = mEventCursor.getString(EVENT_INDEX_TITLE);
-        if (eventName == null || eventName.length() == 0) {
-            eventName = getActivity().getString(R.string.no_title_label);
-        }
-
-        mAllDay = mEventCursor.getInt(EVENT_INDEX_ALL_DAY) != 0;
-        String location = mEventCursor.getString(EVENT_INDEX_EVENT_LOCATION);
-        String description = mEventCursor.getString(EVENT_INDEX_DESCRIPTION);
-        String rRule = mEventCursor.getString(EVENT_INDEX_RRULE);
-        String eventTimezone = mEventCursor.getString(EVENT_INDEX_EVENT_TIMEZONE);
-
-        mColor = Utils.getDisplayColorFromColor(mEventCursor.getInt(EVENT_INDEX_COLOR));
         mHeadlines.setBackgroundColor(mColor);
+        
+        // *** Crm Agenda Title *** 
+        setTextCommon(view, R.id.title, mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib);
 
-        // What
-        if (eventName != null) {
-            setTextCommon(view, R.id.title, eventName);
-        }
-
-        // When
-        // Set the date and repeats (if any)
+        // *** When ? ***
+        mAllDay = mModel.mAllDay ;
         String whenDate;
         int flagsTime = DateUtils.FORMAT_SHOW_TIME;
         int flagsDate = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_WEEKDAY |
@@ -455,31 +442,11 @@ public class EventInfoFragment extends DialogFragment {
         if (DateFormat.is24HourFormat(getActivity())) {
             flagsTime |= DateUtils.FORMAT_24HOUR;
         }
-
-        // Put repeat after the date (if any)
-        String repeatString = null;
-        if (!TextUtils.isEmpty(rRule)) {
-            EventRecurrence eventRecurrence = new EventRecurrence();
-            eventRecurrence.parse(rRule);
-            Time date = new Time(Utils.getTimeZone(getActivity(), mTZUpdater));
-            if (mAllDay) {
-                date.timezone = Time.TIMEZONE_UTC;
-            }
-            date.set(mStartMillis);
-            eventRecurrence.setStartDate(date);
-            repeatString = EventRecurrenceFormatter.getRepeatString(
-                    getActivity().getResources(), eventRecurrence);
-        }
-        // If an all day event , show the date without the time
         if (mAllDay) {
             Formatter f = new Formatter(new StringBuilder(50), Locale.getDefault());
             whenDate = DateUtils.formatDateRange(getActivity(), f, mStartMillis, mEndMillis,
                     flagsDate, Time.TIMEZONE_UTC).toString();
-            if (repeatString != null) {
-                setTextCommon(view, R.id.when_date, whenDate + " (" + repeatString + ")");
-            } else {
-                setTextCommon(view, R.id.when_date, whenDate);
-            }
+            setTextCommon(view, R.id.when_date, whenDate);
             view.findViewById(R.id.when_time).setVisibility(View.GONE);
 
         } else {
@@ -487,69 +454,24 @@ public class EventInfoFragment extends DialogFragment {
             whenDate = Utils.formatDateRange(getActivity(), mStartMillis, mEndMillis, flagsDate);
             String whenTime = Utils.formatDateRange(getActivity(), mStartMillis, mEndMillis,
                     flagsTime);
-            if (repeatString != null) {
-                setTextCommon(view, R.id.when_date, whenDate + " (" + repeatString + ")");
-            } else {
-                setTextCommon(view, R.id.when_date, whenDate);
-            }
-
-            // Show the event timezone if it is different from the local timezone after the time
-            String localTimezone = Utils.getTimeZone(mActivity, mTZUpdater);
-            if (!TextUtils.equals(localTimezone, eventTimezone)) {
-                String displayName;
-                // Figure out if this is in DST
-                Time date = new Time(Utils.getTimeZone(getActivity(), mTZUpdater));
-                if (mAllDay) {
-                    date.timezone = Time.TIMEZONE_UTC;
-                }
-                date.set(mStartMillis);
-
-                TimeZone tz = TimeZone.getTimeZone(localTimezone);
-                if (tz == null || tz.getID().equals("GMT")) {
-                    displayName = localTimezone;
-                } else {
-                    displayName = tz.getDisplayName(date.isDst != 0, TimeZone.LONG);
-                }
-                setTextCommon(view, R.id.when_time, whenTime + " (" + displayName + ")");
-            }
-            else {
-                setTextCommon(view, R.id.when_time, whenTime);
-            }
+            setTextCommon(view, R.id.when_date, whenDate);
+            setTextCommon(view, R.id.when_time, whenTime);
         }
-
-
-        // Organizer view is setup in the updateCalendar method
-
-
-        // Where
-        if (location == null || location.trim().length() == 0) {
-            setVisibilityCommon(view, R.id.where, View.GONE);
-        } else {
-            final TextView textView = mWhere;
-            if (textView != null) {
-                textView.setAutoLinkMask(0);
-                textView.setText(location.trim());
-                linkifyTextView(textView);
-
-                textView.setOnTouchListener(new OnTouchListener() {
-                    @Override
-                    public boolean onTouch(View v, MotionEvent event) {
-                        try {
-                            return v.onTouchEvent(event);
-                        } catch (ActivityNotFoundException e) {
-                            // ignore
-                            return true;
-                        }
-                    }
-                });
-            }
+        
+        
+        
+        if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn && mModel.mAccountEntry != null ) {
+        	setTextCommon(view, R.id.where, mModel.mAccountEntry.displayStr );
         }
-
-        // Description
-        if (description != null && description.length() != 0) {
-            mDesc.setText(description);
+        else {
+        	view.findViewById(R.id.where).setVisibility(View.GONE);
         }
-        */
+        
+        
+        
+        
+        
+        
     }
 
 }

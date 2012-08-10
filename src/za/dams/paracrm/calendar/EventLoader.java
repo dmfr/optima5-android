@@ -173,7 +173,7 @@ public class EventLoader {
     public void loadEventsInBackground(final int numDays, final ArrayList<Event> events,
             int startDay, final Runnable successCallback, final Runnable cancelCallback) {
     	
-    	Log.w(TAG,"Load "+numDays+" days, starting at "+startDay) ;
+    	//Log.w(TAG,"Load "+numDays+" days, starting at "+startDay) ;
 
         // Increment the sequence number for requests.  We don't care if the
         // sequence numbers wrap around because we test for equality with the

@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -237,15 +238,16 @@ public class Event implements Cloneable {
     		else{
     			models = lCalManager.queryModels(startDay,endDay) ;
     		}
+    		Map<String,Integer> accountsColor = PrefsCrm.getAccountsColor(context, lCalManager.getCalendarInfos().mCrmAgendaFilecode ) ;
     		
     		
-    		buildEventsFromModelArray( events, lCalManager, models, context, startDay, endDay ) ;
+    		buildEventsFromModelArray( events, lCalManager, models, accountsColor, context, startDay, endDay ) ;
     	}
         
     }
     
     public static void buildEventsFromModelArray(
-            ArrayList<Event> events, CrmCalendarManager calManager, List<CrmEventModel> models, Context context, int startDay, int endDay) {
+            ArrayList<Event> events, CrmCalendarManager calManager, List<CrmEventModel> models, Map<String,Integer> accountsColor, Context context, int startDay, int endDay) {
         if (models == null || events == null) {
             Log.e(TAG, "buildEventsFromCursor: null cursor or null events list!");
             return;
@@ -263,7 +265,7 @@ public class Event implements Cloneable {
         // Sort events in two passes so we ensure the allday and standard events
         // get sorted in the correct order
         for( CrmEventModel model : models ) {
-            Event e = generateEventFromModel(calManager,model);
+            Event e = generateEventFromModel(calManager,accountsColor,model);
             if (e.startDay > endDay || e.endDay < startDay) {
                 continue;
             }
@@ -271,7 +273,7 @@ public class Event implements Cloneable {
         }
     }
     
-    private static Event generateEventFromModel( CrmCalendarManager calManager, CrmEventModel model ){
+    private static Event generateEventFromModel( CrmCalendarManager calManager, Map<String,Integer> accountsColor, CrmEventModel model ){
     	Event e = new Event();
     	
     	e.id = model.mCalendarId ;
@@ -304,7 +306,15 @@ public class Event implements Cloneable {
     	e.hasAlarm = false ;
     	e.selfAttendeeStatus = 0 ;
     	
-    	e.color = Color.BLUE ;
+		if( calManager.getCalendarInfos().mAccountIsOn ) {
+			e.color = accountsColor.get(model.mAccountEntry.entryKey) ;
+		}
+		else if( accountsColor.size() > 0 ) {
+			e.color = accountsColor.get("&") ;
+		}
+		if( e.color == 0 ) {
+			e.color = Color.WHITE ;
+		}
     	
     	
     	return e ;

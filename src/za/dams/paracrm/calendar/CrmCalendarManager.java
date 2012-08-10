@@ -80,6 +80,35 @@ public class CrmCalendarManager {
 		
 		return mInputs ;
 	}
+	public static CrmCalendarInput queryInputFromEvent( Context context , int eventId ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
+		
+		Cursor tCursor ;
+		tCursor = mDb.rawQuery(String.format("SELECT file_code FROM store_file WHERE filerecord_id='%d'",eventId)) ;
+		if( tCursor.getCount() != 1 ) {
+			tCursor.close() ;
+			return null ;
+		}
+		tCursor.moveToNext() ;
+		String fileCode = tCursor.getString(0) ;
+		tCursor.close() ;
+		
+		CrmCalendarInput crmCalendarInput = null ;
+		
+		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib" +
+				" FROM input_calendar input , define_file def " +
+				" WHERE input.target_filecode=def.file_code" +
+				" ORDER BY target_filecode ASC") ;
+		while( tCursor.moveToNext() ) {
+			if( tCursor.getString(1).equals(fileCode) ) {
+				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ) ;
+				break ;
+			}
+		}
+		tCursor.close() ;
+		
+		return crmCalendarInput ;
+	}
 	
 	
 	
@@ -307,8 +336,8 @@ public class CrmCalendarManager {
 			}
 		}
 		
-		Log.w(TAG,"Load, start is "+crmEventModel.mStart) ;
-		Log.w(TAG,"Load, end is "+crmEventModel.mEnd) ;
+		//Log.w(TAG,"Load, start is "+crmEventModel.mStart) ;
+		//Log.w(TAG,"Load, end is "+crmEventModel.mEnd) ;
 		
 		if( this.mCrmAgendaInfos.mAccountIsOn && fields.containsKey(mCrmAgendaInfos.mAccountTargetFileField) ) {
 			if( mBibleHelper==null ) {
@@ -318,7 +347,7 @@ public class CrmCalendarManager {
 			crmEventModel.mAccountEntry = mBibleHelper.getBibleEntry(mCrmAgendaInfos.mAccountSrcBibleCode
 					, fields.get(mCrmAgendaInfos.mAccountTargetFileField).valueLink ) ;
 			
-			Log.w(TAG,"Load account "+crmEventModel.mAccountEntry.entryKey) ;
+			// Log.w(TAG,"Load account "+crmEventModel.mAccountEntry.entryKey) ;
 		}
 		
 		crmEventModel.mCrmFields = new ArrayList<CrmFileFieldDesc>() ;
