@@ -43,6 +43,8 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.WeakHashMap;
 
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
+
 public class CalendarController {
     private static final boolean DEBUG = false;
     private static final String TAG = "CalendarController";
@@ -65,6 +67,7 @@ public class CalendarController {
     
     // ******** Fields for PARACRM ********
     private static final String BUNDLE_KEY_CRM_ID = "crmId";
+    private static final String BUNDLE_KEY_EVENT_ID = "key_event_id" ;
     private int mCrmInputId ;
     
 
@@ -534,7 +537,7 @@ public class CalendarController {
                 //launchViewEvent(event.id, event.startTime.toMillis(false), endTime);
                 return;
             } else if (event.eventType == EventType.EDIT_EVENT) {
-                //launchEditEvent(event.id, event.startTime.toMillis(false), endTime, true);
+                launchEditEvent(event.id);
                 return;
             } else if (event.eventType == EventType.VIEW_EVENT_DETAILS) {
                 //launchEditEvent(event.id, event.startTime.toMillis(false), endTime, false);
@@ -684,6 +687,22 @@ public class CalendarController {
         intent.putExtra("EXTRA_EVENT_END_TIME", endMillis);
         intent.putExtra("EXTRA_EVENT_ALL_DAY", allDayEvent);
         intent.putExtra(BUNDLE_KEY_CRM_ID, mCrmInputId);
+        mEventId = -1;
+        mContext.startActivity(intent);
+    }
+
+    private void launchEditEvent(long eventId) {
+    	// **** recherche du CrmInputId ****
+		CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(mContext, (int)eventId) ;
+		if( crmCalendarInput == null ){
+			return ;
+		}
+		int eventCrmInputId = crmCalendarInput.mCrmInputId ;
+    	
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setClass(mContext, EditEventActivity.class);
+        intent.putExtra(BUNDLE_KEY_EVENT_ID, eventId);
+        intent.putExtra(BUNDLE_KEY_CRM_ID, eventCrmInputId);
         mEventId = -1;
         mContext.startActivity(intent);
     }

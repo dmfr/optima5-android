@@ -121,6 +121,9 @@ public class EditEventActivity extends Activity {
 
         boolean allDay = intent.getBooleanExtra("EXTRA_EVENT_ALL_DAY", false);
 
+        if( intent.hasExtra(BUNDLE_KEY_EVENT_ID) ){
+        	eventId = intent.getLongExtra(BUNDLE_KEY_EVENT_ID,-1) ;
+        }
         long begin = intent.getLongExtra("EXTRA_EVENT_BEGIN_TIME", -1);
         long end = intent.getLongExtra("EXTRA_EVENT_END_TIME", -1);
         if (end != -1) {

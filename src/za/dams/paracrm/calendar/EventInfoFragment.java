@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.app.Activity;
 import android.app.Dialog;
@@ -160,6 +161,7 @@ public class EventInfoFragment extends DialogFragment {
 			return null;
 		}
 		protected void onPostExecute(Void arg0) {
+			updateCalendar(mView);
 			updateEvent(mView);
 		}
 	}
@@ -410,6 +412,28 @@ public class EventInfoFragment extends DialogFragment {
             return;
         textView.setText(text);
     }
+    private void updateCalendar( View view ){
+    	if( true ) {
+            Button b = (Button) mView.findViewById(R.id.edit);
+            b.setEnabled(true);
+            b.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    doEdit();
+                    // For dialogs, just close the fragment
+                    // For full screen, close activity on phone, leave it for tablet
+                    if (mIsDialog) {
+                        EventInfoFragment.this.dismiss();
+                    }
+                    /*
+                    else if (!mIsTabletConfig){
+                        getActivity().finish();
+                    }
+                    */
+                }
+            });
+    	}
+    }
     private void updateEvent(View view) {
         if (mModel == null || view == null) {
             return;
@@ -488,6 +512,16 @@ public class EventInfoFragment extends DialogFragment {
         
         
         
+    }
+    private void doEdit() {
+        Context c = getActivity();
+        // This ensures that we aren't in the process of closing and have been
+        // unattached already
+        if (c != null) {
+            CalendarController.getInstance(c).sendEventRelatedEvent(
+                    this, EventType.EDIT_EVENT, mEventId, mStartMillis, mEndMillis, 0
+                    , 0, -1);
+        }
     }
 
 }

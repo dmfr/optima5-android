@@ -70,7 +70,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	        if (mEvent != null) {
 	            if (mEvent.id != -1) {
 	            	/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
-	            	
+	            	Log.w(TAG,"Trying to load eventId "+mEvent.id) ;
 	            	
 	            	/*
 	                mModel.mId = mEvent.id;
