@@ -131,7 +131,7 @@
 
 
 	<View
-	    style="@style/EditEventSeparator"/>
+	    style="@style/EventInfoSeparator"/>
         
 	<TableLayout
 	    android:stretchColumns="1"

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/crm_row">
+    <TextView
+	android:id="@+id/crm_label"
+	android:text=""
+	style="@style/TextAppearance.EditEvent_Label" />
+    <TextView
+	android:id="@+id/crm_text"
+	android:text=""
+	style="@style/TextAppearance.EditEvent_Value" />
+</TableRow>

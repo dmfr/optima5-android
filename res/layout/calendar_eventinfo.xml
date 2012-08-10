@@ -121,7 +121,7 @@
         </LinearLayout>
         
 	<View
-	    style="@style/EditEventSeparator"/>
+	    style="@style/EventInfoSeparator"/>
         
 	<TableLayout
 	    xmlns:android="http://schemas.android.com/apk/res/android"

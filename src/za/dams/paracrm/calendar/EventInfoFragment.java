@@ -9,7 +9,10 @@ import java.util.TimeZone;
 import java.util.regex.Pattern;
 
 import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
+import za.dams.paracrm.BibleHelper.BibleCode;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import za.dams.paracrm.calendar.EditEventView.AccountRow;
 
@@ -102,6 +105,11 @@ public class EventInfoFragment extends DialogFragment {
     private Menu mMenu = null;
     private View mHeadlines;
     private ScrollView mScrollView;
+    
+    private ViewGroup mViewgroupTable ;
+    private ArrayList<View> mCrmFieldViews ;
+    
+    
 
     private static final Pattern mWildcardPattern = Pattern.compile("^.*$");
 
@@ -294,6 +302,9 @@ public class EventInfoFragment extends DialogFragment {
         mWhenTime = (TextView) mView.findViewById(R.id.when_time);
         mWhere = (TextView) mView.findViewById(R.id.where);
         mHeadlines = mView.findViewById(R.id.event_info_headline);
+        
+        mViewgroupTable = (ViewGroup)mView.findViewById(R.id.calendar_editevent_table);
+        
         //mIsTabletConfig = Utils.getConfigBool(mActivity, R.bool.tablet_config);
         mIsTabletConfig = true ;
 
@@ -458,8 +469,7 @@ public class EventInfoFragment extends DialogFragment {
             setTextCommon(view, R.id.when_time, whenTime);
         }
         
-        
-        
+        // *** Account ? ***
         if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn && mModel.mAccountEntry != null ) {
         	setTextCommon(view, R.id.where, mModel.mAccountEntry.displayStr );
         }
@@ -469,6 +479,35 @@ public class EventInfoFragment extends DialogFragment {
         
         
         
+    	// ***** Detach de toutes les fields CRM ****
+    	if( mCrmFieldViews != null ){
+    		for( View v : mCrmFieldViews ) {
+    			if( v.getParent() != null ) {
+    				((LinearLayout)v.getParent()).removeView(v);
+    			}
+    		}
+    		mCrmFieldViews.clear() ;
+    	}
+    	else {
+    		mCrmFieldViews = new ArrayList<View>();
+    	}
+    	// Fin du detach 
+    	LayoutInflater inflater = mActivity.getLayoutInflater() ;
+    	View newView ;
+    	int crmFieldsIndex = -1 ;
+    	for( CrmFileFieldDesc fd : mModel.mCrmFields ) {
+    		crmFieldsIndex++ ;
+    		CrmFileFieldValue fv = mModel.mCrmValues.get(crmFieldsIndex) ;
+    		if( fv == null ) {
+    			continue ;
+    		}
+    		
+	    	newView = inflater.inflate(R.layout.calendar_eventinfo_crmfield,null) ;
+	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
+	    	((TextView)newView.findViewById(R.id.crm_text)).setText(fv.displayStr) ;
+	    	mCrmFieldViews.add(newView) ;
+	    	mViewgroupTable.addView(newView) ;
+    	}
         
         
         
