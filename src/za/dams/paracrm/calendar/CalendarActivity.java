@@ -1180,10 +1180,9 @@ public class CalendarActivity extends Activity implements EventHandler,
                 } else {
                     // start event info as a dialog
                 	// @DAMS
-                	/*
                     EventInfoFragment fragment = new EventInfoFragment(this,
                             event.id, event.startTime.toMillis(false),
-                            event.endTime.toMillis(false), (int) event.extraLong, true,
+                            event.endTime.toMillis(false), true,
                             EventInfoFragment.DIALOG_WINDOW_STYLE);
                     fragment.setDialogParams(event.x, event.y, mActionBar.getHeight());
                     FragmentManager fm = getFragmentManager();
@@ -1195,7 +1194,6 @@ public class CalendarActivity extends Activity implements EventHandler,
                     }
                     ft.add(fragment, EVENT_INFO_FRAGMENT_TAG);
                     ft.commit();
-                    */
                 }
             }
             displayTime = event.startTime.toMillis(true);

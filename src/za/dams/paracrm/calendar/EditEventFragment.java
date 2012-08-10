@@ -69,6 +69,9 @@ public class EditEventFragment extends Fragment implements EventHandler {
 			
 	        if (mEvent != null) {
 	            if (mEvent.id != -1) {
+	            	/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
+	            	
+	            	
 	            	/*
 	                mModel.mId = mEvent.id;
 	                mUri = ContentUris.withAppendedId(Events.CONTENT_URI, mEvent.id);
