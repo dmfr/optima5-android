@@ -6,6 +6,7 @@ import java.util.Map;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SyncServiceHelper;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
@@ -187,6 +188,10 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	        	alert.show();
 	        	return ;
 			}
+			
+			// @DAMS : build proper sync system
+			SyncServiceHelper.launchSync( EditEventFragment.this.mContext ) ;
+			
 			Activity a = EditEventFragment.this.getActivity() ;
             if (a != null) {
                 a.finish();

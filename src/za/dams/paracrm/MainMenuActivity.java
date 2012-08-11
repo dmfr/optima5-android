@@ -20,6 +20,7 @@ import org.apache.http.params.HttpParams;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import za.dams.paracrm.calendar.EditEventFragment;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -218,6 +219,7 @@ public class MainMenuActivity extends Activity {
         if( UploadService.hasPendingUploads(mContext) ) {
         	myUploadService() ;
         }
+		
         
         
         
@@ -283,7 +285,8 @@ public class MainMenuActivity extends Activity {
         };
         mStaticMenuAdapterRefreshThread.start() ;
         
-        
+        // @DAMS : build proper sync system
+		SyncServiceHelper.launchSync( mContext ) ;
     }
     protected void onPause(){
     	onForeground = false ;

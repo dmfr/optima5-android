@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SyncServiceHelper;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
@@ -398,6 +399,10 @@ public class EventInfoFragment extends DialogFragment
             if( mIsDialog ){
             	((CalendarActivity)mActivity).eventsChanged() ;
             }
+
+            // @DAMS : build proper sync system
+			SyncServiceHelper.launchSync( EventInfoFragment.this.mContext ) ;
+            
         }
     };
 
