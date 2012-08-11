@@ -15,6 +15,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -35,7 +36,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public class EventInfoFragment extends DialogFragment {
+public class EventInfoFragment extends DialogFragment
+	implements DeleteEventHelper.DeleteNotifyListener {
 
     public static final String TAG = "EventInfoFragment";
 
@@ -73,7 +75,7 @@ public class EventInfoFragment extends DialogFragment {
     private boolean mAllDay;
 
     private boolean mDeleteDialogVisible = false;
-    // private DeleteEventHelper mDeleteHelper;
+    private DeleteEventHelper mDeleteHelper;
 
     // Used to prevent saving changes in event if it is being deleted.
     private boolean mEventDeletionStarted = false;
@@ -305,18 +307,13 @@ public class EventInfoFragment extends DialogFragment {
         b.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-            	/*
-                if (!mCanModifyCalendar) {
-                    return;
-                }
                 mDeleteHelper = new DeleteEventHelper(
                         mContext, mActivity,
                         !mIsDialog && !mIsTabletConfig ); // mIsTabletConfig=exitWhenDone
                 mDeleteHelper.setDeleteNotificationListener(EventInfoFragment.this);
                 mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
                 mDeleteDialogVisible = true;
-                mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
-                */
+                mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, onDeleteRunnable);
             }});
 
         // Hide Edit/Delete buttons if in full screen mode on a phone
@@ -522,6 +519,23 @@ public class EventInfoFragment extends DialogFragment {
                     this, EventType.EDIT_EVENT, mEventId, mStartMillis, mEndMillis, 0
                     , 0, -1);
         }
+    }
+
+	@Override
+	public void onDeleteStarted() {
+		mEventDeletionStarted = true;
+	}
+    private Dialog.OnDismissListener createDeleteOnDismissListener() {
+        return new Dialog.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        // Since OnPause will force the dialog to dismiss , do
+                        // not change the dialog status
+                        if (!mIsPaused) {
+                            mDeleteDialogVisible = false;
+                        }
+                    }
+                };
     }
 
 }
