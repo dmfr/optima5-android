@@ -630,6 +630,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	private boolean fillModelFromUI(){
 		
 		// Champs spécifiques : dates (start/end) + accounts => capture en direct (date/spinner listeners) 
+        mStartTime.timezone = mTimezone;
+        mEndTime.timezone = mTimezone;
+        mModel.mStart = mStartTime.toMillis(true);
+        mModel.mEnd = mEndTime.toMillis(true);
 		
 		// Champs dynamiques CRM
 		int crmFieldIndex = 0 ;

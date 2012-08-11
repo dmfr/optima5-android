@@ -506,12 +506,20 @@ public class CrmCalendarManager {
     	//Log.w(TAG,"Saving !!!") ;
     	ContentValues cv ;
     	
-    	// **** Entete fichier ***** 
-    	cv = new ContentValues() ;
-		cv.put("file_code", localFileCode);
-		long currentFileId = mDb.insert("store_file", cv);
+    	long currentFileId ;
+    	
+    	// **** Entete fichier *****
+    	if( crmEventModel.mCrmFileId == -1 ) {
+        	cv = new ContentValues() ;
+    		cv.put("file_code", localFileCode);
+    		currentFileId = mDb.insert("store_file", cv);
+    	}
+    	else {
+    		currentFileId = crmEventModel.mCrmFileId ;
+    	}
     	
     	
+    	mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",currentFileId));
 		// ***** Revue de tous les champs à partir du define *****
 		tmpCursor = mDb.rawQuery( String.format("SELECT * FROM define_file_entry WHERE file_code='%s' ORDER BY entry_field_index",localFileCode ) ) ;
 		while( tmpCursor.moveToNext() ) {
