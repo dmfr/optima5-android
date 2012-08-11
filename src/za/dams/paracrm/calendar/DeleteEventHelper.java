@@ -1,11 +1,13 @@
 package za.dams.paracrm.calendar;
 
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
+import android.util.Log;
 
 public class DeleteEventHelper {
     private final Activity mParent;
@@ -26,7 +28,7 @@ public class DeleteEventHelper {
     private Runnable mCallback;
     
 
-    private EventDeleteTask mDeleteTask;
+    // private EventDeleteTask mDeleteTask;
 
     private DeleteNotifyListener mDeleteStartedListener = null;
 
@@ -36,6 +38,10 @@ public class DeleteEventHelper {
     
 	private class EventDeleteTask extends AsyncTask<Void, Void, Void> {
 		protected Void doInBackground(Void... arg0) {
+			CrmCalendarManager crmCalendarManager = new CrmCalendarManager( mContext, DeleteEventHelper.this.mModel.mCrmFileCode ) ;
+			crmCalendarManager.doneDeleteModel( DeleteEventHelper.this.mModel ) ;
+			
+			
 			return null;
 		}
 		protected void onPostExecute(Void arg0) {
@@ -86,6 +92,18 @@ public class DeleteEventHelper {
     public void delete(long begin, long end, long eventId) {
         mStartMillis = begin;
         mEndMillis = end;
+        
+        // ***** Load du model ****
+		CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(mContext, (int)eventId) ;
+		if( crmCalendarInput == null ){
+			return ;
+		}
+		mModel = new CrmEventModel( mContext ) ; 
+		CrmCalendarManager crmCalendarManager = new CrmCalendarManager( mContext, crmCalendarInput.mCrmAgendaId ) ;
+		crmCalendarManager.populateModelLoad(mModel, (int)eventId) ;
+        
+        
+        
         // mModel = model;
     	
         AlertDialog dialog = new AlertDialog.Builder(mContext)

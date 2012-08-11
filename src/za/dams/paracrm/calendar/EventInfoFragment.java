@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.app.Activity;
@@ -37,7 +38,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class EventInfoFragment extends DialogFragment
-	implements DeleteEventHelper.DeleteNotifyListener {
+	implements CalendarController.EventHandler, DeleteEventHelper.DeleteNotifyListener {
 
     public static final String TAG = "EventInfoFragment";
 
@@ -394,6 +395,9 @@ public class EventInfoFragment extends DialogFragment
             if (EventInfoFragment.this.isVisible()) {
                 EventInfoFragment.this.dismiss();
             }
+            if( mIsDialog ){
+            	((CalendarActivity)mActivity).eventsChanged() ;
+            }
         }
     };
 
@@ -519,6 +523,27 @@ public class EventInfoFragment extends DialogFragment
                     this, EventType.EDIT_EVENT, mEventId, mStartMillis, mEndMillis, 0
                     , 0, -1);
         }
+    }
+    @Override
+    public void eventsChanged() {
+    }
+
+    @Override
+    public long getSupportedEventTypes() {
+        return EventType.EVENTS_CHANGED;
+    }
+
+    @Override
+    public void handleEvent(EventInfo event) {
+        if (event.eventType == EventType.EVENTS_CHANGED ) {
+            // reload the data
+    		if( mLoadTask != null && !mLoadTask.isCancelled() ) {
+    			mLoadTask.cancel(true) ;
+    		}
+    		mLoadTask = new EventLoadTask() ;
+    		mLoadTask.execute() ;
+        }
+
     }
 
 	@Override

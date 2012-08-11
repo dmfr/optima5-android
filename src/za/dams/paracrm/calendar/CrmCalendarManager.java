@@ -604,6 +604,14 @@ public class CrmCalendarManager {
 		
 		return true ;
 	}
+	public boolean doneDeleteModel( CrmEventModel crmEventModel ) {
+		int currentFileId = crmEventModel.mCrmFileId ;
+		
+		mDb.execSQL(String.format("DELETE FROM store_file WHERE filerecord_id='%d'",currentFileId));
+		mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",currentFileId));
+		
+		return true ;
+	}
 	
 	
 	
