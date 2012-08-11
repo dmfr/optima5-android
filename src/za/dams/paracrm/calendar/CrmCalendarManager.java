@@ -683,6 +683,9 @@ public class CrmCalendarManager {
     		
     		CrmEventModel model = new CrmEventModel() ;
     		populateModelLoad( model , filerecordId ) ;
+    		if( !(model.mCrmFileId > 0) ) {
+    			continue ;
+    		}
     		models.add(model) ;
     	}
     	tCursor.close() ;
