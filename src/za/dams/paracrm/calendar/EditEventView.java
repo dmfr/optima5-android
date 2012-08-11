@@ -413,6 +413,17 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     		}
     		return position ;
     	}
+    	
+    	public int searchPositionById( String searchedId ) {
+        	int accountsIdx = -1 ;
+        	for( AccountRow ar : mData ) {
+        		accountsIdx++ ;
+        		if( ar.id.equals(searchedId) ) {
+        			return accountsIdx ;
+        		}
+        	}
+        	return -1 ;
+    	}
     }
    
     
@@ -505,13 +516,22 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             mEndTime.set(end);
             mEndTime.normalize(true);
         }
-        
+        adjustSpinner() ;
         populateWhen();
         populateCrmFields() ;
         updateView();
         mScrollView.setVisibility(View.VISIBLE);
         mLoadingMessage.setVisibility(View.GONE);
         mAllDayRow.setVisibility(View.GONE);
+    }
+    
+    private void adjustSpinner() {
+    	if( mModel.mAccountEntry != null ) {
+    		int position = ((AccountsAdapter)mCalendarsSpinner.getAdapter()).searchPositionById(mModel.mAccountEntry.entryKey) ;
+    		if( position > -1 ) {
+    			mCalendarsSpinner.setSelection(position);
+    		}
+    	}
     }
     
     // Fills in the date and time fields
@@ -549,11 +569,19 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     	View newView ;
     	int crmFieldsIndex = 0 ;
     	for( CrmFileFieldDesc fd : mModel.mCrmFields ) {
+    		CrmFileFieldValue fv = mModel.mCrmValues.get(crmFieldsIndex) ;
+    		if( fv == null ) {
+    			continue ;
+    		}
+    		
     		switch( fd.fieldType ) {
     		case FIELD_BIBLE :
     	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_bible,null) ;
     	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
     	    	((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	if( fv.isSet ) {
+    	    		((Button)newView.findViewById(R.id.crm_button)).setText(fv.displayStr) ;
+    	    	}
     	    	mCrmFieldViews.add(newView) ;
     	    	mViewgroupTable.addView(newView) ;
     			break ;
@@ -561,7 +589,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     		case FIELD_TEXT :
     	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_text,null) ;
     	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
-    	    	//((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	if( fv.isSet ) {
+    	    		((TextView)newView.findViewById(R.id.crm_text)).setText(fv.displayStr) ;
+    	    	}
     	    	mCrmFieldViews.add(newView) ;
     	    	mViewgroupTable.addView(newView) ;
     			break ;
@@ -569,7 +599,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     		case FIELD_NUMBER :
     	    	newView = inflater.inflate(R.layout.calendar_editevent_crmfield_number,null) ;
     	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
-    	    	//((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    	    	if( fv.isSet ) {
+    	    		((TextView)newView.findViewById(R.id.crm_text)).setText(fv.displayStr) ;
+    	    	}
     	    	mCrmFieldViews.add(newView) ;
     	    	mViewgroupTable.addView(newView) ;
     			break ;
