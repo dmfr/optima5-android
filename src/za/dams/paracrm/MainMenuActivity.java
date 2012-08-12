@@ -259,8 +259,10 @@ public class MainMenuActivity extends Activity {
     }
     protected void onStart() {
     	super.onStart() ;
-        // @DAMS : build proper sync system
-		SyncServiceHelper.launchSync( mContext ) ;
+    	if( SyncServiceHelper.hasPendingUploads(mContext) ) {
+    		// @DAMS : build proper sync system
+    		SyncServiceHelper.launchSync( mContext ) ;
+    	}
     }
     protected void onResume() {
     	super.onResume() ;
@@ -319,7 +321,7 @@ public class MainMenuActivity extends Activity {
 			// e.printStackTrace();
 		}
     	if( nightlyVersion > localVersion ) {
-    		if( !SyncServiceHelper.hasPendingUploads(mContext) ) {
+    		if( !!SyncServiceHelper.isServiceRunning(mContext) && !SyncServiceHelper.hasPendingUploads(mContext) ) {
             	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
         			@Override
         			public void run() {
