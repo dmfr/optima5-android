@@ -216,10 +216,6 @@ public class MainMenuActivity extends Activity {
         });
         
         
-        if( UploadService.hasPendingUploads(mContext) ) {
-        	myUploadService() ;
-        }
-		
         
         
         
@@ -261,9 +257,14 @@ public class MainMenuActivity extends Activity {
         
          // mStaticMenuAdapterRefreshThread.start();
     }
+    protected void onStart() {
+    	super.onStart() ;
+        // @DAMS : build proper sync system
+		SyncServiceHelper.launchSync( mContext ) ;
+    }
     protected void onResume() {
     	super.onResume() ;
-    	
+
     	onForeground = true ;
     	
     	
@@ -284,9 +285,6 @@ public class MainMenuActivity extends Activity {
         	}
         };
         mStaticMenuAdapterRefreshThread.start() ;
-        
-        // @DAMS : build proper sync system
-		SyncServiceHelper.launchSync( mContext ) ;
     }
     protected void onPause(){
     	onForeground = false ;
@@ -321,7 +319,7 @@ public class MainMenuActivity extends Activity {
 			// e.printStackTrace();
 		}
     	if( nightlyVersion > localVersion ) {
-    		if( !UploadService.isRunning() && !UploadService.hasPendingUploads(mContext) ) {
+    		if( !SyncServiceHelper.hasPendingUploads(mContext) ) {
             	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
         			@Override
         			public void run() {
@@ -597,12 +595,8 @@ public class MainMenuActivity extends Activity {
 	
 	
 	public void myUploadService(){
-		if( UploadService.isRunning() ) {
-			//Log.w(TAG,"Service already running") ;
-			return ;
-		}
-		//Log.w(TAG,"Start service...") ;
-		startService(new Intent(this, UploadService.class)) ;
+        // @DAMS : build proper sync system
+		SyncServiceHelper.launchSync( mContext ) ;
 	}
 
 	

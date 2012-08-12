@@ -45,7 +45,7 @@ public class MainMenuStaticAdapter extends BaseAdapter {
 	private void initModules() {
 		MODULES_DICT.clear();
 		
-		if( UploadService.isRunning() || UploadService.hasPendingUploads(mContext) ){
+		if( SyncServiceHelper.isServiceRunning(mContext) || SyncServiceHelper.hasPendingUploads(mContext) ){
 			MODULES_DICT.add(new StaticInfo("UPLOAD", "UploadTest", 
 					R.drawable.ic_launcher, 
 					"myUploadService"));			
