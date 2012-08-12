@@ -8,6 +8,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -28,12 +31,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import za.dams.paracrm.DatabaseManager.DatabaseUpgradeResult;
+
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings.Secure;
 import android.util.Base64;
@@ -46,6 +53,9 @@ public class SyncService extends Service {
 	public static final String SYNCSERVICE_STATUS = "SyncServiceStatus";
 	public static final int SYNCSERVICE_STARTED = 1 ;
 	public static final int SYNCSERVICE_COMPLETE = 2 ;
+	
+	public static final String SYNCPULL_FILECODE = "SyncPullFilecode" ;
+	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullFilecode" ;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -63,6 +73,17 @@ public class SyncService extends Service {
 		// stopped, so return sticky.
 		new UploadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
 		//stopSelf() ;
+		
+		Bundle bundle = intent.getExtras() ;
+		if( bundle.containsKey(SYNCPULL_FILECODE) ){
+			String fileCode = bundle.getString(SYNCPULL_FILECODE) ;
+			if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
+				syncPullResetLastTimestamp( fileCode ) ;
+			}
+			new PullTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,fileCode) ;
+		}
+		
+		
 		
 		return START_STICKY;
 	}
@@ -156,6 +177,49 @@ public class SyncService extends Service {
         	SyncService.this.stopSelf() ;
         }
     }
+    
+    
+    
+    private class PullTask extends AsyncTask<String, Integer, Boolean> {
+    	protected void onPreExecute(){
+    	}
+    
+        protected Boolean doInBackground(String... filesCodes ) {
+        	for( String fileCode : filesCodes ){
+        		SharedPreferences settings = getSharedPreferences("SyncFiles",MODE_PRIVATE);
+        		
+        		// ***** timestamp du dernier sync pour ce fileCode ****
+            	long lastFileSyncTimestamp = settings.getLong(fileCode, 0) ;
+                
+            	
+            	InputStream is = null ;
+            	long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
+            	if( newSyncTimestamp <= 0 ) {
+            		return false ;
+            	}
+            	
+            	// stockage du timetamp de cette sync
+                SharedPreferences.Editor editor = settings.edit();
+                editor.putLong(fileCode, newSyncTimestamp);
+                editor.commit() ;
+        	}
+        	
+        	return true ;
+        }	  
+        protected void onProgressUpdate(Integer... progress ) {
+            // setProgressPercent(progress[0]);
+        }
+
+        protected void onPostExecute(Boolean myBool) {
+        	sendBroadcastComplete() ;
+        	SyncService.this.stopSelf() ;
+        }
+   }
+    
+    
+    
+    
+    
     
     
     public static class UploadEntry {
@@ -347,7 +411,182 @@ public class SyncService extends Service {
 		Log.w("Bin upload","All done ?") ;
 
 	}
+	
+	private long syncDbFromPull( String bibleCode , InputStream is ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+		
+		
+    	long versionTimestamp = 0 ;
+    	
+    	int nbRows = 0 ;
+    	int nbRowsExpected = -1 ;
+    	int nbTables = 0 ;
+    	int nbTablesExpected = -1 ;
+    	
+    	int nbRowstmp = 0 ;
+    	
+    	
+    	HashMap<Integer,Integer> eqivRemoteIdToLocalId = new HashMap<Integer,Integer>() ;
+    	
+    	
+    	ArrayList<String> DBtables = new ArrayList<String>() ;
+    	Cursor tmpCursor = mDb.rawQuery( String.format("SELECT name FROM sqlite_master WHERE type='table'")) ;
+    	while( tmpCursor.moveToNext() ) {
+    		DBtables.add(tmpCursor.getString(0)) ;
+    	}
+    	tmpCursor.close() ;
+    	
+    	ArrayList<ContentValues> insertBuffer = new ArrayList<ContentValues>() ;
+    	
+    	String tableName = null ;
+    	boolean skipTable = false ;
+    	try {
+    		BufferedReader r = new BufferedReader(new InputStreamReader(is));
+    		String readLine ;
+    		boolean isFirst = true ;
+    		String remoteColumnNames[] = new String[0] ;
+    		ContentValues cv ;
+    		
+    		JSONObject jsonObj ;
+    		JSONArray jsonArr ;
+			while( (readLine = r.readLine()) != null ) {
+				// Log.w(TAG,readLine) ;
+				try {
+					if( isFirst ) {
+						jsonObj = new JSONObject(readLine) ;
+						if( jsonObj.optBoolean("success",false) && jsonObj.optLong("timestamp",0) > 0 ) {
+							versionTimestamp = jsonObj.optLong("timestamp",0) ;
+							nbRowsExpected = jsonObj.optInt("nb_rows",0) ;
+							nbTablesExpected = jsonObj.optInt("nb_tables",0) ;
+							isFirst = false ;
+							continue ;
+						}
+						else {
+							// return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+							return 0 ;
+						}
+					}
+					
+					if( tableName == null ) {
+						jsonArr = new JSONArray(readLine) ;
+						if( jsonArr.length() != 1 ) {
+							// return new DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+							return 0 ;
+						}
+						tableName = jsonArr.getString(0) ;
+						skipTable = false ;
+						if( !DBtables.contains(tableName) ) {
+							skipTable = true ;
+							readLine = r.readLine() ;
+							continue ;
+						}
+						
+						Collection<String> localColumnNames = new ArrayList<String>() ;
+						try{
+							mDb.execSQL(String.format("DELETE FROM %s",tableName));
+							Cursor c = mDb.rawQuery(String.format("SELECT * FROM %s WHERE 0",tableName));
+							localColumnNames = Arrays.asList(c.getColumnNames()) ;
+							c.close() ;
+						}
+						finally{
+						}
+						
+						readLine = r.readLine() ;
+						jsonArr = new JSONArray(readLine) ;
+						remoteColumnNames = new String[jsonArr.length()] ;
+						for( int a=0 ; a<jsonArr.length() ; a++ ) {
+							String colName = jsonArr.optString(a) ;
+							if( localColumnNames.contains(colName) ) {
+								remoteColumnNames[a] = colName ;
+							}
+							else {
+								remoteColumnNames[a] = null ;
+							}
+						}
+						
+						continue ;
+					}
+					
+					jsonArr = new JSONArray(readLine) ;
+					
+					if( skipTable ) {
+						if(jsonArr.length() == 0 ) {
+							insertBuffer = new ArrayList<ContentValues>() ;
+							tableName = null ;
+							nbRowstmp = 0 ;
+							nbTables++ ;
+							continue ;
+						}
+						else {
+							nbRows++ ;
+							continue ;
+						}
+					}
+					
+					if(jsonArr.length() == 0 ) {
+						//Log.w(TAG,"Committing "+tableName) ;
+						syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+						insertBuffer = new ArrayList<ContentValues>() ;
+						tableName = null ;
+						nbRowstmp = 0 ;
+						nbTables++ ;
+						continue ;
+					}
+					
+					if( jsonArr.length() != remoteColumnNames.length ) {
+						//Log.w(TAG,"Bad length !!!") ;
+						return 0 ;
+					}
+					
+					cv = new ContentValues() ;
+					for( int a=0 ; a<remoteColumnNames.length ; a++ ) {
+						if( remoteColumnNames[a] == null ) {
+							continue ;
+						}
+						// Log.w(TAG,"adding "+remoteColumnNames[a]+" "+jsonArr.getString(a)) ;
+						cv.put(remoteColumnNames[a], jsonArr.getString(a)) ;
+					}
+					insertBuffer.add(cv) ;
+		    		nbRows++ ;
+		    		nbRowstmp++ ;
+		    		
+		    		if( nbRowstmp > 1000 ) {
+		    			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+		    			insertBuffer = new ArrayList<ContentValues>() ;
+		    			nbRowstmp = 0 ;
+		    		}
+					
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					break ;
+				}
+			}
+			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			return 0 ;
+		}
+    	
+    	return versionTimestamp ;
+	}
+	private void syncDbFromPull_bulkReplace( String tableName, ArrayList<ContentValues> insertBuffer, HashMap<Integer,Integer> eqivRemoteIdToLocalId ) {
+		
+		
+		
+		
+	}
     
+	
+	
+	
+	private void syncPullResetLastTimestamp( String fileCode ) {
+    	SharedPreferences settings = getApplicationContext().getSharedPreferences("SyncFiles",MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putLong(fileCode,0);
+        editor.commit() ;
+	}
     
     
     
