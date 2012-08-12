@@ -516,6 +516,7 @@ public class CrmCalendarManager {
     	}
     	else {
     		currentFileId = crmEventModel.mCrmFileId ;
+    		mDb.execSQL(String.format("UPDATE store_file SET sync_is_synced=NULL WHERE filerecord_id='%d'",currentFileId));
     	}
     	
     	
@@ -607,8 +608,11 @@ public class CrmCalendarManager {
 	public boolean doneDeleteModel( CrmEventModel crmEventModel ) {
 		int currentFileId = crmEventModel.mCrmFileId ;
 		
+		/*
 		mDb.execSQL(String.format("DELETE FROM store_file WHERE filerecord_id='%d'",currentFileId));
 		mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",currentFileId));
+		*/
+		mDb.execSQL(String.format("UPDATE store_file SET sync_is_synced=NULL , sync_is_deleted='O' WHERE filerecord_id='%d'",currentFileId));
 		
 		return true ;
 	}
@@ -638,7 +642,8 @@ public class CrmCalendarManager {
     	if( this.mCrmAgendaInfos.mAccountIsOn ) {
     		sbEnt.append(String.format(" JOIN store_file_field det_acct ON det_acct.filerecord_id=ent.filerecord_id AND det_acct.filerecord_field_code='%s'",this.mCrmAgendaInfos.mAccountTargetFileField)) ;
     	}
-    	sbEnt.append(String.format(" AND ent.file_code='%s'",this.mCrmAgendaInfos.mCrmAgendaFilecode)) ;
+    	sbEnt.append(" WHERE 1") ;
+    	sbEnt.append(String.format(" AND ent.file_code='%s' AND ent.sync_is_deleted IS NULL",this.mCrmAgendaInfos.mCrmAgendaFilecode)) ;
 		
     	Time timeStart = new Time() ;
     	timeStart.setJulianDay(julianDayStart) ;
