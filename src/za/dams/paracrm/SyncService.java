@@ -35,6 +35,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.IBinder;
+import android.provider.Settings.Secure;
 import android.util.Base64;
 import android.util.Log;
 
@@ -54,8 +55,8 @@ public class SyncService extends Service {
 		Log.w("ParacrmSyncService", "Received start id " + startId + ": " + intent);
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
-		//new UploadTask().execute() ;
-		stopSelf() ;
+		new UploadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+		//stopSelf() ;
 		
 		return START_STICKY;
 	}
@@ -73,10 +74,14 @@ public class SyncService extends Service {
         	
         	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
         	
+        	String android_id = Secure.getString(SyncService.this.getApplicationContext().getContentResolver(),
+                    Secure.ANDROID_ID);
+        	mDbManager.syncTagVuid(android_id) ;
+        	
         	JSONObject jsonDump = new JSONObject() ;
         	try {
-        		jsonDump.putOpt("store_file", mDbManager.dumpTable("store_file")) ;
-				jsonDump.putOpt("store_file_field", mDbManager.dumpTable("store_file_field")) ;
+        		jsonDump.putOpt("store_file", mDbManager.syncDumpTable("store_file")) ;
+				jsonDump.putOpt("store_file_field", mDbManager.syncDumpTable("store_file_field")) ;
 			} catch (JSONException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -107,9 +112,7 @@ public class SyncService extends Service {
         			tmpCursor.close() ;
         		}
         		
-          		req = String.format("DELETE FROM store_file WHERE filerecord_id='%d'",uploadEntry.localId) ;
-        		mDbManager.execSQL(req) ;
-          		req = String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",uploadEntry.localId) ;
+          		req = String.format("UPDATE store_file SET sync_is_synced='O' WHERE filerecord_id='%d'",uploadEntry.localId) ;
         		mDbManager.execSQL(req) ;
         	}
         	mDbManager.endTransaction() ;
@@ -155,7 +158,7 @@ public class SyncService extends Service {
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
 		nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-		nameValuePairs.add(new BasicNameValuePair("_action", "android_postDbData"));
+		nameValuePairs.add(new BasicNameValuePair("_action", "android_syncPush"));
 		nameValuePairs.add(new BasicNameValuePair("data", jsonDump.toString()));
 		
 		StringBuilder builder = new StringBuilder();
