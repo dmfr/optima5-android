@@ -211,7 +211,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
 			mLoadTask.cancel(true) ;
 		}
 		mLoadTask = new EventLoadTask() ;
-		mLoadTask.execute() ;
+		mLoadTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
 	}
 	
     public EditEventFragment() {
@@ -350,7 +350,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
         switch (itemId) {
             case R.id.action_done:
             	if(mView != null && mView.prepareForSave()) {
-            		new EventSaveTask().execute() ;
+            		new EventSaveTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
             	}
                 break;
             case R.id.action_cancel:

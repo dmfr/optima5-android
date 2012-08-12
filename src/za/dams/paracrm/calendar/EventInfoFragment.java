@@ -303,7 +303,7 @@ public class EventInfoFragment extends DialogFragment
 			mLoadTask.cancel(true) ;
 		}
 		mLoadTask = new EventLoadTask() ;
-		mLoadTask.execute() ;
+		mLoadTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
 
         Button b = (Button) mView.findViewById(R.id.delete);
         b.setOnClickListener(new OnClickListener() {
@@ -546,7 +546,7 @@ public class EventInfoFragment extends DialogFragment
     			mLoadTask.cancel(true) ;
     		}
     		mLoadTask = new EventLoadTask() ;
-    		mLoadTask.execute() ;
+    		mLoadTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
         }
 
     }
