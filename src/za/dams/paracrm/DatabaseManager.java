@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 7;
+    private final int DB_VERSION = 8;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -234,7 +234,10 @@ public class DatabaseManager {
                     + "store_file" + " ("
                     + "filerecord_id" + " INTEGER PRIMARY KEY, "
                     + "filerecord_parent_id" + " INTEGER,"
-                    + "file_code" + " VARCHAR(50)"
+                    + "file_code" + " VARCHAR(50),"
+                    + "sync_vuid" + " VARCHAR(100),"
+                    + "sync_is_synced" + " VARCHAR(1),"
+                    + "sync_is_deleted" + " VARCHAR(1)"
                     + ");";
             db.execSQL(createTableQuery);
     		createTableQuery = "CREATE INDEX IF NOT EXISTS "
@@ -601,6 +604,56 @@ public class DatabaseManager {
     public void endTransaction() {
     	mDb.setTransactionSuccessful() ;
     	mDb.endTransaction() ;
+    }
+    
+    
+    public void syncTagVuid( String android_id ){
+    	Log.w(TAG,"My Vuid is "+android_id ) ;
+    	String query = String.format("UPDATE store_file SET sync_vuid='%s'||'-'||filerecord_id  WHERE sync_vuid IS NULL",android_id) ;
+    	mDb.beginTransaction() ;
+    	mDb.execSQL(query) ;
+    	mDb.setTransactionSuccessful() ;
+    	mDb.endTransaction() ;
+    }
+    public JSONArray syncDumpTable(String tableName) {
+    	JSONArray jsonArray = new JSONArray() ;
+    	
+    	String columnNames[] ;
+    	Cursor c = mDb.rawQuery(String.format("SELECT * FROM %s WHERE 0",tableName),
+    			null);
+    	try {
+    	    columnNames = c.getColumnNames();
+    	} finally {
+    	    c.close();
+    	}
+    	
+    	Columns cols = new Columns(columnNames);
+    	String query = null ;
+
+    	if( tableName.equals("store_file") ) {
+    		query = String.format("SELECT * FROM store_file WHERE sync_is_synced IS NULL",tableName) ;
+    	}
+    	else if( tableName.equals("store_file_field") ) {
+    		query = String.format("SELECT filefield.* FROM store_file file , store_file_field filefield WHERE file.filerecord_id=filefield.filerecord_id AND file.sync_is_synced IS NULL",tableName) ;
+    	}
+    	else {
+    		return jsonArray ;
+    	}
+    	
+		Cursor tmpCursor = mDb.rawQuery(query,null) ;
+		ContentValues cv ;
+		if( tmpCursor.getCount() > 0 ) {
+			while( !tmpCursor.isLast() ){
+				tmpCursor.moveToNext();
+
+				cv = new ContentValues() ;
+				DatabaseUtils.cursorRowToContentValues(tmpCursor, cv)  ;
+				jsonArray.put(cols.contentValueToJSON(cv)) ;
+			}
+		}
+		tmpCursor.close() ;
+    	
+    	return jsonArray ;
     }
    
     
