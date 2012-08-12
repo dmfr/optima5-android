@@ -21,6 +21,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import za.dams.paracrm.R;
+import za.dams.paracrm.SyncBroadcastReceiver ;
+import za.dams.paracrm.SyncService;
+import za.dams.paracrm.SyncServiceHelper;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
@@ -36,6 +39,7 @@ import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
@@ -61,7 +65,7 @@ import android.widget.TextView;
 
 public class CalendarActivity extends Activity implements EventHandler,
         OnSharedPreferenceChangeListener, SearchView.OnQueryTextListener, ActionBar.TabListener,
-        ActionBar.OnNavigationListener, OnSuggestionListener {
+        ActionBar.OnNavigationListener, OnSuggestionListener, SyncBroadcastReceiver.OnSyncListener {
     private static final String TAG = "AllInOneActivity";
     private static final boolean DEBUG = false;
     private static final String EVENT_INFO_FRAGMENT_TAG = "EventInfoFragment";
@@ -83,6 +87,7 @@ public class CalendarActivity extends Activity implements EventHandler,
     private static final int BUTTON_AGENDA_INDEX = 3;
 
     private CalendarController mController;
+    private SyncBroadcastReceiver mSyncBroadcastReceiver ;
     private static boolean mIsMultipane;
     private static boolean mIsTabletConfig;
     private static boolean mShowAgendaWithMonth;
@@ -298,6 +303,8 @@ public class CalendarActivity extends Activity implements EventHandler,
         // This needs to be created before setContentView
         mController = CalendarController.getInstance(this,mCrmInputId);
 
+        // This needs to be created before onResume / onPause
+        mSyncBroadcastReceiver = new SyncBroadcastReceiver( this ) ;
 
         // Get time from intent or icicle
         long timeMillis = -1;
@@ -401,6 +408,11 @@ public class CalendarActivity extends Activity implements EventHandler,
         */
 
         mContentResolver = getContentResolver();
+        
+        
+        // ***** DAMS : launch sync ******
+        // @DAMS : build proper sync system
+		SyncServiceHelper.launchSync( this ) ;
     }
 
     private long parseViewAction(final Intent intent) {
@@ -555,6 +567,8 @@ public class CalendarActivity extends Activity implements EventHandler,
             mIntentEventStartMillis = -1;
             mIntentEventEndMillis = -1;
         }
+        
+        registerReceiver(mSyncBroadcastReceiver, new IntentFilter(SyncService.SYNCSERVICE_BROADCAST));
     }
 
     @Override
@@ -579,6 +593,8 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (mController.getViewType() != ViewType.EDIT) {
             Utils.setDefaultView(this, mController.getViewType());
         }
+        
+		unregisterReceiver(mSyncBroadcastReceiver);
     }
 
     @Override
@@ -756,7 +772,8 @@ public class CalendarActivity extends Activity implements EventHandler,
         long extras = CalendarController.EXTRA_GOTO_TIME;
         switch (item.getItemId()) {
             case R.id.action_refresh:
-                mController.refreshCalendars();
+                // mController.refreshCalendars();
+            	SyncServiceHelper.launchSync(this) ;
                 return true;
             case R.id.action_today:
                 viewType = ViewType.CURRENT;
@@ -1314,4 +1331,17 @@ public class CalendarActivity extends Activity implements EventHandler,
         }
         return false;
     }
+
+	@Override
+	public void onSyncStarted() {
+		// TODO Auto-generated method stub
+		Log.w(TAG,"TEMP SYNC STARTED") ;
+	}
+
+	@Override
+	public void onSyncComplete(boolean hasChanged) {
+		// TODO Auto-generated method stub
+		Log.w(TAG,"TEMP SYNC DONE !!!!!") ;
+		eventsChanged();
+	}
 }

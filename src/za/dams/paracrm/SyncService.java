@@ -40,6 +40,12 @@ import android.util.Base64;
 import android.util.Log;
 
 public class SyncService extends Service {
+	
+	public static final String SYNCSERVICE_BROADCAST = "SyncServiceBroadcast" ;
+	
+	public static final String SYNCSERVICE_STATUS = "SyncServiceStatus";
+	public static final int SYNCSERVICE_STARTED = 1 ;
+	public static final int SYNCSERVICE_COMPLETE = 2 ;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -61,16 +67,30 @@ public class SyncService extends Service {
 		return START_STICKY;
 	}
 	
+	private synchronized void sendBroadcastStarted() {
+		Intent i = new Intent(SYNCSERVICE_BROADCAST);  
+		i.putExtra(SYNCSERVICE_STATUS,SYNCSERVICE_STARTED);
+		sendBroadcast(i);
+	}
+	private synchronized void sendBroadcastComplete() {
+		Intent i = new Intent(SYNCSERVICE_BROADCAST);  
+		i.putExtra(SYNCSERVICE_STATUS,SYNCSERVICE_COMPLETE);
+		sendBroadcast(i);
+	}
+	
 	
     private class UploadTask extends AsyncTask<Void, Integer, Boolean> {
     	protected void onPreExecute(){
     	}
     	
         protected Boolean doInBackground(Void... Params ) {
+        	
         	try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 			}
+
+        	SyncService.this.sendBroadcastStarted() ;
         	
         	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
         	
@@ -132,6 +152,7 @@ public class SyncService extends Service {
         }
 
         protected void onPostExecute(Boolean myBool) {
+        	sendBroadcastComplete() ;
         	SyncService.this.stopSelf() ;
         }
     }
