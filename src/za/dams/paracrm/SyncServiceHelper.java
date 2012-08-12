@@ -15,14 +15,7 @@ public class SyncServiceHelper {
 		Cursor tmpCursor ;
 		boolean retValue = false ;
 		DatabaseManager mDbManager = DatabaseManager.getInstance(c) ;
-		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM store_file") ;
-		tmpCursor.moveToNext() ;
-		if( tmpCursor.getInt(0) > 0 ) {
-			retValue = true ;
-		}
-		tmpCursor.close() ;
-		
-		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM store_file_field") ;
+		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM store_file WHERE sync_is_synced IS NULL") ;
 		tmpCursor.moveToNext() ;
 		if( tmpCursor.getInt(0) > 0 ) {
 			retValue = true ;
