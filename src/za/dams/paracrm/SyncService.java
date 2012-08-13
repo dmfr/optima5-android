@@ -1,12 +1,17 @@
 package za.dams.paracrm;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,13 +36,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import za.dams.paracrm.DatabaseManager.DatabaseUpgradeResult;
-
 import android.app.Service;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -48,6 +49,8 @@ import android.util.Log;
 
 public class SyncService extends Service {
 	
+	public static final String TAG = "SyncService" ;
+	
 	public static final String SYNCSERVICE_BROADCAST = "SyncServiceBroadcast" ;
 	
 	public static final String SYNCSERVICE_STATUS = "SyncServiceStatus";
@@ -55,7 +58,7 @@ public class SyncService extends Service {
 	public static final int SYNCSERVICE_COMPLETE = 2 ;
 	
 	public static final String SYNCPULL_FILECODE = "SyncPullFilecode" ;
-	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullFilecode" ;
+	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullNoIncrement" ;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -71,16 +74,20 @@ public class SyncService extends Service {
 		Log.w("ParacrmSyncService", "Received start id " + startId + ": " + intent);
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
-		new UploadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+		if( SyncServiceHelper.hasPendingUploads(getApplicationContext())) {
+			new UploadTask().execute() ;
+		}
 		//stopSelf() ;
 		
 		Bundle bundle = intent.getExtras() ;
-		if( bundle.containsKey(SYNCPULL_FILECODE) ){
-			String fileCode = bundle.getString(SYNCPULL_FILECODE) ;
+		if( bundle != null && bundle.containsKey(SYNCPULL_FILECODE) ){
+			String[] filesCodes = bundle.getStringArray(SYNCPULL_FILECODE) ;
 			if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
-				syncPullResetLastTimestamp( fileCode ) ;
+				for( String fileCode : filesCodes ){
+					syncPullResetLastTimestamp( fileCode ) ;
+				}
 			}
-			new PullTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,fileCode) ;
+			new PullTask().execute(filesCodes) ;
 		}
 		
 		
@@ -111,7 +118,7 @@ public class SyncService extends Service {
 			} catch (InterruptedException e) {
 			}
 
-        	SyncService.this.sendBroadcastStarted() ;
+        	// SyncService.this.sendBroadcastStarted() ;
         	
         	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
         	
@@ -173,7 +180,7 @@ public class SyncService extends Service {
         }
 
         protected void onPostExecute(Boolean myBool) {
-        	sendBroadcastComplete() ;
+        	// sendBroadcastComplete() ;
         	SyncService.this.stopSelf() ;
         }
     }
@@ -186,22 +193,49 @@ public class SyncService extends Service {
     
         protected Boolean doInBackground(String... filesCodes ) {
         	for( String fileCode : filesCodes ){
-        		SharedPreferences settings = getSharedPreferences("SyncFiles",MODE_PRIVATE);
-        		
         		// ***** timestamp du dernier sync pour ce fileCode ****
-            	long lastFileSyncTimestamp = settings.getLong(fileCode, 0) ;
+            	long lastFileSyncTimestamp = syncPullGetLastTimestamp(fileCode) ;
                 
             	
-            	InputStream is = null ;
-            	long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
-            	if( newSyncTimestamp <= 0 ) {
-            		return false ;
-            	}
+            	HashMap<String,String> postParams = new HashMap<String,String>() ;
+            	postParams.put("_domain", "paramount");
+            	postParams.put("_moduleName", "paracrm");
+            	postParams.put("_action", "android_syncPull");
+            	postParams.put("file_code", fileCode);
+            	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
+            	String postString = HttpPostHelper.getPostString(postParams) ;
             	
-            	// stockage du timetamp de cette sync
-                SharedPreferences.Editor editor = settings.edit();
-                editor.putLong(fileCode, newSyncTimestamp);
-                editor.commit() ;
+        		try {
+        			URL url = new URL(getString(R.string.server_url));
+        			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+        			httpURLConnection.setDoOutput(true);
+        			httpURLConnection.setRequestMethod("POST");
+        			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
+        			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        			try {
+        				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
+        				out.print(postString);
+        				out.close();
+
+        				InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
+        				long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
+                    	if( newSyncTimestamp <= 0 ) {
+                    		return false ;
+                    	}
+        			}
+        			catch (IOException e) {
+        				
+        			}
+        			finally{
+        				httpURLConnection.disconnect() ;
+        			}
+        		} catch (MalformedURLException e) {
+        			// TODO Auto-generated catch block
+        			
+        		} catch (IOException e) {
+        			// TODO Auto-generated catch block
+        			
+        		}
         	}
         	
         	return true ;
@@ -412,6 +446,23 @@ public class SyncService extends Service {
 
 	}
 	
+	
+	private int syncPullGetLastTimestamp( String fileCode ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+		
+		int timestamp = 0 ;
+		
+		String query = String.format("SELECT max(sync_timestamp) FROM store_file WHERE file_code='%s'",fileCode) ;
+		Cursor cursor = mDb.rawQuery(query) ;
+		if( cursor.getCount() > 0 ) {
+			cursor.moveToNext() ;
+			timestamp = cursor.getInt(0) ;
+		}
+		cursor.close() ;
+		return timestamp ;
+	}
+	
+	
 	private long syncDbFromPull( String bibleCode , InputStream is ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
 		
@@ -450,7 +501,7 @@ public class SyncService extends Service {
     		JSONObject jsonObj ;
     		JSONArray jsonArr ;
 			while( (readLine = r.readLine()) != null ) {
-				// Log.w(TAG,readLine) ;
+				Log.w(TAG,readLine) ;
 				try {
 					if( isFirst ) {
 						jsonObj = new JSONObject(readLine) ;
@@ -483,7 +534,6 @@ public class SyncService extends Service {
 						
 						Collection<String> localColumnNames = new ArrayList<String>() ;
 						try{
-							mDb.execSQL(String.format("DELETE FROM %s",tableName));
 							Cursor c = mDb.rawQuery(String.format("SELECT * FROM %s WHERE 0",tableName));
 							localColumnNames = Arrays.asList(c.getColumnNames()) ;
 							c.close() ;
@@ -571,21 +621,71 @@ public class SyncService extends Service {
     	
     	return versionTimestamp ;
 	}
-	private void syncDbFromPull_bulkReplace( String tableName, ArrayList<ContentValues> insertBuffer, HashMap<Integer,Integer> eqivRemoteIdToLocalId ) {
+	private void syncDbFromPull_bulkReplace( String tableName, ArrayList<ContentValues> cvs, HashMap<Integer,Integer> eqivRemoteIdToLocalId ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
 		
-		
-		
-		
+    	if( cvs.isEmpty() ){
+    		return ;
+    	}
+    	
+    	if( tableName.equals("store_file") ) {
+        	
+    		mDb.beginTransaction() ;
+    		Iterator<ContentValues> iter = cvs.iterator() ;
+    		ContentValues cv ;
+    		while( iter.hasNext() ) {
+    			cv = iter.next() ;
+
+    			if( cv.getAsString("sync_vuid").equals("") ) {
+    				continue ;
+    			}
+    			else {
+    				Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
+    				while( cursor.moveToNext() ) {
+    					int deleteId = cursor.getInt(0) ;
+    					mDb.execSQL(String.format("DELETE FROM store_file WHERE filerecord_id='%d'",deleteId)) ;
+    					mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",deleteId)) ;
+    				}
+    			}
+    			cv.put("sync_is_synced", "O") ;
+    			int remoteId = cv.getAsInteger("filerecord_id") ;
+    			cv.putNull("filerecord_id") ;
+    			int localId = (int)mDb.insert(tableName, cv);
+
+    			eqivRemoteIdToLocalId.put(remoteId, localId) ;
+    		}
+    		mDb.endTransaction() ;
+    	
+    	}
+    	if( tableName.equals("store_file_field") ) {
+        	
+    		mDb.beginTransaction() ;
+    		Iterator<ContentValues> iter = cvs.iterator() ;
+    		ContentValues cv ;
+    		while( iter.hasNext() ) {
+    			cv = iter.next() ;
+    			int remoteId = cv.getAsInteger("filerecord_id") ;
+    			if( !eqivRemoteIdToLocalId.containsKey(remoteId) ) {
+    				continue ;
+    			}
+    			int localId = eqivRemoteIdToLocalId.get(remoteId) ;
+    			cv.put("filerecord_id", localId) ;
+    			
+    			
+    			mDb.insert(tableName, cv);
+    		}
+    		mDb.endTransaction() ;
+    	
+    	}
 	}
     
 	
 	
 	
 	private void syncPullResetLastTimestamp( String fileCode ) {
-    	SharedPreferences settings = getApplicationContext().getSharedPreferences("SyncFiles",MODE_PRIVATE);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putLong(fileCode,0);
-        editor.commit() ;
+        DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+        
+        mDb.execSQL(String.format("UPDATE store_file SET sync_timestamp='0' WHERE file_code='%s'",fileCode)) ;
 	}
     
     

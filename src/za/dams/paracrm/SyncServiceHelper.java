@@ -5,6 +5,7 @@ import android.app.ActivityManager.RunningServiceInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.os.Bundle;
 import android.util.Log;
 
 public class SyncServiceHelper {
@@ -46,10 +47,30 @@ public class SyncServiceHelper {
 		
 		// **** verif : déja lancé ? ****
 		if( isServiceRunning(context) ) {
+			Log.w("SyncHelper","Service running ?") ;
 			return ;
 		}
-		
-		context.startService(new Intent(context, SyncService.class)) ;
+		if( !hasPendingUploads(context) ) {
+			Log.w("SyncHelper","No pending uploads ?") ;
+			return ;
+		}
+		Intent intent = new Intent(context, SyncService.class) ;
+		context.startService(intent) ;
+	}
+	public static void launchSyncAndPull( Context context, String[] filesCodes ){
+		launchSyncAndPull(context,filesCodes,false) ;
+	}
+	public static void launchSyncAndPull( Context context, String[] filesCodes, boolean noIncremential ) {
+		// **** verif : déja lancé ? ****
+		if( isServiceRunning(context) ) {
+			return ;
+		}
+		Intent intent = new Intent(context, SyncService.class) ;
+		intent.putExtra(SyncService.SYNCPULL_FILECODE, filesCodes) ;
+		if( noIncremential ){
+			intent.putExtra(SyncService.SYNCPULL_NO_INCREMENTIAL, true) ;
+		}
+		context.startService(intent) ;
 	}
 
 }
