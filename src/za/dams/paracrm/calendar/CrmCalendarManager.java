@@ -46,6 +46,9 @@ public class CrmCalendarManager {
 			mCrmAgendaLib = crmAgendaLib ;
 		}
 	}
+	public enum CalendarDuration {
+		DURATION_STD, DURATION_ALLDAY, DURATION_MULTIPLEDAYS
+	}
 	public static class CrmCalendarAccount {
 		public String mCrmAgendaFilecode ;
 		public String mCrmAgendaLib ;
@@ -54,10 +57,13 @@ public class CrmCalendarManager {
 		public String mEventEndFileField ;
 		
 		public ArrayList<CrmFileFieldDesc> mCrmFields ;
+		public int mDurationCrmFieldIdx = -1 ;
 		
 		public boolean mAccountIsOn ;
 		public String mAccountTargetFileField ;
 		public String mAccountSrcBibleCode ;
+		
+		public HashMap<String,CalendarDuration> mDurationsTable ;
 		
 		public CrmCalendarAccount(){
 			// empty constructor
@@ -220,7 +226,6 @@ public class CrmCalendarManager {
     			}
     		}
     		
-    		
     		mCrmAgendaInfos.mEventStartFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstart_filefield"));
     		mCrmAgendaInfos.mEventEndFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventend_filefield"));
 			for( CrmFileFieldDesc fd : tFields ) {
@@ -229,21 +234,59 @@ public class CrmCalendarManager {
 					fieldsToRemove.add(fd) ;
 				}
 			}
-    		
-    	}
-    	tmpCursor.close() ;
-    	
-    	/// Suppression des crmFields spécifiques (start,end,account,...) 
-    	int toRemove = fieldsToRemove.size() ;
-    	int removed = 0 ;
-    	for( CrmFileFieldDesc fdToRemove : fieldsToRemove ) {
-    		if( mCrmAgendaInfos.mCrmFields.remove(fdToRemove) ) {
-    			removed++ ;
+			
+	    	/// Suppression des crmFields spécifiques (start,end,account,...) 
+	    	int toRemove = fieldsToRemove.size() ;
+	    	int removed = 0 ;
+	    	for( CrmFileFieldDesc fdToRemove : fieldsToRemove ) {
+	    		if( mCrmAgendaInfos.mCrmFields.remove(fdToRemove) ) {
+	    			removed++ ;
+	    		}
+	    	}
+	    	if( toRemove != removed ){
+	    		Log.w(TAG,"Big problem !") ;
+	    	}
+
+			
+    		if( tmpCursor.getString(tmpCursor.getColumnIndex("duration_is_fixed")).equals("O") ) {
+    			String eventDurationFileField = tmpCursor.getString(tmpCursor.getColumnIndex("duration_src_filefield")) ;
+    			String eventDurationSrcBibleCode = null ;
+    			String eventDurationSrcBibleField = null ;
+    			
+    			// recherche de l'element CrmDuration
+    			int tmpIdx = -1 ;
+    			for( CrmFileFieldDesc fd : mCrmAgendaInfos.mCrmFields ) {
+    				tmpIdx++ ;
+    				if( fd.fieldCode.equals(eventDurationFileField) ) {
+    					mCrmAgendaInfos.mDurationCrmFieldIdx = tmpIdx ;
+    					eventDurationSrcBibleCode = fd.fieldLinkBible ;
+    					eventDurationSrcBibleField = tmpCursor.getString(tmpCursor.getColumnIndex("duration_src_biblefield")) ;
+    					break ;
+    				}
+    			}
+    			
+    			// load de la table "bible"
+    			if( eventDurationSrcBibleCode != null && eventDurationSrcBibleField != null ) {
+    				mCrmAgendaInfos.mDurationsTable = new HashMap<String,CalendarDuration>() ;
+    				
+    				// @DAMS TODO : requete crade
+    				String bibleQuery = String.format("SELECT entry_key,entry_field_value_number FROM store_bible_entry_field WHERE bible_code='%s' AND entry_field_code='%s'",eventDurationSrcBibleCode,eventDurationSrcBibleField) ;
+    				Cursor bibleCursor = mDb.rawQuery(bibleQuery) ;
+    				while( bibleCursor.moveToNext() ) {
+    					String entrykey = bibleCursor.getString(0) ;
+    					float duration = bibleCursor.getFloat(1) ;
+    					
+    					if( duration > 0 ) {
+    						mCrmAgendaInfos.mDurationsTable.put(entrykey, CalendarDuration.DURATION_ALLDAY) ;
+    					}
+    					else {
+    						mCrmAgendaInfos.mDurationsTable.put(entrykey, CalendarDuration.DURATION_STD) ;
+    					}
+    				}
+    			}
     		}
     	}
-    	if( toRemove != removed ){
-    		Log.w(TAG,"Big problem !") ;
-    	}
+    	tmpCursor.close() ;
 	}
 	
 	public boolean isValid() {
@@ -261,6 +304,8 @@ public class CrmCalendarManager {
 	
 	
 	public void populateModelEmpty( CrmEventModel crmEventModel ) {
+		crmEventModel.mAllDay = false ;
+		
 		crmEventModel.mCrmFields = new ArrayList<CrmFileFieldDesc>() ;
 		crmEventModel.mCrmValues = new ArrayList<CrmFileFieldValue>() ;
 		for( CrmFileFieldDesc fd : mCrmAgendaInfos.mCrmFields ) {
@@ -442,8 +487,28 @@ public class CrmCalendarManager {
 		}
 		
 		crmEventModel.mCrmTitle = tCrmTitle.toArray(new String[tCrmTitle.size()]) ;
+		
+		
+		crmEventModel.mAllDay = modelIsAllDay( crmEventModel ) ;
 	}
 	
+	public boolean modelIsAllDay( CrmEventModel crmEventModel ) {
+		if( mCrmAgendaInfos.mDurationCrmFieldIdx >= 0 && crmEventModel.mCrmValues.get(mCrmAgendaInfos.mDurationCrmFieldIdx) != null ) {
+			String entrykey = crmEventModel.mCrmValues.get(mCrmAgendaInfos.mDurationCrmFieldIdx).valueString ;
+			if( mCrmAgendaInfos.mDurationsTable.containsKey(entrykey) ) {
+				switch( mCrmAgendaInfos.mDurationsTable.get(entrykey) ) {
+				case DURATION_ALLDAY :
+					return true ;
+				case DURATION_MULTIPLEDAYS :
+					return true ;
+				default :
+					return false ;
+				}
+			}
+		}
+		
+		return false ;
+	}
 	
 	
 	public boolean doneCheckModel( CrmEventModel crmEventModel ) {
@@ -467,6 +532,23 @@ public class CrmCalendarManager {
 		String localFileCode = mCrmAgendaFileCode ;
 		
 		Cursor tmpCursor ;
+		
+		
+		// ***** Bricolage des champs start/end pour allDay *****
+		if( modelIsAllDay(crmEventModel) ) {
+	    	Time startTime = new Time() ;
+	    	startTime.set(crmEventModel.mStart) ;
+	    	startTime.hour = 0 ;
+	    	startTime.minute = 0 ;
+	    	startTime.second = 0 ;
+	    	crmEventModel.mStart = startTime.toMillis(false) ;
+	    	
+	    	
+	    	crmEventModel.mEnd = startTime.toMillis(false) ;
+		}
+		
+		
+		
 		
 		// ***** Catalogue des champs spéciaux *****
 		HashMap<String,CalendarField> calFields = null ;

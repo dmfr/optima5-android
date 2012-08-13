@@ -35,7 +35,9 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 
-public class EditEventFragment extends Fragment implements EventHandler {
+public class EditEventFragment extends Fragment 
+	implements EventHandler, EditEventView.OnEditEventViewChangeListener {
+	
 	private static final String TAG = "Calendar/EditEventFragment";
 	
 	private EventInfo mEvent ;
@@ -136,6 +138,19 @@ public class EditEventFragment extends Fragment implements EventHandler {
 				
 				mView.setAccountsData( accountRows ) ;
 			}
+			
+			return null;
+		}
+		protected void onPostExecute(Void arg0) {
+			setModelIfDone() ;
+		}
+	}
+	private class EventRefreshTask extends AsyncTask<Void, Void, Void> {
+    	protected void onPreExecute(){
+    		EditEventFragment.this.mView.prepareForSave() ;
+    	}
+		protected Void doInBackground(Void... arg0) {
+			EditEventFragment.this.mModel.mAllDay = mCrmCalendarManager.modelIsAllDay( mModel ) ;
 			
 			return null;
 		}
@@ -267,6 +282,7 @@ public class EditEventFragment extends Fragment implements EventHandler {
             view = inflater.inflate(R.layout.calendar_editevent, null);
         }
         mView = new EditEventView(mContext, view, mOnDone);
+        mView.setViewChangeListener( this ) ;
         startQuery(); // **** chargement des données ??? ***
         
 
@@ -409,6 +425,12 @@ public class EditEventFragment extends Fragment implements EventHandler {
 	public void eventsChanged() {
 		// TODO Auto-generated method stub
 		
+	}
+	@Override
+	public void onEditEventViewChanged() {
+		// TODO Auto-generated method stub
+		//Log.w(TAG,"Edit Event View changed !!!") ;
+		new EventRefreshTask().execute() ;
 	}
 
 }

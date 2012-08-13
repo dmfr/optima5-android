@@ -82,6 +82,12 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     View mAllDayRow ;
     ArrayList<View> mCrmFieldViews ;
     
+    OnEditEventViewChangeListener mChangeListener ;
+    
+	public interface OnEditEventViewChangeListener {
+		void onEditEventViewChanged() ;
+	}
+    
     
     private String mTimezone ;
     
@@ -115,6 +121,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         
         mStartTime = new Time(mTimezone);
         mEndTime = new Time(mTimezone);
+	}
+	
+	public void setViewChangeListener( OnEditEventViewChangeListener changeListener ) {
+		mChangeListener = changeListener ;
 	}
 	
 	
@@ -295,6 +305,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             	mModel.mCrmValues.get(mCrmFieldIndex).isSet = false ;
                 mModel.mCrmValues.get(mCrmFieldIndex).displayStr = "" ;
                 mModel.mCrmValues.get(mCrmFieldIndex).valueString = "" ;
+            }
+            if( mChangeListener != null ) {
+            	mChangeListener.onEditEventViewChanged() ;
             }
         }
     }
@@ -619,6 +632,19 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     private void updateView(){
         mCalendarSelectorGroup.setVisibility(View.VISIBLE);
         mCalendarStaticGroup.setVisibility(View.GONE);
+        
+        setAllDayViewsVisibility(mModel.mAllDay); 
+    }
+    protected void setAllDayViewsVisibility(boolean isChecked) {
+        if (isChecked) {
+            mStartTimeButton.setVisibility(View.GONE);
+            mEndDateButton.setVisibility(View.GONE);
+            mEndTimeButton.setVisibility(View.GONE);
+        } else {
+            mStartTimeButton.setVisibility(View.VISIBLE);
+            mEndDateButton.setVisibility(View.VISIBLE);
+            mEndTimeButton.setVisibility(View.VISIBLE);
+        }
     }
 	
 	

@@ -295,7 +295,7 @@ public class Event implements Cloneable {
     	e.endDay = Time.getJulianDay(e.endMillis, currentTime.gmtoff) ;
     	
     	
-    	e.allDay = false ;
+    	e.allDay = model.mAllDay ;
     	
     	e.title = "Title "+e.id ;
     	e.location = Utils.implodeArray(model.mCrmTitle, System.getProperty("line.separator")) ;
