@@ -1347,14 +1347,12 @@ public class CalendarActivity extends Activity implements EventHandler,
 
 	@Override
 	public void onSyncStarted() {
-		// TODO Auto-generated method stub
-		Log.w(TAG,"TEMP SYNC STARTED") ;
+		//Log.w(TAG,"TEMP SYNC STARTED") ;
 	}
 
 	@Override
 	public void onSyncComplete(boolean hasChanged) {
-		// TODO Auto-generated method stub
-		Log.w(TAG,"TEMP SYNC DONE !!!!!") ;
+		//Log.w(TAG,"TEMP SYNC DONE !!!!!") ;
 		eventsChanged();
 	}
 }

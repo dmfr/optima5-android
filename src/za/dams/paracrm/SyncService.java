@@ -71,7 +71,7 @@ public class SyncService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.w("ParacrmSyncService", "Received start id " + startId + ": " + intent);
+		//Log.w("ParacrmSyncService", "Received start id " + startId + ": " + intent);
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
 		if( SyncServiceHelper.hasPendingUploads(getApplicationContext())) {
@@ -311,7 +311,7 @@ public class SyncService extends Service {
 		}
 		
 		
-		Log.w("UploadService",builder.toString()) ;
+		// Log.w("UploadService",builder.toString()) ;
 		
 		// do something with builder ;
         JSONObject jsonResp = new JSONObject() ;
@@ -363,7 +363,7 @@ public class SyncService extends Service {
 		if( tmpCursor.getCount() > 0 ) {
 			while(!tmpCursor.isLast()) {
 				tmpCursor.moveToNext() ;
-				Log.w("Bin upload","Uploading "+tmpCursor.getString(1)) ;
+				// Log.w("Bin upload","Uploading "+tmpCursor.getString(1)) ;
 
 
 
@@ -442,8 +442,6 @@ public class SyncService extends Service {
 			}
 		}
 		tmpCursor.close() ;
-		Log.w("Bin upload","All done ?") ;
-
 	}
 	
 	
@@ -501,7 +499,7 @@ public class SyncService extends Service {
     		JSONObject jsonObj ;
     		JSONArray jsonArr ;
 			while( (readLine = r.readLine()) != null ) {
-				Log.w(TAG,readLine) ;
+				// Log.w(TAG,readLine) ;
 				try {
 					if( isFirst ) {
 						jsonObj = new JSONObject(readLine) ;
@@ -692,7 +690,7 @@ public class SyncService extends Service {
     
 	
 	public void onDestroy(){
-		Log.w("ParacrmSyncService", "Stopping service");
+		// Log.w("ParacrmSyncService", "Stopping service");
 		super.onDestroy() ;
 	}
 
