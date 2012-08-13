@@ -16,6 +16,7 @@
 
 package za.dams.paracrm.calendar;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -28,6 +29,7 @@ import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.ViewType;
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
 import android.animation.ObjectAnimator;
@@ -38,6 +40,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -412,7 +415,12 @@ public class CalendarActivity extends Activity implements EventHandler,
         
         // ***** DAMS : launch sync ******
         // @DAMS : build proper sync system
-		SyncServiceHelper.launchSync( this ) ;
+        ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
+        for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
+        	calendarFilecodes.add(cci.mCrmAgendaId) ;
+        }
+        String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
+		SyncServiceHelper.launchSyncAndPull( this , filecodes ) ;
     }
 
     private long parseViewAction(final Intent intent) {
@@ -773,7 +781,12 @@ public class CalendarActivity extends Activity implements EventHandler,
         switch (item.getItemId()) {
             case R.id.action_refresh:
                 // mController.refreshCalendars();
-            	SyncServiceHelper.launchSync(this) ;
+                ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
+                for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
+                	calendarFilecodes.add(cci.mCrmAgendaId) ;
+                }
+                String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
+        		SyncServiceHelper.launchSyncAndPull( this , filecodes ) ;
                 return true;
             case R.id.action_today:
                 viewType = ViewType.CURRENT;
