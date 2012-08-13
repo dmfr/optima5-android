@@ -25,6 +25,7 @@ import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -391,11 +392,11 @@ public class EventInfoFragment extends DialogFragment
         public void run() {
             if (EventInfoFragment.this.mIsPaused) {
                 mDismissOnResume = true;
-                return;
             }
-            if (EventInfoFragment.this.isVisible()) {
+            else if (EventInfoFragment.this.isVisible()) {
                 EventInfoFragment.this.dismiss();
             }
+            
             if( mIsDialog ){
             	((CalendarActivity)mActivity).eventsChanged() ;
             }

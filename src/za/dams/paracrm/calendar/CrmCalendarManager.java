@@ -643,7 +643,7 @@ public class CrmCalendarManager {
     		sbEnt.append(String.format(" JOIN store_file_field det_acct ON det_acct.filerecord_id=ent.filerecord_id AND det_acct.filerecord_field_code='%s'",this.mCrmAgendaInfos.mAccountTargetFileField)) ;
     	}
     	sbEnt.append(" WHERE 1") ;
-    	sbEnt.append(String.format(" AND ent.file_code='%s' AND ent.sync_is_deleted IS NULL",this.mCrmAgendaInfos.mCrmAgendaFilecode)) ;
+    	sbEnt.append(String.format(" AND ent.file_code='%s' AND ( ent.sync_is_deleted IS NULL OR ent.sync_is_deleted<>'O' )",this.mCrmAgendaInfos.mCrmAgendaFilecode)) ;
 		
     	Time timeStart = new Time() ;
     	timeStart.setJulianDay(julianDayStart) ;

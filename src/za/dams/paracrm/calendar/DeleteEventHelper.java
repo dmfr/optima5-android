@@ -41,7 +41,6 @@ public class DeleteEventHelper {
 			CrmCalendarManager crmCalendarManager = new CrmCalendarManager( mContext, DeleteEventHelper.this.mModel.mCrmFileCode ) ;
 			crmCalendarManager.doneDeleteModel( DeleteEventHelper.this.mModel ) ;
 			
-			
 			return null;
 		}
 		protected void onPostExecute(Void arg0) {
@@ -76,12 +75,6 @@ public class DeleteEventHelper {
         public void onClick(DialogInterface dialog, int button) {
             deleteStarted();
             new EventDeleteTask().execute() ;
-            if (mCallback != null) {
-                mCallback.run();
-            }
-            if (mExitWhenDone) {
-                mParent.finish();
-            }
         }
     };
 
