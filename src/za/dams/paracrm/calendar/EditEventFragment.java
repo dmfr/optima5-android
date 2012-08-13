@@ -344,7 +344,7 @@ public class EditEventFragment extends Fragment
         super.onCreateOptionsMenu(menu, inflater);
 
         if (!mUseCustomActionBar) {
-        	Log.w(TAG,"Inflating...") ;
+        	//Log.w(TAG,"Inflating...") ;
             inflater.inflate(R.menu.calendar_editevent_titlebar, menu);
         }
     }

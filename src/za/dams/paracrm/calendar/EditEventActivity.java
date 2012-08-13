@@ -56,7 +56,7 @@ public class EditEventActivity extends Activity {
 
         if (getIntent() != null && getIntent().getExtras().containsKey(BUNDLE_KEY_CRM_ID)) {
         	mCrmInputId = getIntent().getExtras().getInt(BUNDLE_KEY_CRM_ID);
-        	Log.w(TAG,"Creating CrmCalendarManager") ;
+        	//Log.w(TAG,"Creating CrmCalendarManager") ;
         	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
         }
         
@@ -87,7 +87,7 @@ public class EditEventActivity extends Activity {
                 intent = getIntent();
             }
 
-            Log.w(TAG,"Creating fragment") ;
+            //Log.w(TAG,"Creating fragment") ;
             mEditFragment = new EditEventFragment(mEventInfo, false, intent);
             
             mEditFragment.setCrmCalendarManager( mCrmCalendarManager ) ;

@@ -495,7 +495,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
      * onItemSelected callback is configured).
      */
     public void setAccountsData( AccountRow[] accountRows ) {
-    	Log.w(TAG,"Spinner size = "+accountRows.length ) ;
+    	//Log.w(TAG,"Spinner size = "+accountRows.length ) ;
     	
         // populate the calendars spinner
         AccountsAdapter adapter = new AccountsAdapter(mActivity, accountRows);
@@ -507,7 +507,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     public void setModel(CrmEventModel model) {
         mModel = model;
         
-        Log.w(TAG,"Dams : Setting model") ;
+        //Log.w(TAG,"Dams : Setting model") ;
 
         if (model == null) {
             // Display loading screen
