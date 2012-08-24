@@ -71,7 +71,6 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.Interpolator;
 import android.view.animation.TranslateAnimation;
-import android.widget.EdgeEffect;
 import android.widget.ImageView;
 import android.widget.OverScroller;
 import android.widget.PopupWindow;
@@ -590,8 +589,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private ViewSwitcher mViewSwitcher;
     private GestureDetector mGestureDetector;
     private OverScroller mScroller;
-    private EdgeEffect mEdgeEffectTop;
-    private EdgeEffect mEdgeEffectBottom;
+    //private EdgeEffect mEdgeEffectTop;
+    //private EdgeEffect mEdgeEffectBottom;
     private boolean mCallEdgeEffectOnAbsorb;
     private final int OVERFLING_DISTANCE;
     private float mLastVelocity;
@@ -725,8 +724,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         }
         mScroller = new OverScroller(context);
         mHScrollInterpolator = new ScrollInterpolator();
+        // @DAMS
+        /*
         mEdgeEffectTop = new EdgeEffect(context);
         mEdgeEffectBottom = new EdgeEffect(context);
+        */
         OVERFLING_DISTANCE = ViewConfiguration.get(context).getScaledOverflingDistance();
 
         init(context);
@@ -1167,8 +1169,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     protected void onSizeChanged(int width, int height, int oldw, int oldh) {
         mViewWidth = width;
         mViewHeight = height;
+        // @DAMS
+        /*
         mEdgeEffectTop.setSize(mViewWidth, mViewHeight);
         mEdgeEffectBottom.setSize(mViewWidth, mViewHeight);
+        */
         int gridAreaWidth = width - mHoursWidth;
         mCellWidth = (gridAreaWidth - (mNumDays * DAY_GAP)) / mNumDays;
 
@@ -2139,6 +2144,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         mComputeSelectedEvents = false;
 
         // Draw overscroll glow
+        // @DAMS
+        /*
         if (!mEdgeEffectTop.isFinished()) {
             if (DAY_HEADER_HEIGHT != 0) {
                 canvas.translate(0, DAY_HEADER_HEIGHT);
@@ -2156,6 +2163,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 invalidate();
             }
         }
+        */
         canvas.restore();
     }
 
@@ -3873,6 +3881,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             mViewStartY = mScrollStartY + distanceY;
 
             // If dragging while already at the end, do a glow
+            // @DAMS
+            /*
             final int pulledToY = (int) (mScrollStartY + deltaY);
             if (pulledToY < 0) {
                 mEdgeEffectTop.onPull(deltaY / mViewHeight);
@@ -3885,6 +3895,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                     mEdgeEffectTop.onRelease();
                 }
             }
+            */
 
             if (mViewStartY < 0) {
                 mViewStartY = 0;
@@ -4093,8 +4104,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             case MotionEvent.ACTION_UP:
                 if (DEBUG) Log.e(TAG, "ACTION_UP Cnt=" + ev.getPointerCount() + mHandleActionUp);
-                mEdgeEffectTop.onRelease();
-                mEdgeEffectBottom.onRelease();
+                // @DAMS
+                //mEdgeEffectTop.onRelease();
+                //mEdgeEffectBottom.onRelease();
                 mStartingScroll = false;
                 mGestureDetector.onTouchEvent(ev);
                 if (!mHandleActionUp) {
@@ -4516,6 +4528,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
             mViewStartY = mScroller.getCurrY();
 
+            // @DAMS
+            /*
             if (mCallEdgeEffectOnAbsorb) {
                 if (mViewStartY < 0) {
                     mEdgeEffectTop.onAbsorb((int) mLastVelocity);
@@ -4526,6 +4540,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 }
                 mLastVelocity = mScroller.getCurrVelocity();
             }
+            */
 
             if (mScrollStartY == 0 || mScrollStartY == mMaxViewStartY) {
                 // Allow overscroll/springback only on a fling,
