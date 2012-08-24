@@ -1261,7 +1261,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         if ("TARDIS".equalsIgnoreCase(query)) {
             Utils.tardis();
         }
-        mSearchMenu.collapseActionView();
+        // mSearchMenu.collapseActionView(); // @DAMS API14
         mController.sendEvent(this, EventType.SEARCH, null, null, -1, ViewType.CURRENT, 0, query,
                 getComponentName());
         return true;
@@ -1335,14 +1335,14 @@ public class CalendarActivity extends Activity implements EventHandler,
 
     @Override
     public boolean onSuggestionClick(int position) {
-        mSearchMenu.collapseActionView();
+        // mSearchMenu.collapseActionView(); // @DAMS API14
         return false;
     }
 
     @Override
     public boolean onSearchRequested() {
         if (mSearchMenu != null) {
-            mSearchMenu.expandActionView();
+            // mSearchMenu.expandActionView();  // @DAMS API14
         }
         return false;
     }

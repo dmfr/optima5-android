@@ -1606,6 +1606,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
 
+    // @DAMS API14
+    /*
     @Override
     public boolean onHoverEvent(MotionEvent event) {
         if (DEBUG) {
@@ -1636,9 +1638,11 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         }
         return true;
     }
+    */
 
     private boolean isTouchExplorationEnabled() {
-        return mIsAccessibilityEnabled && mAccessibilityMgr.isTouchExplorationEnabled();
+        // return mIsAccessibilityEnabled && mAccessibilityMgr.isTouchExplorationEnabled();
+        return mIsAccessibilityEnabled ;
     }
 
     private void sendAccessibilityEventAsNeeded(boolean speakEvents) {
