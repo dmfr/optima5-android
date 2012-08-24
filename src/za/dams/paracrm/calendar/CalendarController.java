@@ -30,8 +30,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
 import android.text.TextUtils;
 import android.text.format.Time;
 import android.util.Log;
@@ -48,10 +46,6 @@ import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 public class CalendarController {
     private static final boolean DEBUG = false;
     private static final String TAG = "CalendarController";
-    private static final String REFRESH_SELECTION = Calendars.SYNC_EVENTS + "=?";
-    private static final String[] REFRESH_ARGS = new String[] { "1" };
-    private static final String REFRESH_ORDER = Calendars.ACCOUNT_NAME + ","
-            + Calendars.ACCOUNT_TYPE;
 
     public static final String EVENT_EDIT_ON_LAUNCH = "editMode";
 
@@ -787,66 +781,6 @@ public class CalendarController {
         mEventId = eventId;
     }
 
-    private class RefreshInBackground extends AsyncTask<Cursor, Integer, Integer> {
-        /* (non-Javadoc)
-         * @see android.os.AsyncTask#doInBackground(Params[])
-         */
-        @Override
-        protected Integer doInBackground(Cursor... params) {
-            if (params.length != 1) {
-                return null;
-            }
-            Cursor cursor = params[0];
-            if (cursor == null) {
-                return null;
-            }
-
-            String previousAccount = null;
-            String previousType = null;
-            Log.d(TAG, "Refreshing " + cursor.getCount() + " calendars");
-            try {
-                while (cursor.moveToNext()) {
-                    Account account = null;
-                    String accountName = cursor.getString(1);
-                    String accountType = cursor.getString(2);
-                    // Only need to schedule one sync per account and they're
-                    // ordered by account,type
-                    if (TextUtils.equals(accountName, previousAccount) &&
-                            TextUtils.equals(accountType, previousType)) {
-                        continue;
-                    }
-                    previousAccount = accountName;
-                    previousType = accountType;
-                    account = new Account(accountName, accountType);
-                    scheduleSync(account, false /* two-way sync */, null);
-                }
-            } finally {
-                cursor.close();
-            }
-            return null;
-        }
-
-        /**
-         * Schedule a calendar sync for the account.
-         * @param account the account for which to schedule a sync
-         * @param uploadChangesOnly if set, specify that the sync should only send
-         *   up local changes.  This is typically used for a local sync, a user override of
-         *   too many deletions, or a sync after a calendar is unselected.
-         * @param url the url feed for the calendar to sync (may be null, in which case a poll of
-         *   all feeds is done.)
-         */
-        void scheduleSync(Account account, boolean uploadChangesOnly, String url) {
-            Bundle extras = new Bundle();
-            if (uploadChangesOnly) {
-                extras.putBoolean(ContentResolver.SYNC_EXTRAS_UPLOAD, uploadChangesOnly);
-            }
-            if (url != null) {
-                extras.putString("feed", url);
-            }
-            extras.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
-            ContentResolver.requestSync(account, Calendars.CONTENT_URI.getAuthority(), extras);
-        }
-    }
 
     private String eventInfoToString(EventInfo eventInfo) {
         String tmp = "Unknown";

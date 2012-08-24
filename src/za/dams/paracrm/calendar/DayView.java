@@ -42,9 +42,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Handler;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
 import android.text.Layout.Alignment;
 import android.text.SpannableStringBuilder;
 import android.text.StaticLayout;
@@ -136,14 +133,6 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
     protected Context mContext;
 
-    private static final String[] CALENDARS_PROJECTION = new String[] {
-        Calendars._ID,          // 0
-        Calendars.CALENDAR_ACCESS_LEVEL, // 1
-        Calendars.OWNER_ACCOUNT, // 2
-    };
-    private static final int CALENDARS_INDEX_ACCESS_LEVEL = 1;
-    private static final int CALENDARS_INDEX_OWNER_ACCOUNT = 2;
-    private static final String CALENDARS_WHERE = Calendars._ID + "=%d";
 
     private static final int FROM_NONE = 0;
     private static final int FROM_ABOVE = 1;
@@ -2750,6 +2739,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                         MAX_EVENT_TEXT_LEN - bob.length()));
             }
 
+            /*
             switch (event.selfAttendeeStatus) {
                 case Attendees.ATTENDEE_STATUS_INVITED:
                     paint.setColor(event.color);
@@ -2765,6 +2755,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                     paint.setColor(mEventTextColor);
                     break;
             }
+            */
+            paint.setColor(mEventTextColor);
 
             // Leave a one pixel boundary on the left and right of the rectangle for the event
             layout = new StaticLayout(bob, 0, bob.length(), new TextPaint(paint), r.width(),
@@ -3354,6 +3346,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         r.right = (int) event.right;
 
         int color = event.color;
+        /*
         switch (event.selfAttendeeStatus) {
             case Attendees.ATTENDEE_STATUS_INVITED:
                 p.setStyle(Style.STROKE);
@@ -3367,7 +3360,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 p.setStyle(Style.FILL_AND_STROKE);
                 break;
         }
-
+        */
+        p.setStyle(Style.FILL_AND_STROKE);
         p.setAntiAlias(false);
 
         int floorHalfStroke = (int) Math.floor(EVENT_RECT_STROKE_WIDTH / 2.0f);
@@ -4307,57 +4301,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     }
 
     private static int getEventAccessLevel(Context context, Event e) {
-        ContentResolver cr = context.getContentResolver();
-
-        int accessLevel = Calendars.CAL_ACCESS_NONE;
-
-        // Get the calendar id for this event
-        Cursor cursor = cr.query(ContentUris.withAppendedId(Events.CONTENT_URI, e.id),
-                new String[] { Events.CALENDAR_ID },
-                null /* selection */,
-                null /* selectionArgs */,
-                null /* sort */);
-
-        if (cursor == null) {
-            return ACCESS_LEVEL_NONE;
-        }
-
-        if (cursor.getCount() == 0) {
-            cursor.close();
-            return ACCESS_LEVEL_NONE;
-        }
-
-        cursor.moveToFirst();
-        long calId = cursor.getLong(0);
-        cursor.close();
-
-        Uri uri = Calendars.CONTENT_URI;
-        String where = String.format(CALENDARS_WHERE, calId);
-        cursor = cr.query(uri, CALENDARS_PROJECTION, where, null, null);
-
-        String calendarOwnerAccount = null;
-        if (cursor != null) {
-            cursor.moveToFirst();
-            accessLevel = cursor.getInt(CALENDARS_INDEX_ACCESS_LEVEL);
-            calendarOwnerAccount = cursor.getString(CALENDARS_INDEX_OWNER_ACCOUNT);
-            cursor.close();
-        }
-
-        if (accessLevel < Calendars.CAL_ACCESS_CONTRIBUTOR) {
-            return ACCESS_LEVEL_NONE;
-        }
-
-        if (e.guestsCanModify) {
-            return ACCESS_LEVEL_EDIT;
-        }
-
-        if (!TextUtils.isEmpty(calendarOwnerAccount)
-                && calendarOwnerAccount.equalsIgnoreCase(e.organizer)) {
-            return ACCESS_LEVEL_EDIT;
-        }
-
-        return ACCESS_LEVEL_DELETE;
+    	return ACCESS_LEVEL_EDIT ;
     }
+    
 
     /**
      * Sets mSelectionDay and mSelectionHour based on the (x,y) touch position.

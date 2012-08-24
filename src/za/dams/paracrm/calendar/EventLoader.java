@@ -21,8 +21,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.Process;
-import android.provider.CalendarContract;
-import android.provider.CalendarContract.EventDays;
 import android.util.Log;
 
 import java.util.ArrayList;

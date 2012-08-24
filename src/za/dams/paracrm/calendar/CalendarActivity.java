@@ -50,7 +50,6 @@ import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.CalendarContract;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
@@ -538,8 +537,10 @@ public class CalendarActivity extends Activity implements EventHandler,
         mController.registerFirstEventHandler(HANDLER_KEY, this);
 
         mOnSaveInstanceStateCalled = false;
+        // @DAMS : content observer replaced with mSyncBroadcastReceiver
+        /*
         mContentResolver.registerContentObserver(CalendarContract.Events.CONTENT_URI,
-                true, mObserver);
+                true, mObserver); */
         if (mUpdateOnResume) {
             initFragments(mController.getTime(), mController.getViewType(), null);
             mUpdateOnResume = false;
@@ -589,7 +590,8 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (mActionBarMenuSpinnerAdapter != null) {
             mActionBarMenuSpinnerAdapter.onPause();
         }
-        mContentResolver.unregisterContentObserver(mObserver);
+        // @DAMS : content observer replaced with mSyncBroadcastReceiver
+        //mContentResolver.unregisterContentObserver(mObserver);
         if (isFinishing()) {
             // Stop listening for changes that would require this to be refreshed
         	/*

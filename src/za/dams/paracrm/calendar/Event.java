@@ -16,34 +16,20 @@
 
 package za.dams.paracrm.calendar;
 
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
-import android.database.Cursor;
-import android.graphics.Color;
-import android.net.Uri;
-import android.os.Debug;
-import android.provider.CalendarContract.Attendees;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
-import android.provider.CalendarContract.Instances;
-import android.text.TextUtils;
-import android.text.format.DateUtils;
-import android.text.format.Time;
-import android.util.Log;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.text.format.DateUtils;
+import android.text.format.Time;
+import android.util.Log;
 
 // TODO: should Event be Parcelable so it can be passed via Intents?
 public class Event implements Cloneable {
@@ -70,51 +56,7 @@ public class Event implements Cloneable {
     private static final String EVENTS_WHERE = DISPLAY_AS_ALLDAY + "=0";
     private static final String ALLDAY_WHERE = DISPLAY_AS_ALLDAY + "=1";
 
-    // The projection to use when querying instances to build a list of events
-    public static final String[] EVENT_PROJECTION = new String[] {
-            Instances.TITLE,                 // 0
-            Instances.EVENT_LOCATION,        // 1
-            Instances.ALL_DAY,               // 2
-            Instances.CALENDAR_COLOR,        // 3
-            Instances.EVENT_TIMEZONE,        // 4
-            Instances.EVENT_ID,              // 5
-            Instances.BEGIN,                 // 6
-            Instances.END,                   // 7
-            Instances._ID,                   // 8
-            Instances.START_DAY,             // 9
-            Instances.END_DAY,               // 10
-            Instances.START_MINUTE,          // 11
-            Instances.END_MINUTE,            // 12
-            Instances.HAS_ALARM,             // 13
-            Instances.RRULE,                 // 14
-            Instances.RDATE,                 // 15
-            Instances.SELF_ATTENDEE_STATUS,  // 16
-            Events.ORGANIZER,                // 17
-            Events.GUESTS_CAN_MODIFY,        // 18
-            Instances.ALL_DAY + "=1 OR (" + Instances.END + "-" + Instances.BEGIN + ")>="
-                    + DateUtils.DAY_IN_MILLIS + " AS " + DISPLAY_AS_ALLDAY, // 19
-    };
 
-    // The indices for the projection array above.
-    private static final int PROJECTION_TITLE_INDEX = 0;
-    private static final int PROJECTION_LOCATION_INDEX = 1;
-    private static final int PROJECTION_ALL_DAY_INDEX = 2;
-    private static final int PROJECTION_COLOR_INDEX = 3;
-    private static final int PROJECTION_TIMEZONE_INDEX = 4;
-    private static final int PROJECTION_EVENT_ID_INDEX = 5;
-    private static final int PROJECTION_BEGIN_INDEX = 6;
-    private static final int PROJECTION_END_INDEX = 7;
-    private static final int PROJECTION_START_DAY_INDEX = 9;
-    private static final int PROJECTION_END_DAY_INDEX = 10;
-    private static final int PROJECTION_START_MINUTE_INDEX = 11;
-    private static final int PROJECTION_END_MINUTE_INDEX = 12;
-    private static final int PROJECTION_HAS_ALARM_INDEX = 13;
-    private static final int PROJECTION_RRULE_INDEX = 14;
-    private static final int PROJECTION_RDATE_INDEX = 15;
-    private static final int PROJECTION_SELF_ATTENDEE_STATUS_INDEX = 16;
-    private static final int PROJECTION_ORGANIZER_INDEX = 17;
-    private static final int PROJECTION_GUESTS_CAN_INVITE_OTHERS_INDEX = 18;
-    private static final int PROJECTION_DISPLAY_AS_ALLDAY = 19;
 
     private static String mNoTitleString;
     private static int mNoColorColor;
@@ -214,7 +156,7 @@ public class Event implements Cloneable {
         e.endMillis = 0;
         e.hasAlarm = false;
         e.isRepeating = false;
-        e.selfAttendeeStatus = Attendees.ATTENDEE_STATUS_NONE;
+        e.selfAttendeeStatus = 0 ;
 
         return e;
     }
@@ -322,56 +264,6 @@ public class Event implements Cloneable {
     
     
 
-    /**
-     * @param cEvents Cursor pointing at event
-     * @return An event created from the cursor
-     */
-    private static Event generateEventFromCursor(Cursor cEvents) {
-        Event e = new Event();
-
-        e.id = cEvents.getLong(PROJECTION_EVENT_ID_INDEX);
-        e.title = cEvents.getString(PROJECTION_TITLE_INDEX);
-        e.location = cEvents.getString(PROJECTION_LOCATION_INDEX);
-        e.allDay = cEvents.getInt(PROJECTION_ALL_DAY_INDEX) != 0;
-        e.organizer = cEvents.getString(PROJECTION_ORGANIZER_INDEX);
-        e.guestsCanModify = cEvents.getInt(PROJECTION_GUESTS_CAN_INVITE_OTHERS_INDEX) != 0;
-
-        if (e.title == null || e.title.length() == 0) {
-            e.title = mNoTitleString;
-        }
-
-        if (!cEvents.isNull(PROJECTION_COLOR_INDEX)) {
-            // Read the color from the database
-            e.color = Utils.getDisplayColorFromColor(cEvents.getInt(PROJECTION_COLOR_INDEX));
-        } else {
-            e.color = mNoColorColor;
-        }
-
-        long eStart = cEvents.getLong(PROJECTION_BEGIN_INDEX);
-        long eEnd = cEvents.getLong(PROJECTION_END_INDEX);
-
-        e.startMillis = eStart;
-        e.startTime = cEvents.getInt(PROJECTION_START_MINUTE_INDEX);
-        e.startDay = cEvents.getInt(PROJECTION_START_DAY_INDEX);
-
-        e.endMillis = eEnd;
-        e.endTime = cEvents.getInt(PROJECTION_END_MINUTE_INDEX);
-        e.endDay = cEvents.getInt(PROJECTION_END_DAY_INDEX);
-
-        e.hasAlarm = cEvents.getInt(PROJECTION_HAS_ALARM_INDEX) != 0;
-
-        // Check if this is a repeating event
-        String rrule = cEvents.getString(PROJECTION_RRULE_INDEX);
-        String rdate = cEvents.getString(PROJECTION_RDATE_INDEX);
-        if (!TextUtils.isEmpty(rrule) || !TextUtils.isEmpty(rdate)) {
-            e.isRepeating = true;
-        } else {
-            e.isRepeating = false;
-        }
-
-        e.selfAttendeeStatus = cEvents.getInt(PROJECTION_SELF_ATTENDEE_STATUS_INDEX);
-        return e;
-    }
 
     /**
      * Computes a position for each event.  Each event is displayed
