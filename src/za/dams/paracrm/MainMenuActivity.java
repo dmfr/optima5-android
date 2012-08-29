@@ -139,7 +139,7 @@ public class MainMenuActivity extends Activity {
         
         
         
-        
+        /*
         mMenuModulesAdapter = new MenuModulesAdapter(this) ;
         
         GridView modulesGrid = (GridView) findViewById(R.id.modulesgridview);
@@ -155,7 +155,8 @@ public class MainMenuActivity extends Activity {
         		startActivity(intent);
             }
         });
-        
+        */
+        ((GridView)findViewById(R.id.modulesgridview)).setVisibility(View.GONE) ;
         
         
         
