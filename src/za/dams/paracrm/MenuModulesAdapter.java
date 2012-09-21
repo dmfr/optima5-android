@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import za.dams.paracrm.MainMenuAdapter.ModuleInfo;
 import za.dams.paracrm.calendar.CalendarActivity;
+import za.dams.paracrm.explorer.ExplorerActivity;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -51,7 +52,7 @@ public class MenuModulesAdapter extends BaseAdapter {
 		//Generic
 		MODULES_DICT.add(new ModuleInfo("CFG", "FilesDB", 
 				R.drawable.mainmenu_filemanager, 
-				null));
+				ExplorerActivity.class));
 		/*
 		MODULES_DICT.add(new ModuleInfo("BIBLEDL", "Calendar", 
 				R.drawable.mainmenu_calendar, 
