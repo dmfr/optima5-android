@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 9;
+    private final int DB_VERSION = 10;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -126,6 +126,7 @@ public class DatabaseManager {
                     + "file_code" + " VARCHAR(50) PRIMARY KEY, "
                     + "eventstart_filefield" + " VARCHAR(20),"
                     + "eventend_filefield" + " VARCHAR(20),"
+                    + "eventstatus_filefield" + " VARCHAR(20),"
                     + "account_is_on" + " VARCHAR(1),"
                     + "account_filefield" + " VARCHAR(20),"
                     + "duration_is_fixed" + " VARCHAR(1),"
@@ -314,6 +315,9 @@ public class DatabaseManager {
                     + "calendar_id" + " INTEGER, "
                     + "calendar_name" + " VARCHAR(100),"
                     + "target_filecode" + " VARCHAR(100),"
+                    + "linkscen_is_on" + " VARCHAR(1),"
+                    + "linkscen_scen_id" + " INTEGER,"
+                    + "linkscen_autoforward_is_on" + " VARCHAR(1),"
                     + "PRIMARY KEY( calendar_id )"
                     + ");";
             db.execSQL(createTableQuery);
