@@ -620,6 +620,22 @@ public class Utils {
         int b = (((color & 0x000000ff) * a) + ((bg & 0x000000ff) * (0xff - a))) & 0x0000ff00;
         return (0xff000000) | ((r | g | b) >> 8);
     }
+    public static int getLighterColorFromColor(int color) {
+        int bg = 0xffffffff;
+        int a = DECLINED_EVENT_ALPHA;
+        int r = (((color & 0x00ff0000) * a) + ((bg & 0x00ff0000) * (0xff - a))) & 0xff000000;
+        int g = (((color & 0x0000ff00) * a) + ((bg & 0x0000ff00) * (0xff - a))) & 0x00ff0000;
+        int b = (((color & 0x000000ff) * a) + ((bg & 0x000000ff) * (0xff - a))) & 0x0000ff00;
+        return (0xff000000) | ((r | g | b) >> 8);
+    }
+    public static int getDarkerColorFromColor(int color) {
+        int bg = 0x00000000;
+        int a = DECLINED_EVENT_ALPHA;
+        int r = (((color & 0x00ff0000) * a) + ((bg & 0x00ff0000) * (0xff - a))) & 0xff000000;
+        int g = (((color & 0x0000ff00) * a) + ((bg & 0x0000ff00) * (0xff - a))) & 0x00ff0000;
+        int b = (((color & 0x000000ff) * a) + ((bg & 0x000000ff) * (0xff - a))) & 0x0000ff00;
+        return (0xff000000) | ((r | g | b) >> 8);
+    }
 
     // A single strand represents one color of events. Events are divided up by
     // color to make them convenient to draw. The black strand is special in

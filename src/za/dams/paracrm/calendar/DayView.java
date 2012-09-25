@@ -34,6 +34,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
@@ -3357,7 +3358,16 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         r.left = (int) event.left + EVENT_RECT_LEFT_MARGIN;
         r.right = (int) event.right;
 
-        int color = event.color;
+        int color ;
+        if( event.allDay ) {
+        	color = Utils.getDarkerColorFromColor(event.color);
+        }
+        else if( event.isDone ) {
+        	color = Utils.getLighterColorFromColor(event.color);
+        }
+        else {
+        	color = event.color ;
+        }
         /*
         switch (event.selfAttendeeStatus) {
             case Attendees.ATTENDEE_STATUS_INVITED:
@@ -3386,6 +3396,15 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         p.setStrokeWidth(EVENT_RECT_STROKE_WIDTH);
         p.setColor(color);
         canvas.drawRect(r, p);
+        
+        
+        if( event.isDone ) {
+        	p.setStrokeWidth(2);
+        	p.setColor(Color.WHITE) ;
+        	p.setAntiAlias(true);
+        	canvas.drawLine(r.left,r.top,r.right,r.bottom, p);
+        }
+        
 
         p.setStyle(Style.FILL);
 

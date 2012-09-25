@@ -73,6 +73,8 @@ public class Event implements Cloneable {
     public int endDay;         // end Julian day
     public int startTime;      // Start and end time are in minutes since midnight
     public int endTime;
+    
+    public boolean isDone ;
 
     public long startMillis;   // UTC milliseconds since the epoch
     public long endMillis;     // UTC milliseconds since the epoch
@@ -112,6 +114,7 @@ public class Event implements Cloneable {
         e.endTime = endTime;
         e.startMillis = startMillis;
         e.endMillis = endMillis;
+        e.isDone = isDone;
         e.hasAlarm = hasAlarm;
         e.isRepeating = isRepeating;
         e.selfAttendeeStatus = selfAttendeeStatus;
@@ -133,6 +136,7 @@ public class Event implements Cloneable {
         dest.endTime = endTime;
         dest.startMillis = startMillis;
         dest.endMillis = endMillis;
+        dest.isDone = isDone;
         dest.hasAlarm = hasAlarm;
         dest.isRepeating = isRepeating;
         dest.selfAttendeeStatus = selfAttendeeStatus;
@@ -154,6 +158,7 @@ public class Event implements Cloneable {
         e.endTime = 0;
         e.startMillis = 0;
         e.endMillis = 0;
+        e.isDone = false;
         e.hasAlarm = false;
         e.isRepeating = false;
         e.selfAttendeeStatus = 0 ;
@@ -238,6 +243,7 @@ public class Event implements Cloneable {
     	
     	
     	e.allDay = model.mAllDay ;
+    	e.isDone = model.isDone ;
     	
     	e.title = "Title "+e.id ;
     	e.location = Utils.implodeArray(model.mCrmTitle, System.getProperty("line.separator")) ;

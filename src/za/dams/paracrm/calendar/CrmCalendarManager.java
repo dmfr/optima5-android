@@ -32,7 +32,7 @@ public class CrmCalendarManager {
 	private CrmCalendarAccount mCrmAgendaInfos ;
 	
 	public enum CalendarField {
-		CALFIELD_START, CALFIELD_END, CALFIELD_ACCOUNT
+		CALFIELD_START, CALFIELD_END, CALFIELD_STATUS, CALFIELD_ACCOUNT
 	}
 	public static class CrmCalendarInput {
 		public int mCrmInputId ;
@@ -58,6 +58,9 @@ public class CrmCalendarManager {
 		
 		public ArrayList<CrmFileFieldDesc> mCrmFields ;
 		public int mDurationCrmFieldIdx = -1 ;
+		
+		public boolean mIsDoneable ;
+		public String mIsDoneFileField ;
 		
 		public boolean mAccountIsOn ;
 		public String mAccountTargetFileField ;
@@ -228,9 +231,14 @@ public class CrmCalendarManager {
     		
     		mCrmAgendaInfos.mEventStartFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstart_filefield"));
     		mCrmAgendaInfos.mEventEndFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventend_filefield"));
+    		if( !tmpCursor.getString(tmpCursor.getColumnIndex("eventstatus_filefield")).equals("") ) {
+    			mCrmAgendaInfos.mIsDoneable = true ;
+    			mCrmAgendaInfos.mIsDoneFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstatus_filefield")) ;
+    		}
 			for( CrmFileFieldDesc fd : tFields ) {
 				if( fd.fieldCode.equals(mCrmAgendaInfos.mEventStartFileField) 
-						|| fd.fieldCode.equals(mCrmAgendaInfos.mEventEndFileField) ) {
+						|| fd.fieldCode.equals(mCrmAgendaInfos.mEventEndFileField)
+						|| (mCrmAgendaInfos.mIsDoneable && fd.fieldCode.equals(mCrmAgendaInfos.mIsDoneFileField)) ) {
 					fieldsToRemove.add(fd) ;
 				}
 			}
@@ -306,6 +314,10 @@ public class CrmCalendarManager {
 	public void populateModelEmpty( CrmEventModel crmEventModel ) {
 		crmEventModel.mAllDay = false ;
 		
+		if( mCrmAgendaInfos.mIsDoneable ) {
+			crmEventModel.isDoneable = true ;
+		}
+		
 		crmEventModel.mCrmFields = new ArrayList<CrmFileFieldDesc>() ;
 		crmEventModel.mCrmValues = new ArrayList<CrmFileFieldValue>() ;
 		for( CrmFileFieldDesc fd : mCrmAgendaInfos.mCrmFields ) {
@@ -378,6 +390,12 @@ public class CrmCalendarManager {
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				//e.printStackTrace();
+			}
+		}
+		if( mCrmAgendaInfos.mIsDoneable ) {
+			crmEventModel.isDoneable = true ;
+			if( fields.containsKey(mCrmAgendaInfos.mIsDoneFileField) ) {
+				crmEventModel.isDone = (fields.get(mCrmAgendaInfos.mIsDoneFileField).valueNumber == 1)?true:false ;
 			}
 		}
 		
@@ -568,6 +586,11 @@ public class CrmCalendarManager {
     		if( !endField.equals("") ) {
     			calFields.put(endField, CalendarField.CALFIELD_END) ;
     		}
+    		// isdone
+    		String statusField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstatus_filefield")) ;
+    		if( !statusField.equals("") ) {
+    			calFields.put(statusField, CalendarField.CALFIELD_STATUS) ;
+    		}
     		// account
     		String accountOn = tmpCursor.getString(tmpCursor.getColumnIndex("account_is_on")) ;
     		String accountField = tmpCursor.getString(tmpCursor.getColumnIndex("account_filefield")) ;
@@ -627,6 +650,13 @@ public class CrmCalendarManager {
 					cv.put("filerecord_id", currentFileId);
 					cv.put("filerecord_field_code", fileFieldCode);
 					cv.put("filerecord_field_value_date",sdf2.format(tmpDateEnd.getTime())) ;
+					mDb.insert("store_file_field", cv);
+					break ;
+				case CALFIELD_STATUS :
+					cv = new ContentValues() ;
+					cv.put("filerecord_id", currentFileId);
+					cv.put("filerecord_field_code", fileFieldCode);
+					cv.put("filerecord_field_value_number",crmEventModel.isDone? 1 : 0 ) ;
 					mDb.insert("store_file_field", cv);
 					break ;
 				case CALFIELD_ACCOUNT :

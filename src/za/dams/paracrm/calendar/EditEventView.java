@@ -80,6 +80,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     View mCalendarSelectorWrapper;
     View mCalendarStaticGroup;
     View mAllDayRow ;
+    View mIsDoneRow ;
+    CheckBox mIsDoneCheckBox;
     ArrayList<View> mCrmFieldViews ;
     
     OnEditEventViewChangeListener mChangeListener ;
@@ -118,6 +120,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mCalendarSelectorWrapper = view.findViewById(R.id.calendar_selector_wrapper);
         mCalendarStaticGroup = view.findViewById(R.id.calendar_group);
         mAllDayRow = view.findViewById(R.id.all_day_row);
+        
+        mIsDoneRow = view.findViewById(R.id.is_done_row);
+        mIsDoneCheckBox = (CheckBox) view.findViewById(R.id.is_done);
         
         mStartTime = new Time(mTimezone);
         mEndTime = new Time(mTimezone);
@@ -531,6 +536,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         }
         adjustSpinner() ;
         populateWhen();
+        populateIsDone() ;
         populateCrmFields() ;
         updateView();
         mScrollView.setVisibility(View.VISIBLE);
@@ -562,6 +568,20 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 
         mStartTimeButton.setOnClickListener(new TimeClickListener(mStartTime));
         mEndTimeButton.setOnClickListener(new TimeClickListener(mEndTime));
+    }
+    private void populateIsDone() {
+    	if( !mModel.isDoneable ) {
+    		mIsDoneRow.setVisibility(View.GONE);
+    	}
+    	else {
+    		mIsDoneRow.setVisibility(View.VISIBLE);
+    		if( mModel.isDone ) {
+    			mIsDoneCheckBox.setChecked(true) ;
+    		}
+    		else {
+    			mIsDoneCheckBox.setChecked(false) ;
+    		}
+    	}
     }
     private void populateCrmFields() {
     	// ***** Detach de toutes les fields CRM ****
@@ -660,6 +680,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mEndTime.timezone = mTimezone;
         mModel.mStart = mStartTime.toMillis(true);
         mModel.mEnd = mEndTime.toMillis(true);
+        
+        if( mModel.isDoneable ) {
+        	mModel.isDone = mIsDoneCheckBox.isChecked() ;
+        }
 		
 		// Champs dynamiques CRM
 		int crmFieldIndex = 0 ;
