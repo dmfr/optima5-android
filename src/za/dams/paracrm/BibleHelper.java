@@ -81,7 +81,7 @@ public class BibleHelper {
     
     
     
-    public static class BibleEntry {
+    public static class BibleEntry implements Cloneable {
     	public String bibleCode ;
     	public String treenodeKey ;
     	public String entryKey ;
@@ -106,6 +106,20 @@ public class BibleHelper {
     		this.displayStr = displayStr ;
     		this.displayStr1 = displayStr1 ;
     		this.displayStr2 = displayStr2 ;
+    	}
+    	public BibleEntry clone() {
+    		Object o = null;
+    		try {
+    			// On récupère l'instance à renvoyer par l'appel de la 
+    			// méthode super.clone()
+    			o = super.clone();
+    		} catch(CloneNotSupportedException cnse) {
+    			// Ne devrait jamais arriver car nous implémentons 
+    			// l'interface Cloneable
+    			// cnse.printStackTrace(System.err);
+    		}
+    		// on renvoie le clone
+    		return (BibleEntry)o;
     	}
     }
     
