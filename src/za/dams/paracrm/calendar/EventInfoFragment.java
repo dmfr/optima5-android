@@ -440,6 +440,30 @@ public class EventInfoFragment extends DialogFragment
                 }
             });
     	}
+    	if( !mModel.isDone && CrmCalendarManager.scenForwardGetId(mContext, CrmCalendarManager.queryInputFromEvent(mContext, mModel.mCrmFileId).mCrmInputId) > 0 ) {
+            Button b = (Button) mView.findViewById(R.id.forward);
+            b.setEnabled(true);
+            b.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    doForward();
+                    // For dialogs, just close the fragment
+                    // For full screen, close activity on phone, leave it for tablet
+                    if (mIsDialog) {
+                        EventInfoFragment.this.dismiss();
+                    }
+                    /*
+                    else if (!mIsTabletConfig){
+                        getActivity().finish();
+                    }
+                    */
+                }
+            });
+    	}
+    	else {
+    		Button b = (Button) mView.findViewById(R.id.forward);
+    		b.setVisibility(View.GONE);
+    	}
     }
     private void updateEvent(View view) {
         if (mModel == null || view == null) {
@@ -527,6 +551,14 @@ public class EventInfoFragment extends DialogFragment
         if (c != null) {
             CalendarController.getInstance(c).sendEventRelatedEvent(
                     this, EventType.EDIT_EVENT, mEventId, mStartMillis, mEndMillis, 0
+                    , 0, -1);
+        }
+    }
+    private void doForward() {
+    	Context c = getActivity();
+        if (c != null) {
+            CalendarController.getInstance(c).sendEventRelatedEvent(
+                    this, EventType.SCEN_FORWARD, mEventId, mStartMillis, mEndMillis, 0
                     , 0, -1);
         }
     }

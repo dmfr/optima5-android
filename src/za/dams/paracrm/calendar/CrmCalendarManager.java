@@ -811,5 +811,23 @@ public class CrmCalendarManager {
 		return models ;
 	}
 	
+	
+	
+	public static int scenForwardGetId( Context context, int crmInputId ) {
+		DatabaseManager db = DatabaseManager.getInstance(context) ;
+		
+		int scenId = 0 ;
+		
+		Cursor tCursor = db.rawQuery(String.format("SELECT linkscen_scen_id FROM input_calendar WHERE calendar_id='%d' AND linkscen_is_on='O'", crmInputId));
+		if( tCursor.getCount() == 1 ) {
+			tCursor.moveToNext() ;
+			
+			scenId = tCursor.getInt(0) ;
+		}
+		tCursor.close() ;
+		
+		return scenId ;
+	}
+	
 
 }

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import za.dams.paracrm.SyncBroadcastReceiver ;
 import za.dams.paracrm.SyncService;
@@ -36,11 +37,13 @@ import android.animation.ObjectAnimator;
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -1357,4 +1360,40 @@ public class CalendarActivity extends Activity implements EventHandler,
 		//Log.w(TAG,"TEMP SYNC DONE !!!!!") ;
 		eventsChanged();
 	}
+	
+	
+	// Retour de l'activité FILE CAPTURE
+	static final int ACT_FILECAPTURE = 0;
+
+    protected void onActivityResult(int requestCode, int resultCode,
+            Intent data) {
+        if (requestCode == ACT_FILECAPTURE) {
+            if (resultCode == RESULT_OK) {
+            	CrmFileTransactionManager.getInstance( getApplicationContext() ).purgeTransactions() ;
+            	
+            	SyncServiceHelper.launchSync( this ) ;
+            	
+            	int precedentEventId = (int)mController.getEventId() ;
+            	
+				CrmEventModel model = new CrmEventModel( this ) ; 
+				mCrmCalendarManager.populateModelLoad(model, precedentEventId) ;
+				model.isDone = true ;
+				mCrmCalendarManager.doneSaveModel(model);
+				
+				eventsChanged() ;
+            	
+            	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            	builder.setMessage("Transaction ended successfully")
+            	       .setCancelable(false)
+            	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            	           public void onClick(DialogInterface dialog, int id) {
+            	                dialog.cancel();
+            	           }
+            	       });
+            	AlertDialog alert = builder.create();            
+            	alert.show();
+            }
+        }
+    }
+	
 }

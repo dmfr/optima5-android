@@ -41,7 +41,10 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.WeakHashMap;
 
+import za.dams.paracrm.CrmFileTransactionManager;
+import za.dams.paracrm.MainMenuActivity;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
+import za.dams.paracrm.ui.FileCaptureActivity;
 
 public class CalendarController {
     private static final boolean DEBUG = false;
@@ -134,6 +137,7 @@ public class CalendarController {
         
         // ParaCRM
         final long LAUNCH_ACCOUNTS = 1L << 12;
+        final long SCEN_FORWARD = 1L << 13 ;
     }
 
     /**
@@ -503,6 +507,12 @@ public class CalendarController {
         }
 
         if (!handled) {
+            // Forward to scenario
+            if (event.eventType == EventType.SCEN_FORWARD) {
+                forwardScenario(event.id);
+                return;
+            }
+
             // Launch Accounts
             if (event.eventType == EventType.LAUNCH_ACCOUNTS) {
                 launchAccounts();
@@ -660,6 +670,28 @@ public class CalendarController {
     }
     */
     
+    private void forwardScenario(long eventId) {
+    	mEventId = eventId;
+    	
+    	Log.w(TAG,"Lauching for scen id "+eventId) ;
+    	
+    	// Quel est le scenario Forward ??
+    	int scenId = CrmCalendarManager.scenForwardGetId(mContext, mCrmInputId) ;
+    	
+    	if( scenId > 0 ) {
+    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
+    		mManager.purgeTransactions() ;
+    		
+        	final Bundle bundle = new Bundle();
+        	bundle.putInt("crmId", scenId);
+   		
+          	Intent intent = new Intent(mContext, FileCaptureActivity.class);
+          	intent.setClass(mContext, FileCaptureActivity.class);
+        	intent.putExtras(bundle);
+        	((Activity)mContext).startActivityForResult(intent,CalendarActivity.ACT_FILECAPTURE);
+    	}
+    }
+
     private void launchAccounts() {
     	
     	
