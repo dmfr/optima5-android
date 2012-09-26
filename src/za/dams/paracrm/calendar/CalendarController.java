@@ -41,6 +41,7 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.WeakHashMap;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.MainMenuActivity;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
@@ -673,7 +674,17 @@ public class CalendarController {
     private void forwardScenario(long eventId) {
     	mEventId = eventId;
     	
-    	Log.w(TAG,"Lauching for scen id "+eventId) ;
+    	//Log.w(TAG,"Lauching for scen id "+eventId) ;
+    	
+    	// Load de l'event
+    	CrmCalendarManager crmCalMan = new CrmCalendarManager(mContext,CrmCalendarManager.queryInputFromEvent(mContext, (int)eventId).mCrmInputId) ;
+    	CrmEventModel crmEventModel = new CrmEventModel(mContext) ;
+    	crmCalMan.populateModelLoad(crmEventModel, (int)eventId) ;
+    	// "Package" de données bible à forwarder
+    	Bundle bibleLinksBundle = new Bundle() ;
+    	for( BibleHelper.BibleEntry be : crmEventModel.getBibleEntries() ) {
+    		bibleLinksBundle.putString(be.bibleCode, be.entryKey) ;
+    	}
     	
     	// Quel est le scenario Forward ??
     	int scenId = CrmCalendarManager.scenForwardGetId(mContext, mCrmInputId) ;
@@ -684,6 +695,7 @@ public class CalendarController {
     		
         	final Bundle bundle = new Bundle();
         	bundle.putInt("crmId", scenId);
+        	bundle.putBundle("bibleForwards", bibleLinksBundle) ;
    		
           	Intent intent = new Intent(mContext, FileCaptureActivity.class);
           	intent.setClass(mContext, FileCaptureActivity.class);

@@ -4,19 +4,24 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.TimeZone;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
+import za.dams.paracrm.CrmFileTransaction.FieldType;
 
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 
 public class CrmEventModel implements Serializable {
 	private static final String TAG = "CalendarEventModel";
+	
+	private Context mContext ;
 	
 	public String mCrmFileCode = "" ;
     public int mCrmFileId = -1;
@@ -52,9 +57,37 @@ public class CrmEventModel implements Serializable {
 
     public CrmEventModel(Context context) {
         this();
+    	mContext = context ;
     }
     public CrmEventModel(Context context, Intent intent) {
         this(context);
+    }
+    
+    
+    
+    public List<BibleHelper.BibleEntry> getBibleEntries() {
+    	List<BibleHelper.BibleEntry> bibleEntries = new ArrayList<BibleHelper.BibleEntry>() ;
+    	
+    	if( mAccountEntry != null ) {
+    		bibleEntries.add(mAccountEntry.clone()) ;
+    	}
+    	if( mCrmFields != null && mCrmValues != null ) {
+    		BibleHelper bh = new BibleHelper(mContext) ;
+    		
+    		int idx = -1 ;
+    		for( CrmFileFieldDesc fd : mCrmFields ) {
+    			idx++ ;
+    			if( fd.fieldType != FieldType.FIELD_BIBLE ) {
+    				continue ;
+    			}
+    			if( mCrmValues.get(idx) == null ) {
+    				continue ;
+    			}
+    			bibleEntries.add( bh.getBibleEntry(fd.fieldLinkBible, mCrmValues.get(idx).valueString) ) ;
+    		}
+    	}
+    	    	
+    	return bibleEntries ;
     }
     
     
