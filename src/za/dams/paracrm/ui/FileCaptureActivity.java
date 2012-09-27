@@ -17,6 +17,7 @@
 package za.dams.paracrm.ui ;
 
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
@@ -75,10 +76,27 @@ public class FileCaptureActivity extends Activity {
         
         int CrmInputScenId = bundle.getInt("crmId");
         CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getApplicationContext() ) ;
-        mManager.newTransaction(CrmInputScenId) ;
+        CrmFileTransaction transaction = mManager.newTransaction(CrmInputScenId) ;
         
         //Log.w(TAG,"My Id is "+mTransaction.getCrmFileCode());
-        
+        if( bundle.getBundle("bibleForwards") != null 
+        		&& transaction.list_getPageType(0) == CrmFileTransaction.PageType.PAGETYPE_LIST  ) {
+        	
+        	int fieldId = -1 ;
+        	for( CrmFileTransaction.CrmFileFieldDesc fd : transaction.page_getFields(0) ) {
+        		fieldId++ ;
+        		
+        		if( fd.fieldType == CrmFileTransaction.FieldType.FIELD_BIBLE ) {
+        			String bibleCode = fd.fieldLinkBible ;
+        			String forwardValue = bundle.getBundle("bibleForwards").getString(bibleCode) ;
+        			
+        			if( forwardValue!=null ) {
+        				transaction.page_setRecordFieldValue_bible(0,0,fieldId,forwardValue ) ;
+        			}
+        			
+        		}
+        	}
+        }
         
         
         // 
