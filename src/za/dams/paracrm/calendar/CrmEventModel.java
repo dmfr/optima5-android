@@ -80,10 +80,14 @@ public class CrmEventModel implements Serializable {
     			if( fd.fieldType != FieldType.FIELD_BIBLE ) {
     				continue ;
     			}
-    			if( mCrmValues.get(idx) == null ) {
+    			if( mCrmValues.get(idx) == null || mCrmValues.get(idx).valueString.equals("") ) {
     				continue ;
     			}
-    			bibleEntries.add( bh.getBibleEntry(fd.fieldLinkBible, mCrmValues.get(idx).valueString) ) ;
+    			
+    			BibleHelper.BibleEntry be = bh.getBibleEntry(fd.fieldLinkBible, mCrmValues.get(idx).valueString) ; 
+    			if( be != null ) {
+    				bibleEntries.add( be ) ;
+    			}
     		}
     	}
     	    	
