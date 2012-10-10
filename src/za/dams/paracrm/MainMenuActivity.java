@@ -323,7 +323,8 @@ public class MainMenuActivity extends Activity {
 			// e.printStackTrace();
 		}
     	if( nightlyVersion > localVersion ) {
-    		if( !!SyncServiceHelper.isServiceRunning(mContext) && !SyncServiceHelper.hasPendingUploads(mContext) ) {
+    		if( !SyncServiceHelper.isServiceRunning(mContext) && !SyncServiceHelper.hasPendingUploads(mContext) 
+    				&& !UploadServiceHelper.isServiceRunning(mContext) && !UploadServiceHelper.hasPendingUploads(mContext) ) {
             	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
         			@Override
         			public void run() {
