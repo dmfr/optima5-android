@@ -23,12 +23,6 @@ public class SyncServiceHelper {
 		}
 		tmpCursor.close() ;
 		
-		tmpCursor = mDbManager.rawQuery("SELECT count(*) FROM upload_media") ;
-		tmpCursor.moveToNext() ;
-		if( tmpCursor.getInt(0) > 0 ) {
-			retValue = true ;
-		}
-		tmpCursor.close() ;
 		
 		return retValue ;
 	}

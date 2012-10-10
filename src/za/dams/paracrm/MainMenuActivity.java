@@ -262,6 +262,9 @@ public class MainMenuActivity extends Activity {
     		// @DAMS : build proper sync system
     		SyncServiceHelper.launchSync( mContext ) ;
     	}
+    	else if( UploadServiceHelper.hasPendingUploads(mContext) ) {
+    		UploadServiceHelper.launchUpload( mContext ) ;
+    	}
     }
     protected void onResume() {
     	super.onResume() ;

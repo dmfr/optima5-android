@@ -74,12 +74,11 @@ public class SyncService extends Service {
 		//Log.w("ParacrmSyncService", "Received start id " + startId + ": " + intent);
 		// We want this service to continue running until it is explicitly
 		// stopped, so return sticky.
-		if( SyncServiceHelper.hasPendingUploads(getApplicationContext())) {
-			new UploadTask().execute() ;
-		}
-		//stopSelf() ;
 		
-		Bundle bundle = intent.getExtras() ;
+		Bundle bundle = null ;
+		if( intent != null ){
+			bundle = intent.getExtras() ;
+		}
 		if( bundle != null && bundle.containsKey(SYNCPULL_FILECODE) ){
 			String[] filesCodes = bundle.getStringArray(SYNCPULL_FILECODE) ;
 			if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
@@ -87,12 +86,13 @@ public class SyncService extends Service {
 					syncPullResetLastTimestamp( fileCode ) ;
 				}
 			}
-			new PullTask().execute(filesCodes) ;
+			new SyncTask().execute(filesCodes) ;
+		}
+		else {
+			new SyncTask().execute() ;
 		}
 		
-		
-		
-		return START_STICKY;
+		return Service.START_REDELIVER_INTENT ;
 	}
 	
 	private synchronized void sendBroadcastStarted() {
@@ -107,153 +107,138 @@ public class SyncService extends Service {
 	}
 	
 	
-    private class UploadTask extends AsyncTask<Void, Integer, Boolean> {
+	private class SyncTask extends AsyncTask<String, Integer, Boolean> {
     	protected void onPreExecute(){
     	}
-    	
-        protected Boolean doInBackground(Void... Params ) {
-        	
-        	try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-			}
-
-        	// SyncService.this.sendBroadcastStarted() ;
-        	
-        	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
-        	
-        	String android_id = Secure.getString(SyncService.this.getApplicationContext().getContentResolver(),
-                    Secure.ANDROID_ID);
-        	mDbManager.syncTagVuid(android_id) ;
-        	
-        	JSONObject jsonDump = new JSONObject() ;
-        	try {
-        		jsonDump.putOpt("store_file", mDbManager.syncDumpTable("store_file")) ;
-				jsonDump.putOpt("store_file_field", mDbManager.syncDumpTable("store_file_field")) ;
-			} catch (JSONException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-        	
-        	// Log.i("UploadService",jsonObject.toString()) ;
-        	ArrayList<UploadEntry> arrUploadEntry = uploadToServer(jsonDump) ;
-        	
-        	mDbManager.beginTransaction() ;
-        	Iterator<UploadEntry> mIter = arrUploadEntry.iterator() ;
-        	String req ;
-        	while( mIter.hasNext() ){
-        		
-        		
-        		UploadEntry uploadEntry = mIter.next() ;
-
-        		if(uploadEntry.isSlot) {
-        			req = String.format("SELECT filerecord_field_value_string FROM store_file_field WHERE filerecord_id='%d' AND filerecord_field_code='media_title'",uploadEntry.localId) ;
-        			Cursor tmpCursor = mDbManager.rawQuery(req) ;
-        			if( tmpCursor.getCount() == 1 ) {
-        				tmpCursor.moveToNext() ;
-        			
-        				ContentValues cv = new ContentValues() ;
-        				cv.put("filerecord_id",uploadEntry.remoteId) ;
-        				cv.put("media_filename",tmpCursor.getString(0)) ;
-        				mDbManager.insert( "upload_media" , cv ) ;
-        			}
-        			tmpCursor.close() ;
-        		}
-        		
-          		req = String.format("UPDATE store_file SET sync_is_synced='O' WHERE filerecord_id='%d'",uploadEntry.localId) ;
-        		mDbManager.execSQL(req) ;
-        	}
-        	mDbManager.endTransaction() ;
-        	
-        	uploadBinaries() ;
-        	
-        	try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-			}
-
-        	return new Boolean(true) ;
-        }
-
-        protected void onProgressUpdate(Integer... progress ) {
-            // setProgressPercent(progress[0]);
-        }
-
-        protected void onPostExecute(Boolean myBool) {
-        	// sendBroadcastComplete() ;
-        	SyncService.this.stopSelf() ;
-        }
-    }
-    
-    
-    
-    private class PullTask extends AsyncTask<String, Integer, Boolean> {
-    	protected void onPreExecute(){
-    	}
-    
         protected Boolean doInBackground(String... filesCodes ) {
-        	for( String fileCode : filesCodes ){
-        		// ***** timestamp du dernier sync pour ce fileCode ****
-            	long lastFileSyncTimestamp = syncPullGetLastTimestamp(fileCode) ;
-                
-            	
-            	HashMap<String,String> postParams = new HashMap<String,String>() ;
-            	postParams.put("_domain", "paramount");
-            	postParams.put("_moduleName", "paracrm");
-            	postParams.put("_action", "android_syncPull");
-            	postParams.put("file_code", fileCode);
-            	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
-            	String postString = HttpPostHelper.getPostString(postParams) ;
-            	
-        		try {
-        			URL url = new URL(getString(R.string.server_url));
-        			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-        			httpURLConnection.setDoOutput(true);
-        			httpURLConnection.setRequestMethod("POST");
-        			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-        			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        			try {
-        				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-        				out.print(postString);
-        				out.close();
-
-        				InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
-        				long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
-                    	if( newSyncTimestamp <= 0 ) {
-                    		return false ;
-                    	}
-        			}
-        			catch (IOException e) {
-        				
-        			}
-        			finally{
-        				httpURLConnection.disconnect() ;
-        			}
-        		} catch (MalformedURLException e) {
-        			// TODO Auto-generated catch block
-        			
-        		} catch (IOException e) {
-        			// TODO Auto-generated catch block
-        			
-        		}
-        	}
+        	SyncService.this.doSync( filesCodes ) ;
         	
         	return true ;
-        }	  
-        protected void onProgressUpdate(Integer... progress ) {
-            // setProgressPercent(progress[0]);
         }
-
         protected void onPostExecute(Boolean myBool) {
         	sendBroadcastComplete() ;
         	SyncService.this.stopSelf() ;
+        	UploadServiceHelper.launchUpload( SyncService.this.getApplicationContext() ) ;
         }
-   }
+	}
+	
+	
     
     
+    private void doSync( String[] pullFilesCodes ) {
+    	if( SyncServiceHelper.hasPendingUploads(getApplicationContext())) {
+    		doPush() ;
+    	}
+    	if( pullFilesCodes != null && pullFilesCodes.length > 0 ) {
+    		doPull( pullFilesCodes ) ;
+    	}
+    }
     
+    private boolean doPush() {
+    	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+    	
+    	String android_id = Secure.getString(SyncService.this.getApplicationContext().getContentResolver(),
+                Secure.ANDROID_ID);
+    	mDbManager.syncTagVuid(android_id) ;
+    	
+    	JSONObject jsonDump = new JSONObject() ;
+    	try {
+    		jsonDump.putOpt("store_file", mDbManager.syncDumpTable("store_file")) ;
+			jsonDump.putOpt("store_file_field", mDbManager.syncDumpTable("store_file_field")) ;
+		} catch (JSONException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+    	
+    	// Log.i("UploadService",jsonObject.toString()) ;
+    	ArrayList<UploadEntry> arrUploadEntry = uploadToServer(jsonDump) ;
+    	
+    	mDbManager.beginTransaction() ;
+    	Iterator<UploadEntry> mIter = arrUploadEntry.iterator() ;
+    	String req ;
+    	while( mIter.hasNext() ){
+    		
+    		
+    		UploadEntry uploadEntry = mIter.next() ;
+
+    		if(uploadEntry.isSlot) {
+    			req = String.format("SELECT filerecord_field_value_string FROM store_file_field WHERE filerecord_id='%d' AND filerecord_field_code='media_title'",uploadEntry.localId) ;
+    			Cursor tmpCursor = mDbManager.rawQuery(req) ;
+    			if( tmpCursor.getCount() == 1 ) {
+    				tmpCursor.moveToNext() ;
+    			
+    				ContentValues cv = new ContentValues() ;
+    				cv.put("filerecord_id",uploadEntry.remoteId) ;
+    				cv.put("media_filename",tmpCursor.getString(0)) ;
+    				mDbManager.insert( "upload_media" , cv ) ;
+    			}
+    			tmpCursor.close() ;
+    		}
+    		
+      		req = String.format("UPDATE store_file SET sync_is_synced='O' WHERE filerecord_id='%d'",uploadEntry.localId) ;
+    		mDbManager.execSQL(req) ;
+    	}
+    	mDbManager.endTransaction() ;
+    	
+    	// uploadBinaries() ;
+    	
+    	try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+		}
+
+    	return new Boolean(true) ;
+    }
     
-    
+    private boolean doPull( String[] filesCodes ) {
+    	for( String fileCode : filesCodes ){
+    		// ***** timestamp du dernier sync pour ce fileCode ****
+        	long lastFileSyncTimestamp = syncPullGetLastTimestamp(fileCode) ;
+            
+        	
+        	HashMap<String,String> postParams = new HashMap<String,String>() ;
+        	postParams.put("_domain", "paramount");
+        	postParams.put("_moduleName", "paracrm");
+        	postParams.put("_action", "android_syncPull");
+        	postParams.put("file_code", fileCode);
+        	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
+        	String postString = HttpPostHelper.getPostString(postParams) ;
+        	
+    		try {
+    			URL url = new URL(getString(R.string.server_url));
+    			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+    			httpURLConnection.setDoOutput(true);
+    			httpURLConnection.setRequestMethod("POST");
+    			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
+    			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+    			try {
+    				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
+    				out.print(postString);
+    				out.close();
+
+    				InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
+    				long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
+                	if( newSyncTimestamp <= 0 ) {
+                		return false ;
+                	}
+    			}
+    			catch (IOException e) {
+    				
+    			}
+    			finally{
+    				httpURLConnection.disconnect() ;
+    			}
+    		} catch (MalformedURLException e) {
+    			// TODO Auto-generated catch block
+    			
+    		} catch (IOException e) {
+    			// TODO Auto-generated catch block
+    			
+    		}
+    	}
+    	
+    	return true ;
+    }
     
     
     public static class UploadEntry {
@@ -326,6 +311,9 @@ public class SyncService extends Service {
         if( jsonMap == null ) {
         	jsonMap = new JSONObject() ;
         }
+        if( jsonUploadSlots == null ) {
+        	jsonUploadSlots = new JSONArray() ;
+        }
         
         ArrayList<UploadEntry> arrUploadEntry = new ArrayList<UploadEntry>() ;
         Iterator<?> mIter ;
@@ -355,94 +343,6 @@ public class SyncService extends Service {
 		return arrUploadEntry ;
 	}
 	
-	public void uploadBinaries() {
-		DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
-
-		String req = String.format("SELECT filerecord_id, media_filename FROM upload_media") ;
-		Cursor tmpCursor = mDbManager.rawQuery(req) ;
-		if( tmpCursor.getCount() > 0 ) {
-			while(!tmpCursor.isLast()) {
-				tmpCursor.moveToNext() ;
-				// Log.w("Bin upload","Uploading "+tmpCursor.getString(1)) ;
-
-
-
-
-				InputStream is;
-				try {
-					is = this.openFileInput(tmpCursor.getString(1));
-				} catch (FileNotFoundException e) {
-					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
-					mDbManager.execSQL(req) ;
-					// TODO Auto-generated catch block
-					//Log.w("Bin upload","Failed 1") ;
-					continue ;
-				}
-				ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
-
-				// this is storage overwritten on each iteration with bytes
-				int bufferSize = 1024;
-				byte[] buffer = new byte[bufferSize];
-
-				// we need to know how may bytes were read to write them to the byteBuffer
-				int len = 0;
-				try {
-					while ((len = is.read(buffer)) != -1) {
-						byteBuffer.write(buffer, 0, len);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					//Log.w("Bin upload","Failed 2") ;
-					continue ;
-				}
-
-
-				ArrayList<NameValuePair> nameValuePairs = new  ArrayList<NameValuePair>();
-				StringBuilder builder = new StringBuilder();
-				nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-				nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-				nameValuePairs.add(new BasicNameValuePair("_action", "android_postBinary"));
-				nameValuePairs.add(new BasicNameValuePair("filerecord_id",tmpCursor.getString(0)));
-				nameValuePairs.add(new BasicNameValuePair("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT)));
-				try{
-					HttpClient httpclient = new DefaultHttpClient();
-					HttpPost httppost = new HttpPost(getString(R.string.server_url));
-					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-					HttpResponse response = httpclient.execute(httppost);
-					HttpEntity entity = response.getEntity();
-					InputStream content = entity.getContent();
-					BufferedReader reader = new BufferedReader(
-							new InputStreamReader(content));
-					String line;
-					while ((line = reader.readLine()) != null) {
-						builder.append(line);
-					}
-					//Log.w("upload ","Result "+builder.toString()) ;
-					///Toast.makeText(UploadImage.this, "Response " + the_string_response, Toast.LENGTH_LONG).show();
-				}catch(Exception e){
-					//e.printStackTrace() ;
-					//Log.w("Bin upload","Failed 3") ;
-				}
-
-				// do something with builder ;
-				JSONObject jsonResp = new JSONObject() ;
-				try {
-					jsonResp = new JSONObject(builder.toString()) ;
-				} catch (JSONException e) {
-
-				}
-				if( jsonResp.optBoolean("success",false) == true ) {
-					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
-					mDbManager.execSQL(req) ;
-
-					this.getFileStreamPath(tmpCursor.getString(1)).delete() ;
-				}
-
-
-			}
-		}
-		tmpCursor.close() ;
-	}
 	
 	
 	private int syncPullGetLastTimestamp( String fileCode ) {
