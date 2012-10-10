@@ -117,8 +117,8 @@ public class SyncService extends Service {
         }
         protected void onPostExecute(Boolean myBool) {
         	sendBroadcastComplete() ;
-        	SyncService.this.stopSelf() ;
         	UploadServiceHelper.launchUpload( SyncService.this.getApplicationContext() ) ;
+        	SyncService.this.stopSelf() ;
         }
 	}
 	
