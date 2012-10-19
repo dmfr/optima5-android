@@ -92,6 +92,8 @@ public class CalendarController {
     private long mEventId = -1;
     private Time mTime = new Time();
     private long mDateFlags = 0;
+    
+    private long mForwardedEventId = -1 ;
 
     // private AsyncQueryService mService;
 
@@ -639,6 +641,21 @@ public class CalendarController {
     public void setTime(long millisTime) {
         mTime.set(millisTime);
     }
+    
+    /**
+     * @return the last event ID the edit view was launched with
+     */
+    public long getForwardedEventId() {
+    	if( mForwardedEventId == -1 ) {
+    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
+    		mForwardedEventId = mManager.getForwardedEventId() ;
+    	}
+    	return mForwardedEventId ;
+    }
+    public void clearForwardedEventId() {
+    	mForwardedEventId = 0 ;
+    }
+    
 
     /**
      * @return the last event ID the edit view was launched with
@@ -672,7 +689,9 @@ public class CalendarController {
     */
     
     private void forwardScenario(long eventId) {
-    	mEventId = eventId;
+    	long previousForwardedEventId = getForwardedEventId() ;
+    	
+    	
     	
     	//Log.w(TAG,"Lauching for scen id "+eventId) ;
     	
@@ -691,8 +710,13 @@ public class CalendarController {
     	
     	if( scenId > 0 ) {
     		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
-    		mManager.purgeTransactions() ;
     		
+    		if( previousForwardedEventId > 0 && previousForwardedEventId != eventId ) {
+    			mManager.purgeTransactions() ;
+    		}
+   			mManager.setForwardedEventId(eventId) ;
+			mForwardedEventId = eventId ;
+   		
         	final Bundle bundle = new Bundle();
         	bundle.putInt("crmId", scenId);
         	bundle.putBundle("bibleForwards", bibleLinksBundle) ;

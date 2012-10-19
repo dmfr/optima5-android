@@ -3362,6 +3362,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         if( event.allDay ) {
         	color = Utils.getDarkerColorFromColor(event.color);
         }
+        else if( mController != null && mController.getForwardedEventId() == event.id ) {
+        	color = Color.RED ;
+        }
         else if( event.isDone ) {
         	color = Utils.getLighterColorFromColor(event.color);
         }

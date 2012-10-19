@@ -14,6 +14,7 @@ import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.Context;
@@ -446,17 +447,39 @@ public class EventInfoFragment extends DialogFragment
             b.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    doForward();
-                    // For dialogs, just close the fragment
-                    // For full screen, close activity on phone, leave it for tablet
-                    if (mIsDialog) {
-                        EventInfoFragment.this.dismiss();
-                    }
-                    /*
-                    else if (!mIsTabletConfig){
-                        getActivity().finish();
-                    }
-                    */
+                	long forwardedEventId = CalendarController.getInstance(EventInfoFragment.this.mContext).getForwardedEventId() ;
+                	if( forwardedEventId > 0 && forwardedEventId != EventInfoFragment.this.mEventId ) {
+                    	AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+                    	builder.setMessage("Attention: précédente saisie non cloturée.\n Continuer et effacer la saisie précédente ?")
+                    	       .setCancelable(true)
+                    	       .setPositiveButton("Continue", new DialogInterface.OnClickListener() {
+                    	           public void onClick(DialogInterface dialog, int id) {
+                      	            	doForward() ;
+
+                      	            	// For dialogs, just close the fragment
+                                        // For full screen, close activity on phone, leave it for tablet
+                                        if (mIsDialog) {
+                                            EventInfoFragment.this.dismiss();
+                                        }
+                    	           }
+                    	       })
+                    	       .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    	           public void onClick(DialogInterface dialog, int id) {
+                    	        	   //doNothing
+                    	           }
+                    	       });
+                    	AlertDialog alert = builder.create();
+                    	alert.show();
+       		
+                	}
+                	else {
+                		doForward();
+                        // For dialogs, just close the fragment
+                        // For full screen, close activity on phone, leave it for tablet
+                        if (mIsDialog) {
+                            EventInfoFragment.this.dismiss();
+                        }
+                	}
                 }
             });
     	}
