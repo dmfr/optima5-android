@@ -14,6 +14,7 @@ public class CrmFileTransactionManager {
 	
 	private Context mContext ;
 	private ArrayList<CrmFileTransaction> tTransactions ;
+	private long tForwardedEventId = -1 ;
 
 	private CrmFileTransactionManager( Context c ) {
 		mContext = c ;
@@ -65,5 +66,17 @@ public class CrmFileTransactionManager {
 		tTransactions.clear();
 	}
 	
+	
+	
+	
+	public void setForwardedEventId(long eventId) {
+		tForwardedEventId = eventId ;
+	}
+	public void clearForwardedEventId() {
+		tForwardedEventId = -1 ;
+	}
+	public long getForwardedEventId() {
+		return tForwardedEventId ;
+	}
 	
 }
