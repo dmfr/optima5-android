@@ -680,6 +680,9 @@ public class CrmFileTransaction {
 		}
 		return new ArrayList<CrmFileRecord>()  ;
 	}
+	public void page_setFieldReadonly( int pageId, int fieldId, boolean isReadonly ) {
+		TransactionPageFields.get(pageId).get(fieldId).fieldIsReadonly = isReadonly ;
+	}
 	public void page_setRecordDisabled( int pageId , int recordId, boolean isDisabled ) {
 		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE ) {
 			return ;

@@ -92,6 +92,7 @@ public class FileCaptureActivity extends Activity {
         			
         			if( forwardValue!=null ) {
         				transaction.page_setRecordFieldValue_bible(0,0,fieldId,forwardValue ) ;
+        				transaction.page_setFieldReadonly(0,fieldId,true) ;
         			}
         			
         		}

@@ -95,6 +95,9 @@ public class FiledetailListFragment extends FiledetailFragment {
         }   
 	}
 	public void handleClickList(int position) {
+		if( mTransaction.page_getFields(getShownIndex()).get(position).fieldIsReadonly ) {
+			return ;
+		}
 		FragmentTransaction ft ;
 		switch( mTransaction.page_getFields(getShownIndex()).get(position).fieldType ){
 		case FIELD_TEXT :
