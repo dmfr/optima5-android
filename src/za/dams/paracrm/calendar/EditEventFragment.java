@@ -245,7 +245,8 @@ public class EditEventFragment extends Fragment
     
     private void setModelIfDone() {
         synchronized (this) {
-        	mView.setModel(mModel);
+        	CrmCalendarManager.CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromFilecode(mContext, mCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode) ;
+        	mView.setModel(crmCalendarInput,mModel);
         }
     }
     
@@ -366,6 +367,9 @@ public class EditEventFragment extends Fragment
             case R.id.action_done:
             	if(mView != null && mView.prepareForSave()) {
             		new EventSaveTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+            	}
+            	else {
+            		
             	}
                 break;
             case R.id.action_cancel:

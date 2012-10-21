@@ -12,6 +12,7 @@ import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
 import android.app.Activity;
@@ -59,6 +60,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     private Activity mActivity;
     private Runnable mDone;
     private View mView;
+    private CrmCalendarInput mCalendarInput;
     private CrmEventModel mModel;
     private Cursor mCalendarsCursor;
     
@@ -509,7 +511,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mCalendarsSpinner.setOnItemSelectedListener(this);
     }
     
-    public void setModel(CrmEventModel model) {
+    public void setModel(CrmCalendarInput input, CrmEventModel model) {
+    	mCalendarInput = input ;
         mModel = model;
         
         //Log.w(TAG,"Dams : Setting model") ;
@@ -570,7 +573,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mEndTimeButton.setOnClickListener(new TimeClickListener(mEndTime));
     }
     private void populateIsDone() {
-    	if( !mModel.isDoneable || CrmCalendarManager.scenSetdoneIsLocked(mActivity, CrmCalendarManager.queryInputFromEvent(mActivity, mModel.mCrmFileId).mCrmInputId) ) {
+    	if( !mModel.isDoneable || CrmCalendarManager.scenSetdoneIsLocked(mActivity, mCalendarInput.mCrmInputId) ) {
     		mIsDoneRow.setVisibility(View.GONE);
     	}
     	else {
@@ -669,6 +672,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	
 	
 	public boolean prepareForSave(){
+		if( mModel.mAccountEntry == null ) {
+			return false ;
+		}
 		// Log.w(TAG,"Prepare for save !!") ;
 		fillModelFromUI() ;
 		return true ;

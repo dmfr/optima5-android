@@ -89,6 +89,26 @@ public class CrmCalendarManager {
 		
 		return mInputs ;
 	}
+	public static CrmCalendarInput queryInputFromFilecode( Context context , String fileCode ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
+		
+		CrmCalendarInput crmCalendarInput = null ;
+		
+		Cursor tCursor ;
+		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib" +
+				" FROM input_calendar input , define_file def " +
+				" WHERE input.target_filecode=def.file_code" +
+				" ORDER BY target_filecode ASC") ;
+		while( tCursor.moveToNext() ) {
+			if( tCursor.getString(1).equals(fileCode) ) {
+				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ) ;
+				break ;
+			}
+		}
+		tCursor.close() ;
+		
+		return crmCalendarInput ;
+	}
 	public static CrmCalendarInput queryInputFromEvent( Context context , int eventId ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
 		
@@ -312,6 +332,8 @@ public class CrmCalendarManager {
 	
 	
 	public void populateModelEmpty( CrmEventModel crmEventModel ) {
+		crmEventModel.mCrmFileCode = mCrmAgendaInfos.mCrmAgendaFilecode ;
+		
 		crmEventModel.mAllDay = false ;
 		
 		if( mCrmAgendaInfos.mIsDoneable ) {
