@@ -57,6 +57,12 @@ public class MainMenuAdapter extends BaseAdapter {
 	    	while( !tmpCursor.isLast() ){
 	    		tmpCursor.moveToNext();
 	    		aId++ ;
+	    		
+	    		if( tmpCursor.getString(tmpCursor.getColumnIndex("scen_is_hidden")) != null 
+	    				&& tmpCursor.getString(tmpCursor.getColumnIndex("scen_is_hidden")).equals("O") ) {
+	    			continue ;
+	    		}
+	    		
 	    		MODULES_DICT.add(new ModuleInfo(aId,
 	    				tmpCursor.getString(tmpCursor.getColumnIndex("scen_name")), 
 	    				R.drawable.mainmenu_visit, 
