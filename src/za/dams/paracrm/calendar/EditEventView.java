@@ -570,7 +570,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mEndTimeButton.setOnClickListener(new TimeClickListener(mEndTime));
     }
     private void populateIsDone() {
-    	if( !mModel.isDoneable ) {
+    	if( !mModel.isDoneable || CrmCalendarManager.scenSetdoneIsLocked(mActivity, CrmCalendarManager.queryInputFromEvent(mActivity, mModel.mCrmFileId).mCrmInputId) ) {
     		mIsDoneRow.setVisibility(View.GONE);
     	}
     	else {
@@ -681,7 +681,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mModel.mStart = mStartTime.toMillis(true);
         mModel.mEnd = mEndTime.toMillis(true);
         
-        if( mModel.isDoneable ) {
+        if( mModel.isDoneable && mIsDoneRow.getVisibility() == View.VISIBLE ) {
         	mModel.isDone = mIsDoneCheckBox.isChecked() ;
         }
 		

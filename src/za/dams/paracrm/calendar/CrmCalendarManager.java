@@ -828,6 +828,24 @@ public class CrmCalendarManager {
 		
 		return scenId ;
 	}
+	public static boolean scenSetdoneIsLocked( Context context, int crmInputId ) {
+		DatabaseManager db = DatabaseManager.getInstance(context) ;
+		
+		boolean setdoneIsLocked = false ;
+		
+		Cursor tCursor = db.rawQuery(String.format("SELECT setdone_is_locked FROM input_calendar WHERE calendar_id='%d'", crmInputId));
+		if( tCursor.getCount() == 1 ) {
+			tCursor.moveToNext() ;
+			
+			String setdone_is_locked = tCursor.getString(0) ;
+			if( setdone_is_locked != null && setdone_is_locked.equals("O") ) {
+				setdoneIsLocked = true ;
+			}
+		}
+		tCursor.close() ;
+		
+		return setdoneIsLocked ;
+	}
 	
 
 }

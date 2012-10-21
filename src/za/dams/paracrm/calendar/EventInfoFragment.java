@@ -421,7 +421,17 @@ public class EventInfoFragment extends DialogFragment
         textView.setText(text);
     }
     private void updateCalendar( View view ){
-    	if( true ) {
+    	boolean hideButtons = mModel.isDone && CrmCalendarManager.scenSetdoneIsLocked(mContext, CrmCalendarManager.queryInputFromEvent(mContext, mModel.mCrmFileId).mCrmInputId) ;
+    	
+    	if( hideButtons ) {
+    		Button b ;
+    		b = (Button) mView.findViewById(R.id.edit);
+    		b.setVisibility(View.GONE) ;
+    		b = (Button) mView.findViewById(R.id.delete);
+    		b.setVisibility(View.GONE) ;
+    	}
+    	
+    	if( !hideButtons ) {
             Button b = (Button) mView.findViewById(R.id.edit);
             b.setEnabled(true);
             b.setOnClickListener(new OnClickListener() {
