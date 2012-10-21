@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 11;
+    private final int DB_VERSION = 12;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -319,6 +319,7 @@ public class DatabaseManager {
                     + "linkscen_is_on" + " VARCHAR(1),"
                     + "linkscen_scen_id" + " INTEGER,"
                     + "linkscen_autoforward_is_on" + " VARCHAR(1),"
+                    + "setdone_is_locked" + " VARCHAR(1),"
                     + "PRIMARY KEY( calendar_id )"
                     + ");";
             db.execSQL(createTableQuery);
