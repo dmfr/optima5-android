@@ -133,13 +133,14 @@ public class EventInfoFragment extends DialogFragment
 			
 			if (mEventId != -1) {
 				int eventId = (int)mEventId ;
+
+				mModel = new CrmEventModel( mContext ) ; 
 				
 				/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
 				CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(mContext, eventId) ;
 				if( crmCalendarInput == null ){
 					return null ;
 				}
-				mModel = new CrmEventModel( mContext ) ; 
 				mCrmCalendarManager = new CrmCalendarManager( mContext, crmCalendarInput.mCrmAgendaId ) ;
 				if( mCrmCalendarManager == null ) {
 					return null ;
@@ -167,6 +168,12 @@ public class EventInfoFragment extends DialogFragment
 			return null;
 		}
 		protected void onPostExecute(Void arg0) {
+			if( mModel==null || mModel.mCrmFileId == -1 ) {
+	            if (mIsDialog) {
+	                EventInfoFragment.this.dismiss();
+	            }
+	            return ;
+			}
 			updateCalendar(mView);
 			updateEvent(mView);
 		}
@@ -421,7 +428,11 @@ public class EventInfoFragment extends DialogFragment
         textView.setText(text);
     }
     private void updateCalendar( View view ){
-    	boolean hideButtons = mModel.isDone && CrmCalendarManager.scenSetdoneIsLocked(mContext, CrmCalendarManager.queryInputFromEvent(mContext, mModel.mCrmFileId).mCrmInputId) ;
+    	int crmFileId = mModel.mCrmFileId ;
+    	int crmInputId = CrmCalendarManager.queryInputFromEvent(mContext, crmFileId).mCrmInputId ;
+    	boolean hideButtons = 
+    			mModel.isDone 
+    			&& CrmCalendarManager.scenSetdoneIsLocked(mContext, crmInputId) ;
     	
     	if( hideButtons ) {
     		Button b ;

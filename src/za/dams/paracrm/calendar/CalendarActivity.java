@@ -1373,14 +1373,19 @@ public class CalendarActivity extends Activity implements EventHandler,
             	
             	SyncServiceHelper.launchSync( this ) ;
             	
-            	int precedentEventId = (int)mController.getForwardedEventId() ;
+            	//int precedentEventId = (int)mController.getForwardedEventId() ;
+            	int precedentEventId = (int)CrmFileTransactionManager.getInstance( getApplicationContext() ).getForwardedEventId() ;
             	mController.clearForwardedEventId() ;
             	CrmFileTransactionManager.getInstance( getApplicationContext() ).clearForwardedEventId() ;
             	
-				CrmEventModel model = new CrmEventModel( this ) ; 
-				mCrmCalendarManager.populateModelLoad(model, precedentEventId) ;
-				model.isDone = true ;
-				mCrmCalendarManager.doneSaveModel(model);
+            	if( precedentEventId > 0 ) {
+            		CrmEventModel model = new CrmEventModel( this ) ; 
+            		mCrmCalendarManager.populateModelLoad(model, precedentEventId) ;
+            		if( model.mCrmFileId == precedentEventId ) {
+            			model.isDone = true ;
+            			mCrmCalendarManager.doneSaveModel(model);
+            		}
+            	}
 				
 				eventsChanged() ;
             	
