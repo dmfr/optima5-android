@@ -737,6 +737,8 @@ public class CalendarActivity extends Activity implements EventHandler,
         super.onCreateOptionsMenu(menu);
         mOptionsMenu = menu;
         getMenuInflater().inflate(R.menu.calendar_allinone_titlebar, menu);
+        
+        menu.findItem(R.id.action_wipe_refresh).setVisible(true) ;
 
         mSearchMenu = menu.findItem(R.id.action_search);
         mSearchView = (SearchView) mSearchMenu.getActionView();
@@ -783,14 +785,20 @@ public class CalendarActivity extends Activity implements EventHandler,
         Time t = null;
         int viewType = ViewType.CURRENT;
         long extras = CalendarController.EXTRA_GOTO_TIME;
+
+    	ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
+    	for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
+    		calendarFilecodes.add(cci.mCrmAgendaId) ;
+    	}
+    	String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
+   
         switch (item.getItemId()) {
+	        case R.id.action_wipe_refresh:
+	        	// mController.refreshCalendars();
+	        	SyncServiceHelper.launchSyncAndPull( this , filecodes, true ) ;
+	        	return true ;
             case R.id.action_refresh:
                 // mController.refreshCalendars();
-                ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
-                for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
-                	calendarFilecodes.add(cci.mCrmAgendaId) ;
-                }
-                String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
         		SyncServiceHelper.launchSyncAndPull( this , filecodes ) ;
                 return true;
             case R.id.action_today:

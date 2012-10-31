@@ -42,6 +42,11 @@
         android:title="Refresh"
         android:icon="@drawable/ic_menu_refresh_holo_light" />
     <item
+        android:id="@+id/action_wipe_refresh"
+        android:alphabeticShortcut="w"
+        android:title="Wipe Refresh"
+        android:icon="@drawable/ic_menu_refresh_holo_light"/>
+    <item
         android:id="@+id/action_search"
         android:alphabeticShortcut="f"
         android:title="Search"
