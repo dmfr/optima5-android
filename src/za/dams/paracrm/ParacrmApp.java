@@ -5,7 +5,7 @@ import org.acra.annotation.ReportsCrashes;
 
 import android.app.Application;
 
-@ReportsCrashes(formKey = "dGVaT3ZqZHp4Z21BdWFZZFpuWjV5V0E6MQ") 
+@ReportsCrashes(formKey = "dDBQdV90bHdhQXE3MHAxNVNwWWFWaEE6MQ") 
 public class ParacrmApp extends Application {
 	@Override
     public void onCreate() {
