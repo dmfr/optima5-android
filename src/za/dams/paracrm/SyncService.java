@@ -526,38 +526,46 @@ public class SyncService extends Service {
     		return ;
     	}
     	
+    	mDb.beginTransaction() ;
+    	
     	if( tableName.equals("store_file") ) {
         	
-    		mDb.beginTransaction() ;
     		Iterator<ContentValues> iter = cvs.iterator() ;
     		ContentValues cv ;
     		while( iter.hasNext() ) {
     			cv = iter.next() ;
+    			
+    			int updateId = 0 ;
 
     			if( cv.getAsString("sync_vuid").equals("") ) {
     				continue ;
     			}
-    			else {
-    				Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
-    				while( cursor.moveToNext() ) {
-    					int deleteId = cursor.getInt(0) ;
-    					mDb.execSQL(String.format("DELETE FROM store_file WHERE filerecord_id='%d'",deleteId)) ;
-    					mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",deleteId)) ;
-    				}
+    			
+    			Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
+    			while( cursor.moveToNext() ) {
+    				updateId = cursor.getInt(0) ;
     			}
+    			cursor.close();
+
     			cv.put("sync_is_synced", "O") ;
+    			int localId ;
     			int remoteId = cv.getAsInteger("filerecord_id") ;
-    			cv.putNull("filerecord_id") ;
-    			int localId = (int)mDb.insert(tableName, cv);
+    			if( updateId > 0 ) {
+    				cv.put("filerecord_id",updateId) ;
+    				mDb.update(tableName, cv, "filerecord_id="+updateId);
+    				localId = updateId ;
+    			}
+    			else {
+    				cv.putNull("filerecord_id") ;
+        			localId = (int)mDb.insert(tableName, cv);
+    			}
 
     			eqivRemoteIdToLocalId.put(remoteId, localId) ;
     		}
-    		mDb.endTransaction() ;
     	
     	}
     	if( tableName.equals("store_file_field") ) {
         	
-    		mDb.beginTransaction() ;
     		Iterator<ContentValues> iter = cvs.iterator() ;
     		ContentValues cv ;
     		while( iter.hasNext() ) {
@@ -569,12 +577,15 @@ public class SyncService extends Service {
     			int localId = eqivRemoteIdToLocalId.get(remoteId) ;
     			cv.put("filerecord_id", localId) ;
     			
+    			String fieldCode = cv.getAsString("filerecord_field_code") ;
+    			mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d' AND filerecord_field_code='%s'",localId,fieldCode)) ;
     			
     			mDb.insert(tableName, cv);
     		}
-    		mDb.endTransaction() ;
     	
     	}
+    	
+		mDb.endTransaction() ;
 	}
     
 	

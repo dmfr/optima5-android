@@ -605,6 +605,9 @@ public class DatabaseManager {
     public long insert( String table , ContentValues values ) {
     	return mDb.insert(table, "NULL", values);
     }
+    public long update( String table , ContentValues values , String whereClause ) {
+    	return mDb.update(table, values, whereClause, null);
+    }
     public void execSQL( String sql ) {
     	mDb.execSQL(sql) ;
     }
