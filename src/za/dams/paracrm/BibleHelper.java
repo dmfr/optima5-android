@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.util.Log;
 
 public class BibleHelper {
 	
@@ -572,7 +573,7 @@ public class BibleHelper {
     					continue ;
     				}
     				
-    				if( bibleTree.getTree(treenodeParentKey) != null ) {
+    				if( bibleTree.getTree(treenodeParentKey) != null && bibleTree.getTree(treenodeKey) == null ) {
     					bibleTree.addLeaf(treenodeParentKey, treenodeKey) ;
     					nbPushedThispass++ ;
     					nbPushed++ ;
