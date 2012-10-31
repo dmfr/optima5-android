@@ -738,7 +738,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         mOptionsMenu = menu;
         getMenuInflater().inflate(R.menu.calendar_allinone_titlebar, menu);
         
-        menu.findItem(R.id.action_wipe_refresh).setVisible(true) ;
+        menu.findItem(R.id.action_wipe_refresh).setVisible(false) ;
 
         mSearchMenu = menu.findItem(R.id.action_search);
         mSearchView = (SearchView) mSearchMenu.getActionView();
