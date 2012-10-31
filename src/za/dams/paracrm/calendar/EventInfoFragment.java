@@ -150,7 +150,7 @@ public class EventInfoFragment extends DialogFragment
 					//Log.w(TAG,"Example : account is "+mModel.mAccountEntry.displayStr) ;
 				}
 				
-				Map<String,Integer> presets = PrefsCrm.getAccountsColor(getActivity(), crmCalendarInput.mCrmAgendaId ) ;
+				Map<String,Integer> presets = PrefsCrm.getAccountsColor(mContext, crmCalendarInput.mCrmAgendaId ) ;
 				if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
 					mColor = presets.get(mModel.mAccountEntry.entryKey) ;
 				}
@@ -526,20 +526,20 @@ public class EventInfoFragment extends DialogFragment
         int flagsDate = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_WEEKDAY |
                 DateUtils.FORMAT_SHOW_YEAR;
 
-        if (DateFormat.is24HourFormat(getActivity())) {
+        if (DateFormat.is24HourFormat(mContext)) {
             flagsTime |= DateUtils.FORMAT_24HOUR;
         }
         if (mAllDay) {
             Formatter f = new Formatter(new StringBuilder(50), Locale.getDefault());
-            whenDate = DateUtils.formatDateRange(getActivity(), f, mStartMillis, mEndMillis,
+            whenDate = DateUtils.formatDateRange(mContext, f, mStartMillis, mEndMillis,
                     flagsDate, Time.TIMEZONE_UTC).toString();
             setTextCommon(view, R.id.when_date, whenDate);
             view.findViewById(R.id.when_time).setVisibility(View.GONE);
 
         } else {
             // Show date for none all-day events
-            whenDate = Utils.formatDateRange(getActivity(), mStartMillis, mEndMillis, flagsDate);
-            String whenTime = Utils.formatDateRange(getActivity(), mStartMillis, mEndMillis,
+            whenDate = Utils.formatDateRange(mContext, mStartMillis, mEndMillis, flagsDate);
+            String whenTime = Utils.formatDateRange(mContext, mStartMillis, mEndMillis,
                     flagsTime);
             setTextCommon(view, R.id.when_date, whenDate);
             setTextCommon(view, R.id.when_time, whenTime);
