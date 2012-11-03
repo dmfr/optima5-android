@@ -137,9 +137,13 @@ public class SyncService extends Service {
     private boolean doPush() {
     	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
     	
+    	Long tsLong = System.currentTimeMillis()/1000;
+    	String ts = tsLong.toString();
+    	
     	String android_id = Secure.getString(SyncService.this.getApplicationContext().getContentResolver(),
                 Secure.ANDROID_ID);
-    	mDbManager.syncTagVuid(android_id) ;
+    	
+    	mDbManager.syncTagVuid(android_id,ts) ;
     	
     	JSONObject jsonDump = new JSONObject() ;
     	try {
