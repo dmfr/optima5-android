@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -111,6 +113,19 @@ public class CrmFileTransaction {
     		this.valueDate = valueDate ;
     		this.displayStr = displayStr ;
     	}
+    	public CrmFileFieldValue( JSONObject jsonObject ) {
+    		try {
+				this.fieldType = FieldType.values()[jsonObject.getInt("fieldType")] ;
+				this.valueFloat = Float.parseFloat(jsonObject.getString("valueFloat")) ;
+				this.valueBoolean = jsonObject.getBoolean("valueBoolean") ;
+				this.valueString = jsonObject.getString("valueString") ;
+				this.valueDate = new Date(jsonObject.getLong("valueDate")) ;
+				this.isSet = jsonObject.getBoolean("isSet") ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
     	public CrmFileFieldValue clone() {
     		Object o = null;
     		try {
@@ -124,6 +139,22 @@ public class CrmFileTransaction {
     		}
     		// on renvoie le clone
     		return (CrmFileFieldValue)o;
+    	}
+    	public JSONObject toJSONObject() {
+    		try{
+    			JSONObject jsonObject = new JSONObject();
+    			jsonObject.put("fieldType", this.fieldType.ordinal()) ;
+    			jsonObject.put("valueFloat", new Float(this.valueFloat).toString()) ;
+    			jsonObject.put("valueBoolean", this.valueBoolean) ;
+    			jsonObject.put("valueDate", this.valueDate.getTime()) ;
+    			jsonObject.put("displayStr", this.displayStr) ;
+    			jsonObject.put("isSet", this.isSet) ;
+    			return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null ;
+			}
     	}
 	}
 	
@@ -195,6 +226,56 @@ public class CrmFileTransaction {
     		this.recordIsDisabled = recordIsDisabled ;
     		this.recordIsHidden = false ;
     	}
+    	
+    	public CrmFileRecord( JSONObject jsonObject ) {
+    		try {
+				this.recordTmpId = jsonObject.getInt("recordTmpId") ;
+				if( jsonObject.has("recordPhoto") ) {
+					this.recordPhoto = new CrmFilePhoto( jsonObject.getJSONObject("recordPhoto")) ;
+				}
+				if( jsonObject.has("recordData") ) {
+					JSONObject jsonRecordData = jsonObject.getJSONObject("recordData") ;
+					this.recordData = new HashMap<String,CrmFileFieldValue>() ;
+					Iterator<String> iterKeys = jsonRecordData.keys() ;
+					while( iterKeys.hasNext() ) {
+						String key = iterKeys.next() ;
+						CrmFileFieldValue cffv = new CrmFileFieldValue(jsonRecordData.getJSONObject(key)) ;
+						this.recordData.put(key, cffv) ;
+					}
+				}
+				this.recordIsDisabled = jsonObject.getBoolean("recordIsDisabled") ;
+				this.recordIsHidden = jsonObject.getBoolean("recordIsHidden") ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+			}
+    	}
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+    			jsonObject.put("recordTmpId", this.recordTmpId) ;
+    			if( this.recordPhoto != null ) {
+    				jsonObject.put("recordPhoto", this.recordPhoto.toJSONObject()) ;
+    			}
+    			if( this.recordData != null ) {
+    				JSONObject jsonRecordData = new JSONObject() ;
+    				for( Entry<String,CrmFileFieldValue> map : this.recordData.entrySet() ) {
+    					jsonRecordData.put(map.getKey(), map.getValue().toJSONObject()) ;
+    					map.getValue() ;
+    				}
+    				jsonObject.put("recordData", jsonRecordData) ;
+    			}
+    			jsonObject.put("recordIsDisabled", this.recordIsDisabled) ;
+    			jsonObject.put("recordIsHidden", this.recordIsHidden) ;
+    			
+    			
+    			return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+				return null ;
+			}
+    	}
 	}
 	
 	
@@ -206,8 +287,35 @@ public class CrmFileTransaction {
     		this.uriString = uriString ;
     		this.uriStringThumb = uriStringThumb ;
     	}
+    	public CrmFilePhoto( JSONObject jsonObject ) {
+    		try {
+				this.uriString = jsonObject.getString("uriString") ;
+				this.uriStringThumb = jsonObject.getString("uriStringThumb") ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+			}
+    	}
+    	
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+    			jsonObject.put("uriString",this.uriString) ;
+    			jsonObject.put("uriStringThumb",this.uriStringThumb) ;
+    			return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+				return null ;
+			}
+    	}
     }
 	
+    public CrmFileTransaction( Context c , JSONObject jsonObj ) {
+		this.mContext = c ;
+		mDb = DatabaseManager.getInstance(c) ;
+    	
+    }
 	
 	public CrmFileTransaction( Context c , int CrmInputScenId ) {
 		this.mContext = c ;
@@ -1260,6 +1368,20 @@ public class CrmFileTransaction {
     	}
     	mDb.endTransaction() ;
     	return true ;
+	}
+	
+	public JSONObject toJSONObject() {
+		try {
+			JSONObject jsonObj = new JSONObject() ;
+			jsonObj.put("CrmInputScenId",CrmInputScenId) ;
+			jsonObj.put("CrmFileCode", CrmFileCode) ;
+			
+			return jsonObj ;
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			return null ;
+		}
 	}
 
 }
