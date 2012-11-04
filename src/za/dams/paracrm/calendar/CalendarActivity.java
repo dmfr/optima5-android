@@ -1385,6 +1385,7 @@ public class CalendarActivity extends Activity implements EventHandler,
             	int precedentEventId = (int)CrmFileTransactionManager.getInstance( getApplicationContext() ).getForwardedEventId() ;
             	mController.clearForwardedEventId() ;
             	CrmFileTransactionManager.getInstance( getApplicationContext() ).clearForwardedEventId() ;
+            	CrmFileTransactionManager.purgeInstance( getApplicationContext() ) ;
             	
             	if( precedentEventId > 0 ) {
             		CrmEventModel model = new CrmEventModel( this ) ; 

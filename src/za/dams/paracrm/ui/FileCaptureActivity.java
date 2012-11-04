@@ -104,6 +104,14 @@ public class FileCaptureActivity extends Activity {
         
         setContentView(R.layout.filecapture);
     }
+    protected void onPause() {
+    	super.onPause();
+    	CrmFileTransactionManager.saveInstance( getApplicationContext() ) ;
+    }
+    
+    
+    
+    
     public void endOfTransaction() {
     	// ----- check saisie complète ------
         CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getApplicationContext() ) ;

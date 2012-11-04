@@ -154,7 +154,7 @@ public class MainMenuActivity extends Activity {
         		startActivity(intent);
             }
         });
-        ((GridView)findViewById(R.id.modulesgridview)).setVisibility(View.VISIBLE) ;
+        ((GridView)findViewById(R.id.modulesgridview)).setVisibility(View.GONE) ;
         
         
         
@@ -478,6 +478,7 @@ public class MainMenuActivity extends Activity {
         if (requestCode == ACT_FILECAPTURE) {
             if (resultCode == RESULT_OK) {
             	CrmFileTransactionManager.getInstance( getApplicationContext() ).purgeTransactions() ;
+            	CrmFileTransactionManager.purgeInstance( getApplicationContext() ) ;
             	
             	this.myUploadService() ;
             	
@@ -496,7 +497,27 @@ public class MainMenuActivity extends Activity {
     }
     
     public void myQuitActivity() {
-    	finish();
+    	if( CrmFileTransactionManager.getInstance(getApplicationContext()).getNbTransactions() == 0 ) {
+    		finish() ;
+    		return ;
+    	}
+    	
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setMessage("Warning, unsaved transactions will be lost.")
+    	       .setCancelable(true)
+    	       .setPositiveButton("Quit", new DialogInterface.OnClickListener() {
+    	           public void onClick(DialogInterface dialog, int id) {
+    	        	   CrmFileTransactionManager.purgeInstance( getApplicationContext() ) ;
+    	        	   finish();
+    	           }
+    	       })
+    	       .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+    	           public void onClick(DialogInterface dialog, int id) {
+    	                dialog.cancel();
+    	           }
+    	       });
+    	AlertDialog alert = builder.create();
+    	alert.show();
     }
     
 	
