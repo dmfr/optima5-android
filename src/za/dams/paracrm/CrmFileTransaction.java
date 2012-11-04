@@ -74,6 +74,47 @@ public class CrmFileTransaction {
     		}
     		pageIsHidden = true ;
     	}
+    	public CrmFilePageinfo( JSONObject jsonObject ) {
+    		try {
+				pageId = jsonObject.getInt("pageId");
+				pageType = PageType.values()[jsonObject.getInt("pageType")] ;
+				pageTableType = PageTableType.values()[jsonObject.getInt("pageTableType")] ;
+				pageCode = jsonObject.getString("pageCode");
+				pageLib = jsonObject.getString("pageLib");
+				fileCode = jsonObject.getString("fileCode");
+				fileLib = jsonObject.getString("fileLib");
+				fileIsSubfile = jsonObject.getBoolean("fileIsSubfile");
+				fileHasGmap = jsonObject.getBoolean("fileHasGmap");
+				pageIsHidden = jsonObject.getBoolean("pageIsHidden");
+				loadIsLoadable = jsonObject.getBoolean("loadIsLoadable");
+				loadIsLoaded = jsonObject.getBoolean("loadIsLoaded");
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+				jsonObject.put("pageId", pageId) ;
+				jsonObject.put("pageType",pageType.ordinal()) ;
+				jsonObject.put("pageTableType",pageTableType.ordinal()) ;
+				jsonObject.put("pageCode", pageCode) ;
+				jsonObject.put("pageLib", pageLib) ;
+				jsonObject.put("fileCode", fileCode) ;
+				jsonObject.put("fileLib", fileLib) ;
+				jsonObject.put("fileIsSubfile", fileIsSubfile) ;
+				jsonObject.put("fileHasGmap", fileHasGmap) ;
+				jsonObject.put("pageIsHidden", pageIsHidden) ;
+				jsonObject.put("loadIsLoadable", loadIsLoadable) ;
+				jsonObject.put("loadIsLoaded", loadIsLoaded) ;
+				return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null ;
+			}
+    	}
 	}
 	
 	public static class CrmFileFieldValue implements Cloneable {
@@ -116,10 +157,17 @@ public class CrmFileTransaction {
     	public CrmFileFieldValue( JSONObject jsonObject ) {
     		try {
 				this.fieldType = FieldType.values()[jsonObject.getInt("fieldType")] ;
-				this.valueFloat = Float.parseFloat(jsonObject.getString("valueFloat")) ;
+				this.valueFloat = Float.parseFloat(jsonObject.optString("valueFloat","")) ;
 				this.valueBoolean = jsonObject.getBoolean("valueBoolean") ;
-				this.valueString = jsonObject.getString("valueString") ;
-				this.valueDate = new Date(jsonObject.getLong("valueDate")) ;
+				if( jsonObject.has("valueString") ) {
+					this.valueString = jsonObject.getString("valueString") ;
+				}
+				if( jsonObject.has("valueDate") ) {
+					this.valueDate = new Date(jsonObject.getLong("valueDate")) ;
+				}
+				if( jsonObject.has("displayStr") ) {
+					this.displayStr = jsonObject.getString("displayStr") ;
+				}
 				this.isSet = jsonObject.getBoolean("isSet") ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -146,8 +194,15 @@ public class CrmFileTransaction {
     			jsonObject.put("fieldType", this.fieldType.ordinal()) ;
     			jsonObject.put("valueFloat", new Float(this.valueFloat).toString()) ;
     			jsonObject.put("valueBoolean", this.valueBoolean) ;
-    			jsonObject.put("valueDate", this.valueDate.getTime()) ;
-    			jsonObject.put("displayStr", this.displayStr) ;
+    			if( this.valueDate != null ) {
+    				jsonObject.put("valueDate", this.valueDate.getTime()) ;
+    			}
+    			if( this.valueString != null ) {
+    				jsonObject.put("valueString", this.valueString) ;
+    			}
+    			if( this.displayStr != null ) {
+    				jsonObject.put("displayStr", this.displayStr) ;
+    			}
     			jsonObject.put("isSet", this.isSet) ;
     			return jsonObject ;
 			} catch (JSONException e) {
@@ -191,6 +246,27 @@ public class CrmFileTransaction {
     		this.fieldName = fieldName ;
     		this.fieldIsHighlight = fieldIsHighlight ;
     	}
+    	public CrmFileFieldDesc( JSONObject jsonObject ) {
+    		try {
+				this.fieldType = FieldType.values()[jsonObject.getInt("fieldType")] ;
+				this.fieldLinkBible = jsonObject.getString("fieldLinkBible") ;
+				this.fieldCode = jsonObject.getString("fieldCode") ;
+				this.fieldName = jsonObject.getString("fieldName") ;
+				this.fieldIsPivot = jsonObject.optBoolean("fieldIsPivot",false) ;
+				this.fieldIsReadonly = jsonObject.optBoolean("fieldIsReadonly",false) ;
+				this.fieldIsHighlight = jsonObject.optBoolean("fieldIsHighlight",false) ;
+				this.fieldAutovalueIsOn = jsonObject.optBoolean("fieldAutovalueIsOn",false) ;
+				this.fieldAutovalueSrc = jsonObject.optString("fieldAutovalueSrc",null) ;
+				if( jsonObject.has("fieldAutovalue") ) {
+					this.fieldAutovalue = new CrmFileFieldValue(jsonObject.getJSONObject("fieldAutovalue")) ;
+				}
+				this.fieldSearchIsCondition = jsonObject.optBoolean("fieldSearchIsCondition",false) ;
+				
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
     	public CrmFileFieldDesc clone() {
     		Object o = null;
     		try {
@@ -204,6 +280,31 @@ public class CrmFileTransaction {
     		}
     		// on renvoie le clone
     		return (CrmFileFieldDesc)o;
+    	}
+    	
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+    			jsonObject.put("fieldType",this.fieldType.ordinal()) ;
+    			jsonObject.put("fieldLinkBible",this.fieldLinkBible) ;
+    			jsonObject.put("fieldCode",this.fieldCode) ;
+    			jsonObject.put("fieldName",this.fieldName) ;
+    			jsonObject.put("fieldIsPivot",this.fieldIsPivot) ;
+    			jsonObject.put("fieldIsReadonly",this.fieldIsReadonly) ;
+    			jsonObject.put("fieldIsHighlight",this.fieldIsHighlight) ;
+    			if( this.fieldAutovalueIsOn ) {
+    				jsonObject.put("fieldAutovalueIsOn",this.fieldAutovalueIsOn) ;
+    				jsonObject.put("fieldAutovalueSrc",this.fieldAutovalueSrc) ;
+    				jsonObject.put("fieldAutovalue",this.fieldAutovalue.toJSONObject()) ;
+    			}
+    			jsonObject.put("fieldSearchIsCondition",this.fieldSearchIsCondition) ;
+    			
+    			return jsonObject ;
+    			
+    		} catch (JSONException e) {
+    			e.printStackTrace();
+    			return null ;
+    		}
     	}
 	}
 	
@@ -314,7 +415,57 @@ public class CrmFileTransaction {
     public CrmFileTransaction( Context c , JSONObject jsonObj ) {
 		this.mContext = c ;
 		mDb = DatabaseManager.getInstance(c) ;
+		
+		try {
+			this.CrmInputScenId = jsonObj.getInt("CrmInputScenId") ;
+			this.CrmFileCode = jsonObj.getString("CrmFileCode") ;
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     	
+		TransactionPages = new ArrayList<CrmFilePageinfo>() ;
+		TransactionPageFields = new ArrayList<ArrayList<CrmFileFieldDesc>>() ;
+		TransactionPageRecords = new ArrayList<ArrayList<CrmFileRecord>>() ;
+		
+		try {
+			JSONArray JsonTransactionPages = jsonObj.getJSONArray("TransactionPages") ;
+			for( int idx=0 ; idx<JsonTransactionPages.length() ; idx++ ) {
+				TransactionPages.add( new CrmFilePageinfo( JsonTransactionPages.getJSONObject(idx) ) ) ;
+			}
+		} catch( JSONException e ) {
+			e.printStackTrace() ;
+		}
+		
+		try {
+			JSONArray JsonTransactionPageFields = jsonObj.getJSONArray("TransactionPageFields") ;
+			for( int idx=0 ; idx<JsonTransactionPageFields.length() ; idx++ ) {
+				ArrayList<CrmFileFieldDesc> TransactionPageFields_intra = new ArrayList<CrmFileFieldDesc>() ;
+				JSONArray JsonTransactionPageFields_intra = JsonTransactionPageFields.getJSONArray(idx) ;
+				for( int idx2=0 ; idx2<JsonTransactionPageFields_intra.length() ; idx2++ ) {
+					TransactionPageFields_intra.add( new CrmFileFieldDesc( JsonTransactionPageFields_intra.getJSONObject(idx2) ) ) ;
+				}
+				TransactionPageFields.add( TransactionPageFields_intra ) ;
+			}
+		} catch( JSONException e ) {
+			e.printStackTrace() ;
+		}
+		
+		try {
+			JSONArray JsonTransactionPageRecords = jsonObj.getJSONArray("TransactionPageRecords") ;
+			for( int idx=0 ; idx<JsonTransactionPageRecords.length() ; idx++ ) {
+				ArrayList<CrmFileRecord> TransactionPageRecords_intra = new ArrayList<CrmFileRecord>() ;
+				JSONArray JsonTransactionPageRecords_intra = JsonTransactionPageRecords.getJSONArray(idx) ;
+				for( int idx2=0 ; idx2<JsonTransactionPageRecords_intra.length() ; idx2++ ) {
+					TransactionPageRecords_intra.add( new CrmFileRecord( JsonTransactionPageRecords_intra.getJSONObject(idx2) ) ) ;
+				}
+				TransactionPageRecords.add( TransactionPageRecords_intra ) ;
+			}
+		} catch( JSONException e ) {
+			e.printStackTrace() ;
+		}
+		
+		
     }
 	
 	public CrmFileTransaction( Context c , int CrmInputScenId ) {
@@ -1376,10 +1527,36 @@ public class CrmFileTransaction {
 			jsonObj.put("CrmInputScenId",CrmInputScenId) ;
 			jsonObj.put("CrmFileCode", CrmFileCode) ;
 			
+			JSONArray JsonTransactionPages = new JSONArray() ;
+			for( CrmFilePageinfo cfp : TransactionPages ) {
+				JsonTransactionPages.put(cfp.toJSONObject()) ;
+			}
+			jsonObj.put("TransactionPages", JsonTransactionPages) ;
+			
+			JSONArray JsonTransactionPageFields = new JSONArray() ;
+			for( ArrayList<CrmFileFieldDesc> arrCffd : TransactionPageFields ) {
+				JSONArray JsonTransactionPageFields_intra = new JSONArray() ;
+				for( CrmFileFieldDesc cffd : arrCffd ) {
+					JsonTransactionPageFields_intra.put(cffd.toJSONObject()) ;
+				}
+				JsonTransactionPageFields.put(JsonTransactionPageFields_intra) ;
+			}
+			jsonObj.put("TransactionPageFields", JsonTransactionPageFields) ;
+			
+			JSONArray JsonTransactionPageRecords = new JSONArray() ;
+			for( ArrayList<CrmFileRecord> arrCfr : TransactionPageRecords ) {
+				JSONArray JsonTransactionPageRecords_intra = new JSONArray() ;
+				for( CrmFileRecord cfr : arrCfr ) {
+					JsonTransactionPageRecords_intra.put(cfr.toJSONObject()) ;
+				}
+				JsonTransactionPageRecords.put(JsonTransactionPageRecords_intra) ;
+			}
+			jsonObj.put("TransactionPageRecords", JsonTransactionPageRecords) ;
+			
 			return jsonObj ;
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
-			//e.printStackTrace();
+			e.printStackTrace();
 			return null ;
 		}
 	}

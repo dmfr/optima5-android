@@ -31,20 +31,22 @@ public class CrmFileTransactionManager {
 	}
 	private CrmFileTransactionManager( Context c , JSONObject jsonObject ) {
 		mContext = c ;
-		if( jsonObject != null ) {
-			tForwardedEventId = jsonObject.optLong("tForwardedEventId",-1);
+		try {
+			tForwardedEventId = jsonObject.getLong("tForwardedEventId");
 			
 			tTransactions = new ArrayList<CrmFileTransaction>();
-			JSONArray jsonArrCft = jsonObject.optJSONArray("tTransactions") ;
+			JSONArray jsonArrCft = jsonObject.getJSONArray("tTransactions") ;
 			if( jsonArrCft != null ) {
 				for( int idx=0 ; idx<jsonArrCft.length() ; idx++ ) {
-					JSONObject jsonCft = jsonArrCft.optJSONObject(idx) ;
+					JSONObject jsonCft = jsonArrCft.getJSONObject(idx) ;
 					if( jsonCft != null ) {
 						CrmFileTransaction cft = new CrmFileTransaction( c , jsonCft ) ;
 						tTransactions.add(cft) ;
 					}
 				}
 			}
+		} catch( JSONException e ) {
+			e.printStackTrace() ;
 		}
 	}
 
@@ -139,6 +141,7 @@ public class CrmFileTransactionManager {
 			JSONArray jsonArr = new JSONArray() ;
 			for( CrmFileTransaction cft : tTransactions ) {
 				if( cft != null ) {
+					//Log.w(TAG,cft.toJSONObject().toString(3)) ;
 					jsonArr.put( cft.toJSONObject() ) ;
 				}
 			}
@@ -148,7 +151,7 @@ public class CrmFileTransactionManager {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			//e.printStackTrace();
+			e.printStackTrace();
 			return null ;
 		}
 	}
