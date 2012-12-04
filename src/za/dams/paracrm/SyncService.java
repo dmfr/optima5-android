@@ -260,8 +260,8 @@ public class SyncService extends Service {
     
 	public ArrayList<UploadEntry> uploadToServer(JSONObject jsonDump) {
     	HttpParams httpParameters = new BasicHttpParams();
-    	HttpConnectionParams.setConnectionTimeout(httpParameters, 10000);
-    	HttpConnectionParams.setSoTimeout(httpParameters, 10000);
+    	HttpConnectionParams.setConnectionTimeout(httpParameters, 30000);
+    	HttpConnectionParams.setSoTimeout(httpParameters, 30000);
     	
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
