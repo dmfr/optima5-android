@@ -1,16 +1,21 @@
 package za.dams.paracrm.ui;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
+import android.app.DatePickerDialog;
+import android.app.DatePickerDialog.OnDateSetListener;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.format.Time;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -21,6 +26,8 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.CalendarView;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -131,6 +138,26 @@ public class FiledetailTableFragment extends FiledetailFragment {
 
         		switch( fieldDesc.fieldType )
         		{
+        		case FIELD_DATE:
+        		case FIELD_DATETIME :
+    				etext = new EditText(getActivity());
+    				if( mrecord.recordData.get(fieldDesc.fieldCode).isSet ) {
+    					etext.setText(mrecord.recordData.get(fieldDesc.fieldCode).displayStr);
+    				}
+    				etext.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22) ;
+    				// text.setTextColor(Color.rgb(255,255,255)) ;
+    				etext.setPadding(10, 3, 10, 10) ;
+    				etext.setMaxLines(1) ;
+    				if( true ){
+    					etext.setInputType(InputType.TYPE_NULL) ;
+    				}
+    				etext.setId( (a*100) + b ) ;
+    				
+    				etext.setOnClickListener(new DateClickListener(pageId,a,b)) ;
+
+    				row.addView(etext) ;
+        			break ;
+        		
         		case FIELD_TEXT :
         		case FIELD_NUMBER :
         			if( mrecord.recordIsDisabled ) {
@@ -252,5 +279,54 @@ public class FiledetailTableFragment extends FiledetailFragment {
 	}
 	
 	
+    private class DateClickListener implements View.OnClickListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+
+        public DateClickListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+        }
+
+        public void onClick(View v) {
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	Date curDate = mTransaction.page_getRecordFieldValue( pageId , recordId, fieldId ).valueDate ;
+        	
+        	
+            DatePickerDialog dpd = new DatePickerDialog(
+                    getActivity(), new DateListener(pageId,recordId,fieldId), curDate.getYear() + 1900 , curDate.getMonth() , curDate.getDate());
+            dpd.getDatePicker().setSpinnersShown(false) ;
+            dpd.setCanceledOnTouchOutside(true);
+            dpd.show();
+        }
+    }
+    private class DateListener implements OnDateSetListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+    	
+    	public DateListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+    	}
+
+    	public void onDateSet(DatePicker view, int year, int month, int monthDay) {
+        	int annee = year - 1900 ;
+        	int mois = month;
+        	int jour = monthDay ;
+    		
+        	Date newDate = new Date(annee,mois,jour) ;
+    		
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	mTransaction.page_setRecordFieldValue_date(pageId,recordId,fieldId, newDate ) ;
+        	
+        	FiledetailTableFragment.this.syncWithData() ;
+    	}
+    }
 
 }

@@ -17,12 +17,14 @@
 package za.dams.paracrm.ui ;
 
 
-import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -107,6 +109,17 @@ public class FileCaptureActivity extends Activity {
     protected void onPause() {
     	super.onPause();
     	CrmFileTransactionManager.saveInstance( getApplicationContext() ) ;
+    	if( isFinishing() ) {
+    		// **** On detruit les fragments, pour provoquer la fin des fragments imbriqués AVANT le destroy de l'acitivité ****
+        	//Log.w(TAG,"Before destroying filecapture") ;
+    		FragmentManager mFragmentMgr = getFragmentManager() ;
+    		Fragment childFragment =mFragmentMgr.findFragmentById(R.id.filedetail) ;
+    		if( childFragment!=null ) {
+    			FragmentTransaction ft = mFragmentMgr.beginTransaction();
+    			ft.remove(childFragment);
+    			ft.commit() ;
+    		}
+    	}
     }
     
     

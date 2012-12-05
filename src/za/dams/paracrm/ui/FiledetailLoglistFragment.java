@@ -15,10 +15,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.HttpPostHelper;
 import za.dams.paracrm.R;
+import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.widget.BiblePickerDialog;
+import za.dams.paracrm.widget.InputPickerDialog;
+import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
+import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
 import android.app.FragmentTransaction;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -145,25 +151,34 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 			return ;
 		}
 		
+		int targetPageId = getShownIndex() ;
+		int targetRecordId = 0 ;
+		int targetFieldId = mPivotPosition ;
+		
+		String targetTitle = mTransaction.page_getFields(targetPageId).get(targetFieldId).fieldName ;
+		Bundle dialogBundle = new Bundle() ;
+		dialogBundle.putString("title",targetTitle) ;
+
 		FragmentTransaction ft ;
+		InputPickerDialog ipd ;
 		switch( mTransaction.page_getFields(getShownIndex()).get(mPivotPosition).fieldType ){
 		case FIELD_TEXT :
-			TextpickerFragment textPicker = TextpickerFragment.newInstance(getShownIndex(),0,mPivotPosition) ;
-			textPicker.setTargetFragment(this, 0);
-			// biblePicker.s
-			ft = getFragmentManager().beginTransaction();
-
-			textPicker.show(ft, "dialoggg") ;
-			//ft.commit();
+			String curString = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueString ;
+			
+			ipd = new InputPickerDialog(getActivity(), new InputListener(targetPageId,targetRecordId,targetFieldId), InputPickerDialog.TYPE_TEXT, curString ) ;
+			ipd.setArguments(dialogBundle) ;
+            ft = getFragmentManager().beginTransaction();
+            ipd.show(getFragmentManager(), "dialog") ;
 			break ;
 		case FIELD_BIBLE :
-			BiblepickerFragment biblePicker = BiblepickerFragment.newInstance(getShownIndex(),0,mPivotPosition) ;
-			biblePicker.setTargetFragment(this, 0);
-			// biblePicker.s
-			ft = getFragmentManager().beginTransaction();
-
-			biblePicker.show(ft, "dialoggg") ;
-			//ft.commit();
+			BibleHelper.BibleCode bibleCode = new BibleHelper.BibleCode(mTransaction.page_getFields(targetPageId).get(targetFieldId).fieldLinkBible) ;
+			ArrayList<BibleHelper.BibleEntry> bibleConditions = mTransaction.links_getBibleConditions() ;
+            BiblePickerDialog bpd = new BiblePickerDialog(getActivity(), new BibleListener(targetPageId,targetRecordId,targetFieldId), bibleCode, bibleConditions);
+            //bpd.setTargetFragment(this, 0);
+            //bpd.setCanceledOnTouchOutside(true);
+            ft = getFragmentManager().beginTransaction();
+            bpd.show(ft, "dialog") ;
+            
 			break ;
 		case FIELD_DATE :
 		case FIELD_DATETIME :
@@ -312,5 +327,62 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         	FiledetailLoglistFragment.this.syncWithData() ;
         }
     }
- 
+
+    private class BibleListener implements OnBibleSetListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+
+    	public BibleListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+    	}
+    	
+        public void onBibleSet(BibleEntry be) {
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	
+        	if( be == null ) {
+        		mTransaction.page_setRecordFieldValue_unset(pageId,recordId,fieldId) ;
+        	}
+        	else {
+        		String selectedEntryKey = be.entryKey ;
+        		mTransaction.page_setRecordFieldValue_bible(pageId,recordId,fieldId, selectedEntryKey ) ;
+        	}
+
+        	FiledetailLoglistFragment.this.syncWithData() ;
+        }
+    }
+    private class InputListener implements OnInputSetListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+
+    	public InputListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+    	}
+    	
+    	public void onInputSet( String s ) {
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	mTransaction.page_setRecordFieldValue_text( pageId , recordId, fieldId, s ) ;
+        	FiledetailLoglistFragment.this.syncWithData() ;
+    	}
+    	public void onInputSet( int i ) {
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+    		mTransaction.page_setRecordFieldValue_number( pageId , recordId, fieldId, (float)i ) ;
+    		FiledetailLoglistFragment.this.syncWithData() ;
+    	}
+    	public void onInputSet( float f ) {
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+    		mTransaction.page_setRecordFieldValue_number( pageId , recordId, fieldId, (float)f ) ;
+    		FiledetailLoglistFragment.this.syncWithData() ;
+    	}
+    }
+
 }
