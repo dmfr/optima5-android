@@ -23,6 +23,11 @@ public class FiledetailFragmentFactory {
     	case  PAGETYPE_PHOTO :
             f = FiledetailGalleryFragment.newInstance(position);
             break;
+        
+    	case  PAGETYPE_CONTAINER :
+            f = FiledetailContainerFragment.newInstance(position);
+            break;
+            
     		
     	default :
             f = FiledetailDummyFragment.newInstance(position);
