@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.json.JSONArray;
@@ -37,7 +36,8 @@ public class CrmFileTransaction {
 	private ArrayList<ArrayList<CrmFileRecord>> TransactionPageRecords ;
 	
 	public enum PageType {
-		PAGETYPE_LIST, PAGETYPE_LOGLIST, PAGETYPE_TABLE, PAGETYPE_PHOTO, PAGETYPE_SAVE, PAGETYPE_NULL
+		PAGETYPE_LIST, PAGETYPE_LOGLIST, PAGETYPE_TABLE, PAGETYPE_PHOTO, PAGETYPE_SAVE, PAGETYPE_NULL,
+		PAGETYPE_CONTAINER
 	}
 	public enum PageTableType {
 		TABLE_NULL, TABLE_MANUAL, TABLE_AUTOFILL_DISABLED, TABLE_AUTOFILL_ENABLED
@@ -48,8 +48,9 @@ public class CrmFileTransaction {
 	
 	public static class CrmFilePageinfo {
     	public int pageId ;
-    	public PageType pageType ;
-    	public PageTableType pageTableType ;
+    	public int[] childPageIds = {} ;
+    	public PageType pageType = PageType.PAGETYPE_NULL ;
+    	public PageTableType pageTableType = PageTableType.TABLE_NULL ;
     	public String pageCode ;
     	public String pageLib ;
     	public String fileCode ;
@@ -57,6 +58,7 @@ public class CrmFileTransaction {
     	public boolean fileIsSubfile ;
     	public boolean fileHasGmap ;
     	public boolean pageIsHidden ;
+    	public boolean pageInnerContainer ;
     	public boolean loadIsLoadable ;
     	public boolean loadIsLoaded ;
 	
@@ -73,10 +75,33 @@ public class CrmFileTransaction {
     			fileHasGmap = aFileHasGmap ;
     		}
     		pageIsHidden = true ;
+    		pageInnerContainer = false ;
+    	}
+    	public CrmFilePageinfo( int aPageId , PageType aPageType , int[] aChildPageIds ) {
+    		pageId = aPageId ;
+    		childPageIds = aChildPageIds ;
+    		pageType = aPageType ;
+    		pageTableType = PageTableType.TABLE_NULL ;
+    		pageCode = "" ;
+    		pageLib = "" ;
+    		fileCode = "" ;
+    		fileLib = "" ;
+    		fileIsSubfile = false ;
+    		if( !fileIsSubfile ){
+    			fileHasGmap = false ;
+    		}
+    		pageIsHidden = true ;
+    		pageInnerContainer = false ;
     	}
     	public CrmFilePageinfo( JSONObject jsonObject ) {
+    		int idx ;
     		try {
 				pageId = jsonObject.getInt("pageId");
+				JSONArray jsonArray = jsonObject.getJSONArray("childPageIds") ;
+				childPageIds = new int[jsonArray.length()] ;
+				for( idx=0 ; idx<jsonArray.length() ; idx++ ){
+					childPageIds[idx] = jsonArray.getInt(idx) ;
+				}
 				pageType = PageType.values()[jsonObject.getInt("pageType")] ;
 				pageTableType = PageTableType.values()[jsonObject.getInt("pageTableType")] ;
 				pageCode = jsonObject.getString("pageCode");
@@ -86,6 +111,7 @@ public class CrmFileTransaction {
 				fileIsSubfile = jsonObject.getBoolean("fileIsSubfile");
 				fileHasGmap = jsonObject.getBoolean("fileHasGmap");
 				pageIsHidden = jsonObject.getBoolean("pageIsHidden");
+				pageInnerContainer = jsonObject.getBoolean("pageInnerContainer");
 				loadIsLoadable = jsonObject.getBoolean("loadIsLoadable");
 				loadIsLoaded = jsonObject.getBoolean("loadIsLoaded");
 			} catch (JSONException e) {
@@ -97,6 +123,11 @@ public class CrmFileTransaction {
     		try {
     			JSONObject jsonObject = new JSONObject() ;
 				jsonObject.put("pageId", pageId) ;
+				JSONArray jsonArray = new JSONArray() ;
+				for( int p : childPageIds ) {
+					jsonArray.put(p) ;
+				}
+				jsonObject.put("childPageIds",jsonArray) ;
 				jsonObject.put("pageType",pageType.ordinal()) ;
 				jsonObject.put("pageTableType",pageTableType.ordinal()) ;
 				jsonObject.put("pageCode", pageCode) ;
@@ -106,6 +137,7 @@ public class CrmFileTransaction {
 				jsonObject.put("fileIsSubfile", fileIsSubfile) ;
 				jsonObject.put("fileHasGmap", fileHasGmap) ;
 				jsonObject.put("pageIsHidden", pageIsHidden) ;
+				jsonObject.put("pageInnerContainer", pageInnerContainer) ;
 				jsonObject.put("loadIsLoadable", loadIsLoadable) ;
 				jsonObject.put("loadIsLoaded", loadIsLoaded) ;
 				return jsonObject ;
@@ -492,8 +524,10 @@ public class CrmFileTransaction {
 		tmpCursor.close() ;
 		
 		// ******** Ajout de toutes les pages **********
-		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index FROM input_scen_page WHERE scen_id='%d' ORDER BY scen_page_index",CrmInputScenId) ) ;
+		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index, scen_page_parent_index FROM input_scen_page WHERE scen_id='%d' ORDER BY scen_page_index",CrmInputScenId) ) ;
+		int arraylistIdx = -1 ;
     	while( !tmpCursor.isLast() ){
+    		arraylistIdx++ ;
     		tmpCursor.moveToNext();
     		
     		PageType pageType = PageType.PAGETYPE_NULL;
@@ -506,8 +540,15 @@ public class CrmFileTransaction {
     			pageType = PageType.PAGETYPE_LOGLIST ;
     		if( sPageType.equals("PAGETYPE_TABLE") )
     			pageType = PageType.PAGETYPE_TABLE ;
+    		if( sPageType.equals("PAGETYPE_CONTAINER") )
+    			pageType = PageType.PAGETYPE_CONTAINER ;
     		if( sPageType.equals("PAGETYPE_SAVE") )
     			pageType = PageType.PAGETYPE_SAVE ;
+    		
+    		boolean pageInnerContainer = false ;
+    		if( !tmpCursor.isNull(5) && tmpCursor.getInt(5) > 0 ) {
+    			pageInnerContainer = true ;
+    		}
     		
     		PageTableType pagetableType = PageTableType.TABLE_NULL;
     		String sPageTableType = tmpCursor.getString(3) ;
@@ -516,6 +557,26 @@ public class CrmFileTransaction {
     		if( sPageTableType.equals("TABLE_AUTOFILL_DISABLED") )
     			pagetableType = PageTableType.TABLE_AUTOFILL_DISABLED ;
      		
+    		
+    		if( pageType == PageType.PAGETYPE_CONTAINER ) {
+    			tmpInnerCursor = mDb.rawQuery( String.format("SELECT count(*) FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='%d'",CrmInputScenId,tmpCursor.getInt(4))) ;
+    			tmpInnerCursor.moveToNext() ;
+    			int nbChildren = tmpInnerCursor.getInt(0) ;
+    			int subArraylistIdx = arraylistIdx ;
+    			int childPageIds[] ;
+    			childPageIds = new int[nbChildren] ;
+    			for( int a=0 ; a<nbChildren ; a++ ) {
+    				subArraylistIdx++ ;
+    				childPageIds[a] = subArraylistIdx ;
+    			}
+    			tmpInnerCursor.close() ;
+    			
+    			TransactionPages.add( new CrmFilePageinfo(tmpCursor.getInt(4),pageType,childPageIds) ) ;
+    			
+    			continue ;
+    		}
+    		
+    		
     		
     		if( pageType == PageType.PAGETYPE_SAVE ){
     			TransactionPages.add( new CrmFilePageinfo(tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ) ;
@@ -534,6 +595,9 @@ public class CrmFileTransaction {
     		if( pageType == PageType.PAGETYPE_LOGLIST ) {
     			tmpPageInfo.loadIsLoadable = true ;
     			tmpPageInfo.loadIsLoaded = false ;
+    		}
+    		if( pageInnerContainer ) {
+    			tmpPageInfo.pageInnerContainer = true ;
     		}
     		TransactionPages.add( tmpPageInfo ) ;
     		
@@ -598,6 +662,14 @@ public class CrmFileTransaction {
 			TransactionPageRecords.add( new ArrayList<CrmFileRecord>() ) ;
 			return ;
 		}
+		
+		if( tFileinfo.pageType == PageType.PAGETYPE_CONTAINER ) {
+			Log.w(TAG,"Init empty page") ;
+			TransactionPageFields.add( new ArrayList<CrmFileFieldDesc>() ) ;
+			TransactionPageRecords.add( new ArrayList<CrmFileRecord>() ) ;
+			return ;
+		}
+		
 		
 		// ******** Load de tous les FIELDS ************
 		
@@ -972,7 +1044,13 @@ public class CrmFileTransaction {
 		CrmFileFieldValue record = TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
 		
 		record.valueDate = date ;
-		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm") ;
+		SimpleDateFormat sdf ;
+		if( TransactionPages.get(pageId).pageType == PageType.PAGETYPE_TABLE ) {
+			sdf = new SimpleDateFormat("dd/MM/yyyy") ;
+		}
+		else{
+			sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm") ;
+		}
 		record.displayStr = sdf.format(date) ;
 		record.isSet = true ;
 		//TransactionPageRecords.get(pageId).get(recordId).recordData.put(TransactionPageFields.get(pageId).get(fieldId).fieldCode,record) ;
@@ -1066,13 +1144,22 @@ public class CrmFileTransaction {
 						// TODO Auto-generated catch block
 						//e.printStackTrace();
 					}
+        			
+        			String displayDate ;
+        			if( TransactionPages.get(pageId).pageType == PageType.PAGETYPE_TABLE ) {
+        				displayDate = new SimpleDateFormat("dd/MM/yyyy").format(tDate) ;
+        			}
+        			else{
+        				displayDate = new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate) ;
+        			}
+        			
         			recordData.put(tFieldDesc.fieldCode,
         					new CrmFileFieldValue(tFieldDesc.fieldType,
         							new Float(0),
         							false,
         							null,
         							tDate ,
-        							new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate),
+        							displayDate,
         							true) ) ;
         			break ;
         			
@@ -1201,6 +1288,9 @@ public class CrmFileTransaction {
 			if(pageId==0) {
 				pageInfo.pageIsHidden = false ;
 			}
+			else if ( pageInfo.pageInnerContainer ) {
+				pageInfo.pageIsHidden = true ;
+			}
 			else {
 				pageInfo.pageIsHidden = !isFirstComplete ;
 			}
@@ -1217,8 +1307,13 @@ public class CrmFileTransaction {
 		while(pageIter.hasNext()){
 			pageId++ ;
 			CrmFilePageinfo pageInfo = pageIter.next() ;
-			if( pageInfo.pageType != PageType.PAGETYPE_LOGLIST ) {
-				continue ;
+			switch( pageInfo.pageType ) {
+				case PAGETYPE_LOGLIST :
+				case PAGETYPE_LIST :
+					break ;
+			
+				default :
+					continue ;
 			}
 			Iterator<CrmFileFieldDesc> descIter = TransactionPageFields.get(pageId).iterator() ;
 			while(descIter.hasNext()) {
@@ -1311,29 +1406,39 @@ public class CrmFileTransaction {
 	
 	
 
-	public boolean saveAll(){
-		Iterator<ArrayList<CrmFileRecord>> iter1 = TransactionPageRecords.iterator() ;
-		Iterator<CrmFileRecord> iter2 ;
-		Iterator<String> iter3 ;
-		String fieldCode ;
-		CrmFileRecord record ;
-		CrmFileFieldValue recValue ;
+	public boolean saveAll() {
 		ContentValues cv ;
-		int pageId = 0 ;
-		int recId ;
-		PageType pageType ;
-		String fileCode ;
-		long remainMainFileId = 0 ;
+		
+		HashMap<String,String> mapFilecodeParentfilecode = new HashMap<String,String>() ;
+		// *** Stockage filecode > parentFilecode pour les fileIsSubfile==true
+		Cursor c = mDb.rawQuery("SELECT file_code, file_parent_code FROM define_file") ;
+		while( c.moveToNext() ) {
+			String filecode = c.getString(0) ;
+			String parentFilecode = c.getString(1) ;
+			if( filecode==null || filecode.equals("") || parentFilecode==null || parentFilecode.equals("") ) {
+				continue ;
+			}
+			mapFilecodeParentfilecode.put(filecode, parentFilecode) ;
+		}
+		c.close() ;
+		
+		
 		long currentFileId ;
+		HashMap<String,Long> mapFilecodeFileid = new HashMap<String,Long>() ;
+		
 		mDb.beginTransaction() ;
+		
+		Iterator<ArrayList<CrmFileRecord>> iter1 = TransactionPageRecords.iterator() ;
+		int pageId = -1 ;
     	while( iter1.hasNext() ){
-    		pageType = list_getPageType( pageId ) ;
-    		fileCode = TransactionPages.get(pageId).fileCode ;
-    		iter2 = iter1.next().iterator() ;
-    		recId = -1 ;
+    		pageId++ ;
+    		PageType pageType = list_getPageType( pageId ) ;
+    		String fileCode = TransactionPages.get(pageId).fileCode ;
+    		Iterator<CrmFileRecord> iter2 = iter1.next().iterator() ;
+    		int recId = -1 ;
         	while( iter2.hasNext() ){
         		recId++ ;
-        		record = iter2.next() ;
+        		CrmFileRecord record = iter2.next() ;
         		if( pageType==PageType.PAGETYPE_TABLE && (record.recordIsDisabled||record.recordIsHidden) ) {
         			continue ;
         		}
@@ -1341,32 +1446,58 @@ public class CrmFileTransaction {
         			continue ;
         		}
         		
-    			// insertion de l'entete
-    			currentFileId = 0 ;
-    			if( !TransactionPages.get(pageId).fileIsSubfile ) {
-    				if( TransactionPages.get(pageId).fileCode.equals(CrmFileCode) ) {
-    					if( remainMainFileId == 0 ) {
-    	        			cv = new ContentValues() ;
-    	        			cv.put("file_code", fileCode);
-    	        			remainMainFileId = currentFileId = mDb.insert("store_file", cv);
-    					}
-    					else{
-    						currentFileId = remainMainFileId ;
-    					}
-    					
-    				}
-    				else {
-	        			cv = new ContentValues() ;
-	        			cv.put("file_code", fileCode);
-	        			currentFileId = mDb.insert("store_file", cv);
-    				}
-    			}
-    			else {
+        		
+    			// *************** Insertion de l'entete ************
+        		//  page == 0 > (fileCode == CrmFileCode) obligatoire !  => création d'un currentFileId
+        		// 
+        		//  fileIsSubfile == false
+        		//    - si fileCode == CrmFileCode => utilisation mapFilecodeFileid
+        		//    - sinon => création currentFileId + stockage mapFilecodeFileid
+        		//  
+        		//  fileIsSubfile == true
+        		//    - recherche du parentFileCode
+        		//    - recherche mapFilecodeFileid pour le parentFileId
+        		//    - création d'un currentFileId
+        		// ***************************************************
+        		if( pageId==0 ) {
+        			if( !TransactionPages.get(pageId).fileCode.equals(CrmFileCode) ) {
+        				Log.e(TAG,"Massive error !") ;
+        				return false ;
+        			}
         			cv = new ContentValues() ;
-        			cv.put("filerecord_parent_id", remainMainFileId);
         			cv.put("file_code", fileCode);
         			currentFileId = mDb.insert("store_file", cv);
-    			}
+        			mapFilecodeFileid.put(fileCode, currentFileId) ;
+        		}
+        		else if( !TransactionPages.get(pageId).fileIsSubfile ) {
+        			if( TransactionPages.get(pageId).fileCode.equals(CrmFileCode) ) {
+        				currentFileId = mapFilecodeFileid.get(fileCode) ;
+        			}
+        			else {
+            			cv = new ContentValues() ;
+            			cv.put("file_code", fileCode);
+            			currentFileId = mDb.insert("store_file", cv);
+            			mapFilecodeFileid.put(fileCode, currentFileId) ;
+        			}
+        		}
+        		else if( TransactionPages.get(pageId).fileIsSubfile ) {
+        			String parentFilecode = mapFilecodeParentfilecode.get(fileCode) ;
+        			if( parentFilecode==null || !mapFilecodeFileid.containsKey(parentFilecode) ) {
+        				Log.e(TAG,"Massive error !") ;
+        				return false ;
+        			}
+        			cv = new ContentValues() ;
+        			cv.put("filerecord_parent_id", mapFilecodeFileid.get(parentFilecode) );
+        			cv.put("file_code", fileCode);
+        			currentFileId = mDb.insert("store_file", cv);
+        		}
+        		else {
+        			Log.e(TAG,"Massive error !") ;
+        			return false;
+        		}
+        		
+        		
+        		
     			
     			if( TransactionPages.get(pageId).fileHasGmap && pageId==0 ) {
     				LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
@@ -1442,7 +1573,7 @@ public class CrmFileTransaction {
         			
         		case PAGETYPE_LOGLIST : // si LOGLIST + fileCode = fichier principal => on insère que la valeur PIVOT
         			if( TransactionPages.get(pageId).fileCode.equals(CrmFileCode) ) {
-        				recValue = record.recordData.get( fieldPivot ) ;
+        				CrmFileFieldValue recValue = record.recordData.get( fieldPivot ) ;
                 		if( recValue != null && recValue.isSet ){
                 			cv = new ContentValues() ;
                 			cv.put("filerecord_id", currentFileId);
@@ -1472,7 +1603,7 @@ public class CrmFileTransaction {
         			}
         			else {
         				// Si LOGLIST et FieldPivot nul (pas de valeur) => on break (ne sera pas inséré)
-        				recValue = record.recordData.get( fieldPivot ) ;
+        				CrmFileFieldValue recValue = record.recordData.get( fieldPivot ) ;
                 		if( recValue != null && recValue.isSet ){
                 			if( recValue.displayStr.equals("")) {
                 				mDb.execSQL(String.format("DELETE FROM store_file WHERE filerecord_id='%d'",currentFileId)) ;
@@ -1482,10 +1613,10 @@ public class CrmFileTransaction {
         			}
         		
         		default :
-            		iter3 = record.recordData.keySet().iterator() ;
+        			Iterator<String> iter3 = record.recordData.keySet().iterator() ;
                 	while( iter3.hasNext() ){
-                		fieldCode = iter3.next() ;
-                		recValue = record.recordData.get(fieldCode) ;
+                		String fieldCode = iter3.next() ;
+                		CrmFileFieldValue recValue = record.recordData.get(fieldCode) ;
                 		if( recValue.isSet ){
                 			cv = new ContentValues() ;
                 			cv.put("filerecord_id", currentFileId);
@@ -1515,7 +1646,6 @@ public class CrmFileTransaction {
         		}
         		
         	}
-        	pageId++ ;
     	}
     	mDb.endTransaction() ;
     	return true ;

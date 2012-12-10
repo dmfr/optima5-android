@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 12;
+    private final int DB_VERSION = 13;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -287,6 +287,7 @@ public class DatabaseManager {
                     + "input_scen_page" + " ("
                     + "scen_id" + " INTEGER, "
                     + "scen_page_index" + " INTEGER, "
+                    + "scen_page_parent_index" + " INTEGER, "
                     + "scen_page_name" + " VARCHAR(100),"
                     + "target_filecode" + " VARCHAR(100),"
                     + "page_type" + " VARCHAR(100),"
