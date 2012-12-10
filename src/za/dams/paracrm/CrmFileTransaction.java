@@ -601,48 +601,13 @@ public class CrmFileTransaction {
     		}
     		TransactionPages.add( tmpPageInfo ) ;
     		
-    		/*
-    		if( tmpInnerCursor.getString(2).equals("media_img") ) {
-    			TransactionPages.add( new CrmFilePageinfo( pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ) ;
-    		}
-    		else {
-    			TransactionPages.add( new CrmFilePageinfo( pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ) ;
-    		}
-    		*/
     		tmpInnerCursor.close() ;
     	}
     	tmpCursor.close() ;
 		
-		/*
-		tmpCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on FROM define_file WHERE file_code='%s'",CrmFileCode) ) ;
-		if( tmpCursor.getCount() < 1 ) {
-			return ;
-		}
-		tmpCursor.moveToNext();
-		TransactionPages.add( new CrmFilePageinfo( PageType.PAGETYPE_LIST, tmpCursor.getString(0) , tmpCursor.getString(1) , false, tmpCursor.getString(2).equals("O") ) ) ;
-		tmpCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, file_type FROM define_file WHERE file_parent_code='%s' ORDER BY file_code",CrmFileCode) ) ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		if( tmpCursor.getString(2).equals("media_img") ) {
-    			TransactionPages.add( new CrmFilePageinfo( PageType.PAGETYPE_PHOTO, tmpCursor.getString(0) , tmpCursor.getString(1) , true, false ) ) ;
-    		}
-    		else {
-    			TransactionPages.add( new CrmFilePageinfo( PageType.PAGETYPE_TABLE, tmpCursor.getString(0) , tmpCursor.getString(1) , true, false ) ) ;
-    		}
-    		
-    	}
-    	*/
-
     	
-    	Iterator<CrmFileTransaction.CrmFilePageinfo> mIter = TransactionPages.iterator() ;
-    	CrmFileTransaction.CrmFilePageinfo tFileinfo ;
-    	int tmpIndex = 0 ;
-    	while( mIter.hasNext() ){
-    		tFileinfo = mIter.next() ;
-    		
+    	for( CrmFileTransaction.CrmFilePageinfo tFileinfo : TransactionPages ) {
     		CrmFileTransaction_initPage(tFileinfo) ;
-    		
-    		tmpIndex++ ;
     	}
     	
     	links_refresh() ;
@@ -673,76 +638,17 @@ public class CrmFileTransaction {
 		
 		// ******** Load de tous les FIELDS ************
 		
-		
 		ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
 		
-		Cursor tmpCursor ;
-		Cursor tmpInnerCursor ;
-		
-		/*
-		// --- field "pivot"
-		String pivotFieldCode = null ;
-		String localFileCode = tFileinfo.fileCode ;
-		if( tFileinfo.fileIsSubfile ){
-			tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code " +
-					"FROM define_file_entry " +
-					"WHERE file_code='%s' AND entry_field_type='link' AND entry_field_linkbible<>''",
-					localFileCode) ) ;
-			if( tmpCursor.getCount() == 1 ) {
-				tmpCursor.moveToNext();
-				pivotFieldCode = tmpCursor.getString(0) ;
-			}
-		}
-		
-		
-		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
-				"FROM define_file_entry " +
-				"WHERE file_code='%s' ORDER BY entry_field_index",
-				localFileCode) ) ;
-		boolean fieldIsPivot ;
-		FieldType tFieldType ;
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		
-    		fieldIsPivot = false ;
-    		tFieldType = null ;
-   		
-    		if( tmpCursor.getString(0).equals("number") ) {
-    			tFieldType = FieldType.FIELD_NUMBER ;
-    		}
-    		else {
-    			if( tmpCursor.getString(0).equals("date") ) {
-    				tFieldType = FieldType.FIELD_DATETIME ;
-    			}
-    			else{
-        			if( tmpCursor.getString(0).equals("link") ) {
-        				tFieldType = FieldType.FIELD_BIBLE ;
-        				if( pivotFieldCode != null && pivotFieldCode.equals(tmpCursor.getString(1)) ) {
-        					fieldIsPivot = true ;
-        				}
-        			}
-        			else{
-        				tFieldType = FieldType.FIELD_TEXT ;
-        			}
-    			}
-    		}
-    		
-    		
-    		tFields.add( new CrmFileFieldDesc( tFieldType, tmpCursor.getString(3),
-    				tmpCursor.getString(1) , tmpCursor.getString(2) , fieldIsPivot, false ) ) ;
-    	}
-    	TransactionPageFields.add( tFields ) ;
-		*/
-		tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition " +
+		Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition " +
 				"FROM input_scen_page_field " +
 				"WHERE scen_id='%d' AND scen_page_index='%d' ORDER BY scen_page_field_index",
 				CrmInputScenId, tFileinfo.pageId )) ;
 		
-		
     	while( !tmpCursor.isLast() ){
     		tmpCursor.moveToNext();
     		
-    		tmpInnerCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
+    		Cursor tmpInnerCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
     				"FROM define_file_entry " +
     				"WHERE file_code='%s' AND entry_field_code='%s' ORDER BY entry_field_index",
     				tmpCursor.getString(0),tmpCursor.getString(1)) ) ;
@@ -1523,7 +1429,6 @@ public class CrmFileTransaction {
     			
     			String fieldPivot = "" ;
 				Iterator<CrmFileFieldDesc> iterFields = TransactionPageFields.get(pageId).iterator() ;
-				int b = -1 ;
 				while( iterFields.hasNext() ) {
 					CrmFileFieldDesc fieldDesc = iterFields.next();
 					if( fieldDesc.fieldIsPivot ) {
