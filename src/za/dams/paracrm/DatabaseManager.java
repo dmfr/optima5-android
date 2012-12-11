@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 13;
+    private final int DB_VERSION = 14;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -292,6 +292,21 @@ public class DatabaseManager {
                     + "target_filecode" + " VARCHAR(100),"
                     + "page_type" + " VARCHAR(100),"
                     + "page_table_type" + " VARCHAR(100),"
+                    + "PRIMARY KEY( scen_id , scen_page_index )"
+                    + ");";
+            db.execSQL(createTableQuery);
+  
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_scen_pagepivot" + " ("
+                    + "scen_id" + " INTEGER, "
+                    + "scen_page_index" + " INTEGER, "
+                    + "pivot_type" + " VARCHAR(100),"
+                    + "target_bible_code" + " VARCHAR(50),"
+                    + "target_page_index" + " INTEGER, "
+                    + "target_page_field_index" + " INTEGER, "
+                    + "foreignsrc_is_on" + " VARCHAR(1),"
+                    + "foreignsrc_page_index" + " INTEGER, "
+                    + "foreignsrc_page_field_index" + " INTEGER, "
                     + "PRIMARY KEY( scen_id , scen_page_index )"
                     + ");";
             db.execSQL(createTableQuery);

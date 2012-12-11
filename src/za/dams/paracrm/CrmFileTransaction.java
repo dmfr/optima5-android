@@ -70,6 +70,8 @@ public class CrmFileTransaction {
     	public boolean loadIsLoaded ;
     	public CrmFilePivot outerPivot ;
     	public CrmFilePivot innerPivot ;
+    	public String pivotTag ;
+    	public int pivotForeignRefIdx ;
 	
     	public CrmFilePageinfo( int aPageId , PageType aPageType , PageTableType aPageTableType , String aFileCode, String aFileLib, boolean aIsSubfile, boolean aFileHasGmap ) {
     		pageId = aPageId ;
@@ -118,6 +120,14 @@ public class CrmFileTransaction {
 				pageInnerContainer = jsonObject.getBoolean("pageInnerContainer");
 				loadIsLoadable = jsonObject.getBoolean("loadIsLoadable");
 				loadIsLoaded = jsonObject.getBoolean("loadIsLoaded");
+				if( jsonObject.has("outerPivot") ) {
+					outerPivot = new CrmFilePivot( jsonObject.getJSONObject("outerPivot") ) ;
+				}
+				if( jsonObject.has("innerPivot") ) {
+					innerPivot = new CrmFilePivot( jsonObject.getJSONObject("innerPivot") ) ;
+				}
+				pivotTag = jsonObject.getString("pivotTag");
+				pivotForeignRefIdx = jsonObject.getInt("pivotForeignRefIdx");
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -140,6 +150,14 @@ public class CrmFileTransaction {
 				jsonObject.put("pageInnerContainer", pageInnerContainer) ;
 				jsonObject.put("loadIsLoadable", loadIsLoadable) ;
 				jsonObject.put("loadIsLoaded", loadIsLoaded) ;
+				if( outerPivot != null ) {
+					jsonObject.put("outerPivot", outerPivot.toJSONObject()) ;
+				}
+				if( innerPivot != null ) {
+					jsonObject.put("innerPivot", innerPivot.toJSONObject()) ;
+				}
+				jsonObject.put("pivotTag", pivotTag) ;
+				jsonObject.put("pivotForeignRefIdx", pivotForeignRefIdx) ;
 				return jsonObject ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -154,12 +172,58 @@ public class CrmFileTransaction {
 		
 		public String previousConditionsHash ;
 		
+		public int containerPageId ;
+		public int containerSize ;
+		
 		public String targetBibleCode ;
 		public int targetPageId ;
 		public int targetFieldId ;
 
+		public boolean conditionSrc ;
 		public int conditionSrcPageId ;
 		public int conditionSrcFieldId ;
+		
+		public CrmFilePivot() {
+			
+		}
+    	public CrmFilePivot( JSONObject jsonObject ) {
+    		try {
+				pivotType = PivotType.values()[jsonObject.getInt("pivotType")] ;
+				previousConditionsHash = jsonObject.getString("previousConditionsHash");
+				containerPageId = jsonObject.getInt("containerPageId");
+				containerSize = jsonObject.getInt("containerSize");
+				targetBibleCode = jsonObject.getString("targetBibleCode");
+				targetPageId = jsonObject.getInt("targetPageId");
+				targetFieldId = jsonObject.getInt("targetFieldId");
+				conditionSrc = jsonObject.getBoolean("conditionSrc");
+				conditionSrcPageId = jsonObject.getInt("conditionSrcPageId");
+				conditionSrcFieldId = jsonObject.getInt("conditionSrcFieldId");
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+				jsonObject.put("pivotType",pivotType.ordinal()) ;
+				jsonObject.put("previousConditionsHash",previousConditionsHash) ;
+				jsonObject.put("containerPageId", containerPageId) ;
+				jsonObject.put("containerSize", containerSize) ;
+				jsonObject.put("targetBibleCode", targetBibleCode) ;
+				jsonObject.put("targetPageId", targetPageId) ;
+				jsonObject.put("targetFieldId", targetFieldId) ;
+				jsonObject.put("conditionSrc", conditionSrc) ;
+				jsonObject.put("conditionSrcPageId", conditionSrcPageId) ;
+				jsonObject.put("conditionSrcFieldId", conditionSrcFieldId) ;
+				return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null ;
+			}
+    	}
+		
 	}
 	
 	
@@ -331,6 +395,7 @@ public class CrmFileTransaction {
     	
     	public JSONObject toJSONObject() {
     		try {
+    			Log.w(TAG,"Field code "+this.fieldCode) ;
     			JSONObject jsonObject = new JSONObject() ;
     			jsonObject.put("fieldType",this.fieldType.ordinal()) ;
     			jsonObject.put("fieldLinkBible",this.fieldLinkBible) ;
@@ -349,6 +414,7 @@ public class CrmFileTransaction {
     			return jsonObject ;
     			
     		} catch (JSONException e) {
+    			Log.w(TAG,"Field code "+this.fieldCode) ;
     			e.printStackTrace();
     			return null ;
     		}
@@ -471,9 +537,19 @@ public class CrmFileTransaction {
 			e.printStackTrace();
 		}
     	
+		outerPivots = new ArrayList<CrmFilePivot>() ;
 		TransactionPages = new ArrayList<CrmFilePageinfo>() ;
 		TransactionPageFields = new ArrayList<ArrayList<CrmFileFieldDesc>>() ;
 		TransactionPageRecords = new ArrayList<ArrayList<CrmFileRecord>>() ;
+		
+		try {
+			JSONArray JsonOuterPivots = jsonObj.getJSONArray("outerPivots") ;
+			for( int idx=0 ; idx<JsonOuterPivots.length() ; idx++ ) {
+				outerPivots.add( new CrmFilePivot( JsonOuterPivots.getJSONObject(idx) ) ) ;
+			}
+		} catch( JSONException e ) {
+			e.printStackTrace() ;
+		}
 		
 		try {
 			JSONArray JsonTransactionPages = jsonObj.getJSONArray("TransactionPages") ;
@@ -521,6 +597,7 @@ public class CrmFileTransaction {
 		this.CrmInputScenId = CrmInputScenId ;
 		
 		
+		outerPivots = new ArrayList<CrmFilePivot>() ;
 		TransactionPages = new ArrayList<CrmFilePageinfo>() ;
 		TransactionPageFields = new ArrayList<ArrayList<CrmFileFieldDesc>>() ;
 		TransactionPageRecords = new ArrayList<ArrayList<CrmFileRecord>>() ;
@@ -538,9 +615,18 @@ public class CrmFileTransaction {
 		
 		// ******** Ajout de toutes les pages **********
 		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='0' ORDER BY scen_page_index",CrmInputScenId) ) ;
+		whileCursor :
     	while( tmpCursor.moveToNext() ){
     		int insertOffset = TransactionPages.size() ; // on ajoute linéairement
     		List<CrmFilePageinfo> insertPages = pagetool_getCrmFilePageinfo( tmpCursor.getInt(0) ) ;
+    		
+    		// On extrait les pages "template" cad conditionné par un PIVOT_CONTAINER (=outerPivot)
+    		for( CrmFilePageinfo fpi : insertPages ) {
+    			if( fpi.outerPivot != null ) {
+    				outerPivots.add(fpi.outerPivot) ;
+    				continue whileCursor ;
+    			}
+    		}
 
     		pages_insert( insertOffset, insertPages ) ;
     	}
@@ -552,11 +638,43 @@ public class CrmFileTransaction {
     	return ;
 	}
 
-	
+	private int pagetool_findOffset( int searchPageId, int startOffset ) {
+		if( startOffset >= TransactionPages.size() || startOffset < 0 ) {
+			return -1 ;
+		}
+		
+		
+		boolean fromInner = false ;
+		// ******** recherche d'une page à partir d'une autre ********
+		if( TransactionPages.get(startOffset).pageInnerContainer ) {
+			fromInner = true ;
+			while( TransactionPages.get(startOffset).pageInnerContainer ) {
+				startOffset-- ;
+			}
+		}
+		
+		while( startOffset < TransactionPages.size() ) {
+			// Log.w(TAG,"Search "+searchPageId+" current is "+TransactionPages.get(startOffset).pageId) ;
+			if( TransactionPages.get(startOffset).pageId == searchPageId ) {
+				return startOffset ;
+			}
+			startOffset++ ;
+			if( fromInner && !TransactionPages.get(startOffset).pageInnerContainer ) {
+				break ;
+			}
+		}
+		
+		if( fromInner ) {
+			return pagetool_findOffset( searchPageId, 0 ) ;
+		}
+		return -1 ;
+	}
 	private List<CrmFilePageinfo> pagetool_getCrmFilePageinfo( int pageId ) {
+		Cursor tmpCursor ;
+		Cursor tmpInnerCursor ;
 		
 		// ******** Ajout d'une page + tous ses children **********
-		Cursor tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index, scen_page_parent_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
+		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index, scen_page_parent_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
 		if( !tmpCursor.moveToNext() ) {
 			tmpCursor.close() ;
 			return new ArrayList<CrmFilePageinfo>() ;
@@ -564,8 +682,6 @@ public class CrmFileTransaction {
 		
 		ArrayList<CrmFilePageinfo> returnArr = new ArrayList<CrmFilePageinfo>() ;
 		CrmFilePageinfo tmpPageInfo ;
-		
-		Cursor tmpInnerCursor ;
     		
 		PageType pageType = PageType.PAGETYPE_NULL;
 		String sPageType = tmpCursor.getString(2) ;
@@ -632,8 +748,40 @@ public class CrmFileTransaction {
 		
 		// ajout de outerPivot ?
 		// ajout de innerPivot ?
-		
-		
+		tmpCursor = mDb.rawQuery( String.format("SELECT * FROM input_scen_pagepivot WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
+		if( tmpCursor.moveToNext() ) {
+			CrmFilePivot cfpivot = new CrmFilePivot() ;
+			
+			String strPivotType = tmpCursor.getString(tmpCursor.getColumnIndex("pivot_type")) ;
+			if( strPivotType.equals("PIVOT_CONTAINER") ) {
+				cfpivot.pivotType = PivotType.PIVOT_CONTAINER ;
+			} else if( strPivotType.equals("PIVOT_TABLE") ) {
+				cfpivot.pivotType = PivotType.PIVOT_TABLE ;
+			} else {
+				cfpivot.pivotType = PivotType.PIVOT_NULL ;
+			}
+			
+			cfpivot.targetBibleCode = tmpCursor.getString(tmpCursor.getColumnIndex("target_bible_code")) ;
+			cfpivot.targetPageId = tmpCursor.getInt(tmpCursor.getColumnIndex("target_page_index")) ;
+			cfpivot.targetFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("target_page_field_index")) - 1 ;
+
+			cfpivot.conditionSrcPageId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_index")) ;
+			cfpivot.conditionSrcFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_field_index")) - 1 ;
+			cfpivot.conditionSrc = tmpCursor.getString(tmpCursor.getColumnIndex("foreignsrc_is_on")).equals("O") ? true : false ;
+			
+			switch( cfpivot.pivotType ) {
+			case PIVOT_CONTAINER :
+				cfpivot.containerPageId = tmpPageInfo.pageId ;
+				cfpivot.containerSize = 1 + tmpPageInfo.nbChildren ;
+				tmpPageInfo.outerPivot = cfpivot ;
+				break ;
+			case PIVOT_TABLE :
+				tmpPageInfo.innerPivot = cfpivot ;
+				break ;
+			default : break ;
+			}
+		}
+		tmpCursor.close() ;
 		returnArr.add(0,tmpPageInfo) ;
 		return returnArr ;
 	}
@@ -721,14 +869,15 @@ public class CrmFileTransaction {
 			TransactionPages.add(insertOffset,tFileinfo) ;
 			TransactionPageFields.add(insertOffset, tFields ) ;
 			TransactionPageRecords.add(insertOffset, new ArrayList<CrmFileRecord>() ) ;
-
-			if( tFileinfo.pageType == PageType.PAGETYPE_TABLE ) {
-				if( true ) {
+			
+			if( tFileinfo.innerPivot == null ) {
+				switch( tFileinfo.pageType ) {
+				case PAGETYPE_TABLE :
 					page_fillTable( insertOffset, null ) ;
+					break ;
+				default :
+					page_fillSingle(insertOffset) ;
 				}
-			}
-			else {
-				page_fillSingle(insertOffset) ;
 			}
 
 
@@ -739,8 +888,8 @@ public class CrmFileTransaction {
 	private void pages_delete( int deleteOffset, int deleteLength ) {
 		for( int i=0 ; i<deleteLength ; i++ ) {
 			TransactionPages.remove(deleteOffset) ;
-			TransactionPageFields.get(deleteOffset) ;
-			TransactionPageRecords.get(deleteOffset) ;
+			TransactionPageFields.remove(deleteOffset) ;
+			TransactionPageRecords.remove(deleteOffset) ;
 		}
 	}
 	
@@ -845,7 +994,7 @@ public class CrmFileTransaction {
     	// appel a bible helper pour remplir la table
     	BibleHelper bibleHelper = new BibleHelper(mContext) ;
     	int a = 0 ;
-    	for( BibleHelper.BibleEntry bibleEntry : bibleHelper.queryBible(tFieldDescPivot.fieldLinkBible) ){
+    	for( BibleHelper.BibleEntry bibleEntry : bibleHelper.queryBible(tFieldDescPivot.fieldLinkBible,bibleConditions) ){
 
     		recordData = new HashMap<String,CrmFileFieldValue>() ;
 
@@ -1256,6 +1405,13 @@ public class CrmFileTransaction {
 		}
 		
 		
+		
+		// ******** REFRESH des pivots *******
+		pivots_refreshOuter() ;
+		pivots_refreshInner() ;
+		// ********************************
+		
+		
 		// ****** Each page => Autofill FIELD_AUTOVALUEs ******
 		// ******     => if different, destroy Data
 		Iterator<CrmFilePageinfo> pageIter ;
@@ -1288,52 +1444,6 @@ public class CrmFileTransaction {
 			TransactionPageRecords.get(pageId).subList(1, TransactionPageRecords.get(pageId).size()).clear();
 			pageInfo.loadIsLoaded = false ;
 		}
-		
-		
-		// ****** Each page => Gestion des tables AUTOFILL ******
-		// ******     => if LINKS differents, mask/unmask table entries
-		pageIter = TransactionPages.iterator() ;
-		pageId = -1 ;
-		while(pageIter.hasNext()){
-			pageId++ ;
-			CrmFilePageinfo pageInfo = pageIter.next() ;
-			if( pageInfo.pageType != PageType.PAGETYPE_TABLE ) {
-				continue ;
-			}
-			
-			// @TODO
-			// field pivot ?
-	    	Iterator<CrmFileFieldDesc> mIter = TransactionPageFields.get(pageId).iterator() ;
-	    	CrmFileFieldDesc tFieldDesc ;
-	    	while( mIter.hasNext() ){
-	    		tFieldDesc = mIter.next() ;
-	    		
-	    		if(tFieldDesc.fieldIsPivot) {
-	    			ArrayList<String> activatedPivotKeys = new ArrayList<String>() ;
-	    			
-	    			// appel a bible helper
-	    			BibleHelper bibleHelper = new BibleHelper(mContext) ;
-	    			Iterator<BibleHelper.BibleEntry> bibleIter = bibleHelper.queryBible(tFieldDesc.fieldLinkBible,links_getBibleConditions()).iterator() ;
-	    	    	while( bibleIter.hasNext() ){
-	    	    		BibleHelper.BibleEntry bibleEntry = bibleIter.next() ;
-	    	    		activatedPivotKeys.add( bibleEntry.entryKey ) ;
-	    	    	}
-	    	    	
-	    	    	// iteration sur tous les elements du tableau => activation / desactivation
-	    	    	Iterator<CrmFileRecord> recordsIter = TransactionPageRecords.get(pageId).iterator() ;
-	    	    	while( recordsIter.hasNext() ){
-	    	    		CrmFileRecord tableRecord = recordsIter.next() ;
-	    	    		String tableRecordPivotvalue = tableRecord.recordData.get(tFieldDesc.fieldCode).valueString ;
-	    	    		tableRecord.recordIsHidden = !(activatedPivotKeys.contains(tableRecordPivotvalue)) ;
-	    	    	}
-	    		}
-	    	}
-	    	
-	    	
-			
-		}
-		
-		
 	}
 	public ArrayList<BibleHelper.BibleEntry> links_getBibleConditions() { // utilisation : dans les BiblePickers , dans les tables TABLE_AUTOFILL
 		ArrayList<BibleHelper.BibleEntry> mArr = new ArrayList<BibleHelper.BibleEntry>() ;
@@ -1357,6 +1467,237 @@ public class CrmFileTransaction {
 		}
 		
 		return mArr ;
+	}
+	private void pivots_refreshOuter() {
+		for( CrmFilePivot fpivot : outerPivots ) {
+			String targetBiblecode = fpivot.targetBibleCode ;
+			
+			// ****** Gestion Source *********
+			String foreignBiblecode = null ;
+			String foreignFieldkey = null ;
+			ArrayList<BibleHelper.BibleEntry> foreignEntries = null ;
+			if( !fpivot.conditionSrc ) {
+				// pas de source
+				
+				if( fpivot.previousConditionsHash!=null && fpivot.previousConditionsHash.equals("*") ) {
+					continue ;
+				}
+				
+			} else {
+			
+				// recherche de la source ?
+				int conditionSrcPageIdx = pagetool_findOffset( fpivot.conditionSrcPageId, 0 ) ;
+				int conditionSrcFieldIdx = fpivot.conditionSrcFieldId ;
+				if( conditionSrcPageIdx == -1 ) {
+					// ??? mauvaise config
+					Log.w(TAG,"ERROR 4") ;
+					continue ;
+				}
+
+
+				foreignBiblecode = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldLinkBible ;
+				foreignFieldkey = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldCode ;
+				if( foreignBiblecode==null ) {
+					// ??? mauvaise config
+					Log.w(TAG,"ERROR 5") ;
+					continue ;
+				}
+
+				// calcul du hash (besoin d'un reset ?)
+				ArrayList<String> currentConditionsTab = new ArrayList<String>() ;
+				for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+					if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+						continue ;
+					}
+					currentConditionsTab.add(cfr.recordData.get(foreignFieldkey).valueString) ;
+				}
+				String currentConditionsHash = implodeArray(currentConditionsTab.toArray(new String[currentConditionsTab.size()]),"+") ;
+
+				// pas changé
+				if( fpivot.previousConditionsHash!=null && currentConditionsHash.equals(fpivot.previousConditionsHash) ) {
+					continue ;
+				}
+				fpivot.previousConditionsHash = currentConditionsHash ;
+				// Log.w(TAG,"New hash is "+currentConditionsHash) ;
+
+				BibleHelper bh = new BibleHelper(mContext) ;
+				foreignEntries = new ArrayList<BibleHelper.BibleEntry>() ;
+				for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+					if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+						continue ;
+					}
+					foreignEntries.add(bh.getBibleEntry(foreignBiblecode, cfr.recordData.get(foreignFieldkey).valueString)) ;
+				}
+			}
+			
+			// Interro bible
+			BibleHelper bibleHelper = new BibleHelper(mContext) ;
+			ArrayList<BibleEntry> tBibleEntries ;
+			if( foreignEntries != null && foreignEntries.size() == 0 ) {
+				tBibleEntries = new ArrayList<BibleEntry>() ;
+			} else {
+				tBibleEntries = bibleHelper.queryBible(targetBiblecode,foreignEntries) ;
+			}
+			
+			// PAGEtags objectif
+			ArrayList<String> pagetagsTarget = new ArrayList<String>() ;
+			for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ) {
+				pagetagsTarget.add(bibleEntry.entryKey) ;
+			}
+			// PAGEtags current
+			ArrayList<String> pagetagsCurrent = new ArrayList<String>() ;
+			for( CrmFilePageinfo fpi : TransactionPages ) {
+				if( fpi.pageId != fpivot.containerPageId ) {
+					continue ;
+				}
+				pagetagsCurrent.add(fpi.pivotTag) ;
+			}
+			
+			// DELETE DES PAGES CONCERNEES
+			for( String pivotTag : pagetagsCurrent ) {
+				if( pagetagsTarget.contains(pivotTag) ) {
+					continue ;
+				}
+				int tmpIdx = -1 ;
+				for( CrmFilePageinfo fpi : TransactionPages ) {
+					tmpIdx++ ;
+					if( fpi.pageId == fpivot.containerPageId && fpi.pivotTag == pivotTag ) {
+						pages_delete( tmpIdx, fpivot.containerSize ) ;
+						break ;
+					}
+				}
+			}
+			
+			// INSERTION PAGE
+			int insertOffset = TransactionPages.size() ;
+	    	for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ){
+	    		
+	    		String pivotTag = bibleEntry.entryKey ;
+	    		
+	    		
+	    		// TODO : Condition inverse sur la bible originale => pour le mapping
+	    		
+	    		
+	    		if( pagetagsCurrent.contains(pivotTag) ) {
+	    			continue ;
+	    		}
+	    		
+	    		List<CrmFilePageinfo> insertPages = pagetool_getCrmFilePageinfo( fpivot.containerPageId ) ;
+	    		for( CrmFilePageinfo fpi : insertPages) {
+	    			if( fpi.pageType == PageType.PAGETYPE_CONTAINER ) {
+	    				fpi.pageIsHidden = false ;
+	    				fpi.pageLib = bibleEntry.displayStr ;
+	    				fpi.pivotTag = pivotTag ;
+	    			}
+	    		}
+	    		
+	    		pages_insert( insertOffset , insertPages ) ;
+	    		
+	    		int targetPageId = fpivot.targetPageId ;
+	    		int targetFieldIdx = fpivot.targetFieldId ;
+	    		
+	    		int targetPageIdx = pagetool_findOffset(targetPageId, insertOffset) ;
+	    		if( targetPageIdx != -1 ) {
+	    			for( int tmpIdx2=0 ; tmpIdx2 < TransactionPageRecords.get(targetPageIdx).size() ; tmpIdx2++ ) {
+	    				page_setRecordFieldValue_bible( targetPageIdx , tmpIdx2, targetFieldIdx, bibleEntry.entryKey ) ;
+	    			}
+	    			TransactionPageFields.get(targetPageIdx).get(targetFieldIdx).fieldIsReadonly = true ;
+	    		}
+	    		
+	    		
+	    		
+	    		
+	    		
+	    		insertOffset += fpivot.containerSize ;
+	    	}
+		}
+	}
+	private void pivots_refreshInner() {
+		int pageIdx = -1 ;
+		for( CrmFilePageinfo fpi : TransactionPages ) {
+			pageIdx++ ;
+			if( fpi.innerPivot==null ) {
+				continue ;
+			}
+			CrmFilePivot fpivot = fpi.innerPivot ;
+			
+			String targetBiblecode = fpivot.targetBibleCode ;
+			if( fpi.pageId != fpivot.targetPageId ) {
+				// ??? mauvaise config
+				Log.w(TAG,"ERROR 1") ;
+				continue ;
+			}
+			if( TransactionPageFields.get(pageIdx).get(fpivot.targetFieldId).fieldType != FieldType.FIELD_BIBLE ) {
+				// ??? mauvaise config
+				Log.w(TAG,"ERROR 2") ;
+				continue ;
+			}
+			if( !targetBiblecode.equals(TransactionPageFields.get(pageIdx).get(fpivot.targetFieldId).fieldLinkBible) ) {
+				// ??? mauvaise config
+				Log.w(TAG,"ERROR 3 " + targetBiblecode + " " + TransactionPageFields.get(pageIdx).get(fpivot.targetFieldId).fieldLinkBible ) ;
+				continue ;
+			}
+			
+			// pivot sans source ?
+			if( !fpivot.conditionSrc ) {
+				if( fpivot.previousConditionsHash!=null && fpivot.previousConditionsHash.equals("*") ) {
+					continue ;
+				}
+				page_fillTable( pageIdx, null ) ;
+				fpivot.previousConditionsHash = "*" ;
+				continue ;
+			}
+			
+			// recherche de la source ?
+			int conditionSrcPageIdx ;
+			if( TransactionPages.get(pageIdx).pageInnerContainer ) {
+				conditionSrcPageIdx = pagetool_findOffset( fpivot.conditionSrcPageId, pageIdx ) ;
+			} else {
+				conditionSrcPageIdx = pagetool_findOffset( fpivot.conditionSrcPageId, 0 ) ;
+			}
+			int conditionSrcFieldIdx = fpivot.conditionSrcFieldId ;
+			if( conditionSrcPageIdx == -1 ) {
+				// ??? mauvaise config
+				Log.w(TAG,"ERROR 4") ;
+				continue ;
+			}
+			
+			
+			String foreignBiblecode = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldLinkBible ;
+			String foreignFieldkey = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldCode ;
+			if( foreignBiblecode==null ) {
+				// ??? mauvaise config
+				Log.w(TAG,"ERROR 5") ;
+				continue ;
+			}
+			
+			// calcul du hash (besoin d'un reset ?)
+			ArrayList<String> currentConditionsTab = new ArrayList<String>() ;
+			for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+				if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+					continue ;
+				}
+				currentConditionsTab.add(cfr.recordData.get(foreignFieldkey).valueString) ;
+			}
+			String currentConditionsHash = implodeArray(currentConditionsTab.toArray(new String[currentConditionsTab.size()]),"+") ;
+			
+			// pas changé
+			if( fpivot.previousConditionsHash!=null && currentConditionsHash.equals(fpivot.previousConditionsHash) ) {
+				continue ;
+			}
+			fpivot.previousConditionsHash = currentConditionsHash ;
+			
+			BibleHelper bh = new BibleHelper(mContext) ;
+			ArrayList<BibleHelper.BibleEntry> foreignEntries = new ArrayList<BibleHelper.BibleEntry>() ;
+			for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+				if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+					continue ;
+				}
+				foreignEntries.add(bh.getBibleEntry(foreignBiblecode, cfr.recordData.get(foreignFieldkey).valueString)) ;
+			}
+			
+			page_fillTable( pageIdx, foreignEntries ) ;
+		}
 	}
 	
 	
@@ -1613,6 +1954,12 @@ public class CrmFileTransaction {
 			jsonObj.put("CrmInputScenId",CrmInputScenId) ;
 			jsonObj.put("CrmFileCode", CrmFileCode) ;
 			
+			JSONArray JsonOuterPivots = new JSONArray() ;
+			for( CrmFilePivot opivot : outerPivots ) {
+				JsonOuterPivots.put(opivot.toJSONObject()) ;
+			}
+			jsonObj.put("outerPivots", JsonOuterPivots) ;
+			
 			JSONArray JsonTransactionPages = new JSONArray() ;
 			for( CrmFilePageinfo cfp : TransactionPages ) {
 				JsonTransactionPages.put(cfp.toJSONObject()) ;
@@ -1646,5 +1993,36 @@ public class CrmFileTransaction {
 			return null ;
 		}
 	}
+
+	
+	
+	
+	
+    /**
+     * Method to join array elements of type string
+     * @author Hendrik Will, imwill.com
+     * @param inputArray Array which contains strings
+     * @param glueString String between each array element
+     * @return String containing all array elements seperated by glue string
+     */
+    private static String implodeArray(String[] inputArray, String glueString) {
+
+    	/** Output variable */
+    	String output = "";
+
+    	if (inputArray.length > 0) {
+    		StringBuilder sb = new StringBuilder();
+    		sb.append(inputArray[0]);
+
+    		for (int i=1; i<inputArray.length; i++) {
+    			sb.append(glueString);
+    			sb.append(inputArray[i]);
+    		}
+
+    		output = sb.toString();
+    	}
+
+    	return output;
+    }
 
 }
