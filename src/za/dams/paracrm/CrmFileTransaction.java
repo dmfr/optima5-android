@@ -9,12 +9,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import za.dams.paracrm.BibleHelper.BibleEntry;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -31,6 +33,8 @@ public class CrmFileTransaction {
 	private int CrmInputScenId ;
 	private String CrmFileCode ;
 	
+	private ArrayList<CrmFilePivot> outerPivots ;
+	
 	private ArrayList<CrmFilePageinfo> TransactionPages ;
 	private ArrayList<ArrayList<CrmFileFieldDesc>>  TransactionPageFields ;
 	private ArrayList<ArrayList<CrmFileRecord>> TransactionPageRecords ;
@@ -38,6 +42,9 @@ public class CrmFileTransaction {
 	public enum PageType {
 		PAGETYPE_LIST, PAGETYPE_LOGLIST, PAGETYPE_TABLE, PAGETYPE_PHOTO, PAGETYPE_SAVE, PAGETYPE_NULL,
 		PAGETYPE_CONTAINER
+	}
+	public enum PivotType {
+		PIVOT_NULL, PIVOT_CONTAINER, PIVOT_TABLE
 	}
 	public enum PageTableType {
 		TABLE_NULL, TABLE_MANUAL, TABLE_AUTOFILL_DISABLED, TABLE_AUTOFILL_ENABLED
@@ -48,7 +55,7 @@ public class CrmFileTransaction {
 	
 	public static class CrmFilePageinfo {
     	public int pageId ;
-    	public int[] childPageIds = {} ;
+    	public int nbChildren ;
     	public PageType pageType = PageType.PAGETYPE_NULL ;
     	public PageTableType pageTableType = PageTableType.TABLE_NULL ;
     	public String pageCode ;
@@ -61,6 +68,8 @@ public class CrmFileTransaction {
     	public boolean pageInnerContainer ;
     	public boolean loadIsLoadable ;
     	public boolean loadIsLoaded ;
+    	public CrmFilePivot outerPivot ;
+    	public CrmFilePivot innerPivot ;
 	
     	public CrmFilePageinfo( int aPageId , PageType aPageType , PageTableType aPageTableType , String aFileCode, String aFileLib, boolean aIsSubfile, boolean aFileHasGmap ) {
     		pageId = aPageId ;
@@ -77,9 +86,9 @@ public class CrmFileTransaction {
     		pageIsHidden = true ;
     		pageInnerContainer = false ;
     	}
-    	public CrmFilePageinfo( int aPageId , PageType aPageType , int[] aChildPageIds ) {
+    	public CrmFilePageinfo( int aPageId , PageType aPageType , int aNbChildren ) {
     		pageId = aPageId ;
-    		childPageIds = aChildPageIds ;
+    		nbChildren = aNbChildren ;
     		pageType = aPageType ;
     		pageTableType = PageTableType.TABLE_NULL ;
     		pageCode = "" ;
@@ -94,14 +103,9 @@ public class CrmFileTransaction {
     		pageInnerContainer = false ;
     	}
     	public CrmFilePageinfo( JSONObject jsonObject ) {
-    		int idx ;
     		try {
 				pageId = jsonObject.getInt("pageId");
-				JSONArray jsonArray = jsonObject.getJSONArray("childPageIds") ;
-				childPageIds = new int[jsonArray.length()] ;
-				for( idx=0 ; idx<jsonArray.length() ; idx++ ){
-					childPageIds[idx] = jsonArray.getInt(idx) ;
-				}
+				nbChildren = jsonObject.getInt("nbChildren");
 				pageType = PageType.values()[jsonObject.getInt("pageType")] ;
 				pageTableType = PageTableType.values()[jsonObject.getInt("pageTableType")] ;
 				pageCode = jsonObject.getString("pageCode");
@@ -123,11 +127,7 @@ public class CrmFileTransaction {
     		try {
     			JSONObject jsonObject = new JSONObject() ;
 				jsonObject.put("pageId", pageId) ;
-				JSONArray jsonArray = new JSONArray() ;
-				for( int p : childPageIds ) {
-					jsonArray.put(p) ;
-				}
-				jsonObject.put("childPageIds",jsonArray) ;
+				jsonObject.put("nbChildren", nbChildren) ;
 				jsonObject.put("pageType",pageType.ordinal()) ;
 				jsonObject.put("pageTableType",pageTableType.ordinal()) ;
 				jsonObject.put("pageCode", pageCode) ;
@@ -148,6 +148,21 @@ public class CrmFileTransaction {
 			}
     	}
 	}
+	
+	public static class CrmFilePivot {
+		public PivotType pivotType ;
+		
+		public String previousConditionsHash ;
+		
+		public String targetBibleCode ;
+		public int targetPageId ;
+		public int targetFieldId ;
+
+		public int conditionSrcPageId ;
+		public int conditionSrcFieldId ;
+	}
+	
+	
 	
 	public static class CrmFileFieldValue implements Cloneable {
     	public FieldType fieldType ;
@@ -511,9 +526,7 @@ public class CrmFileTransaction {
 		TransactionPageRecords = new ArrayList<ArrayList<CrmFileRecord>>() ;
 		
 		
-		Cursor tmpCursor ;	
-		Cursor tmpInnerCursor ;	
-		tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode FROM input_scen WHERE scen_id='%d'",CrmInputScenId) ) ;
+		Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode FROM input_scen WHERE scen_id='%d'",CrmInputScenId) ) ;
 		if( tmpCursor.getCount() < 1 ) {
 			tmpCursor.close() ;
 			return ;
@@ -524,195 +537,223 @@ public class CrmFileTransaction {
 		tmpCursor.close() ;
 		
 		// ******** Ajout de toutes les pages **********
-		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index, scen_page_parent_index FROM input_scen_page WHERE scen_id='%d' ORDER BY scen_page_index",CrmInputScenId) ) ;
-		int arraylistIdx = -1 ;
-    	while( !tmpCursor.isLast() ){
-    		arraylistIdx++ ;
-    		tmpCursor.moveToNext();
-    		
-    		PageType pageType = PageType.PAGETYPE_NULL;
-    		String sPageType = tmpCursor.getString(2) ;
-    		if( sPageType.equals("PAGETYPE_PHOTO") )
-    			pageType = PageType.PAGETYPE_PHOTO ;
-    		if( sPageType.equals("PAGETYPE_LIST") )
-    			pageType = PageType.PAGETYPE_LIST ;
-    		if( sPageType.equals("PAGETYPE_LOGLIST") )
-    			pageType = PageType.PAGETYPE_LOGLIST ;
-    		if( sPageType.equals("PAGETYPE_TABLE") )
-    			pageType = PageType.PAGETYPE_TABLE ;
-    		if( sPageType.equals("PAGETYPE_CONTAINER") )
-    			pageType = PageType.PAGETYPE_CONTAINER ;
-    		if( sPageType.equals("PAGETYPE_SAVE") )
-    			pageType = PageType.PAGETYPE_SAVE ;
-    		
-    		boolean pageInnerContainer = false ;
-    		if( !tmpCursor.isNull(5) && tmpCursor.getInt(5) > 0 ) {
-    			pageInnerContainer = true ;
-    		}
-    		
-    		PageTableType pagetableType = PageTableType.TABLE_NULL;
-    		String sPageTableType = tmpCursor.getString(3) ;
-    		if( sPageTableType.equals("TABLE_AUTOFILL_ENABLED") )
-    			pagetableType = PageTableType.TABLE_AUTOFILL_ENABLED ;
-    		if( sPageTableType.equals("TABLE_AUTOFILL_DISABLED") )
-    			pagetableType = PageTableType.TABLE_AUTOFILL_DISABLED ;
-     		
-    		
-    		if( pageType == PageType.PAGETYPE_CONTAINER ) {
-    			tmpInnerCursor = mDb.rawQuery( String.format("SELECT count(*) FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='%d'",CrmInputScenId,tmpCursor.getInt(4))) ;
-    			tmpInnerCursor.moveToNext() ;
-    			int nbChildren = tmpInnerCursor.getInt(0) ;
-    			int subArraylistIdx = arraylistIdx ;
-    			int childPageIds[] ;
-    			childPageIds = new int[nbChildren] ;
-    			for( int a=0 ; a<nbChildren ; a++ ) {
-    				subArraylistIdx++ ;
-    				childPageIds[a] = subArraylistIdx ;
-    			}
-    			tmpInnerCursor.close() ;
-    			
-    			TransactionPages.add( new CrmFilePageinfo(tmpCursor.getInt(4),pageType,childPageIds) ) ;
-    			
-    			continue ;
-    		}
-    		
-    		
-    		
-    		if( pageType == PageType.PAGETYPE_SAVE ){
-    			TransactionPages.add( new CrmFilePageinfo(tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ) ;
-    			continue ;
-    		}
-    		
-    		
-    		tmpInnerCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on, file_parent_code FROM define_file WHERE file_code='%s'",tmpCursor.getString(1)) ) ;
-    		if( tmpInnerCursor.getCount() < 1 ) {
-    			tmpInnerCursor.close() ;
-    			continue ;
-    		}
-    		tmpInnerCursor.moveToNext() ;
-    		
-    		CrmFilePageinfo tmpPageInfo = new CrmFilePageinfo( tmpCursor.getInt(4), pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ;
-    		if( pageType == PageType.PAGETYPE_LOGLIST ) {
-    			tmpPageInfo.loadIsLoadable = true ;
-    			tmpPageInfo.loadIsLoaded = false ;
-    		}
-    		if( pageInnerContainer ) {
-    			tmpPageInfo.pageInnerContainer = true ;
-    		}
-    		TransactionPages.add( tmpPageInfo ) ;
-    		
-    		tmpInnerCursor.close() ;
+		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='0' ORDER BY scen_page_index",CrmInputScenId) ) ;
+    	while( tmpCursor.moveToNext() ){
+    		int insertOffset = TransactionPages.size() ; // on ajoute linéairement
+    		List<CrmFilePageinfo> insertPages = pagetool_getCrmFilePageinfo( tmpCursor.getInt(0) ) ;
+
+    		pages_insert( insertOffset, insertPages ) ;
     	}
     	tmpCursor.close() ;
-		
-    	
-    	for( CrmFileTransaction.CrmFilePageinfo tFileinfo : TransactionPages ) {
-    		CrmFileTransaction_initPage(tFileinfo) ;
-    	}
+
     	
     	links_refresh() ;
     	
     	return ;
 	}
-	private void CrmFileTransaction_initPage( CrmFilePageinfo tFileinfo ) {
-		if( tFileinfo.pageType == PageType.PAGETYPE_SAVE 
-				|| tFileinfo.pageType == PageType.PAGETYPE_NULL ) {
-			TransactionPageFields.add( new ArrayList<CrmFileFieldDesc>() ) ;
-			TransactionPageRecords.add( new ArrayList<CrmFileRecord>() ) ;
-			return ;
+
+	
+	private List<CrmFilePageinfo> pagetool_getCrmFilePageinfo( int pageId ) {
+		
+		// ******** Ajout d'une page + tous ses children **********
+		Cursor tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_name, target_filecode, page_type, page_table_type, scen_page_index, scen_page_parent_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
+		if( !tmpCursor.moveToNext() ) {
+			tmpCursor.close() ;
+			return new ArrayList<CrmFilePageinfo>() ;
 		}
 		
-		if( tFileinfo.pageType == PageType.PAGETYPE_PHOTO ) {
-			TransactionPageFields.add( new ArrayList<CrmFileFieldDesc>() ) ;
-			TransactionPageRecords.add( new ArrayList<CrmFileRecord>() ) ;
-			return ;
+		ArrayList<CrmFilePageinfo> returnArr = new ArrayList<CrmFilePageinfo>() ;
+		CrmFilePageinfo tmpPageInfo ;
+		
+		Cursor tmpInnerCursor ;
+    		
+		PageType pageType = PageType.PAGETYPE_NULL;
+		String sPageType = tmpCursor.getString(2) ;
+		if( sPageType.equals("PAGETYPE_PHOTO") )
+			pageType = PageType.PAGETYPE_PHOTO ;
+		if( sPageType.equals("PAGETYPE_LIST") )
+			pageType = PageType.PAGETYPE_LIST ;
+		if( sPageType.equals("PAGETYPE_LOGLIST") )
+			pageType = PageType.PAGETYPE_LOGLIST ;
+		if( sPageType.equals("PAGETYPE_TABLE") )
+			pageType = PageType.PAGETYPE_TABLE ;
+		if( sPageType.equals("PAGETYPE_CONTAINER") )
+			pageType = PageType.PAGETYPE_CONTAINER ;
+		if( sPageType.equals("PAGETYPE_SAVE") )
+			pageType = PageType.PAGETYPE_SAVE ;
+
+		boolean pageInnerContainer = false ;
+		if( !tmpCursor.isNull(5) && tmpCursor.getInt(5) > 0 ) {
+			pageInnerContainer = true ;
 		}
-		
-		if( tFileinfo.pageType == PageType.PAGETYPE_CONTAINER ) {
-			Log.w(TAG,"Init empty page") ;
-			TransactionPageFields.add( new ArrayList<CrmFileFieldDesc>() ) ;
-			TransactionPageRecords.add( new ArrayList<CrmFileRecord>() ) ;
-			return ;
+
+		PageTableType pagetableType = PageTableType.TABLE_NULL;
+		String sPageTableType = tmpCursor.getString(3) ;
+		if( sPageTableType.equals("TABLE_AUTOFILL_ENABLED") )
+			pagetableType = PageTableType.TABLE_AUTOFILL_ENABLED ;
+		if( sPageTableType.equals("TABLE_AUTOFILL_DISABLED") )
+			pagetableType = PageTableType.TABLE_AUTOFILL_DISABLED ;
+
+
+		if( pageType == PageType.PAGETYPE_CONTAINER ) {
+			int nbChildren = 0 ;
+			tmpInnerCursor = mDb.rawQuery( String.format("SELECT scen_page_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='%d'",CrmInputScenId,tmpCursor.getInt(4))) ;
+			while( tmpInnerCursor.moveToNext() ) {
+				nbChildren++ ;
+				int childPageId =  tmpInnerCursor.getInt(0) ;
+				returnArr.addAll(pagetool_getCrmFilePageinfo(childPageId)) ;
+			}
+			tmpInnerCursor.close() ;
+
+			tmpPageInfo = new CrmFilePageinfo(tmpCursor.getInt(4),pageType,nbChildren) ;
 		}
+		else if( pageType == PageType.PAGETYPE_SAVE ){
+			tmpPageInfo = new CrmFilePageinfo(tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ;
+		}
+		else {
+			tmpInnerCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on, file_parent_code FROM define_file WHERE file_code='%s'",tmpCursor.getString(1)) ) ;
+			if( tmpInnerCursor.getCount() < 1 ) {
+				tmpInnerCursor.close() ;
+				return returnArr ;
+			}
+			tmpInnerCursor.moveToNext() ;
+
+			tmpPageInfo = new CrmFilePageinfo( tmpCursor.getInt(4), pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ;
+			if( pageType == PageType.PAGETYPE_LOGLIST ) {
+				tmpPageInfo.loadIsLoadable = true ;
+				tmpPageInfo.loadIsLoaded = false ;
+			}
+			if( pageInnerContainer ) {
+				tmpPageInfo.pageInnerContainer = true ;
+			}
+			tmpInnerCursor.close() ;
+		}
+		tmpCursor.close() ;
+		
+		// ajout de outerPivot ?
+		// ajout de innerPivot ?
 		
 		
-		// ******** Load de tous les FIELDS ************
-		
-		ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
-		
-		Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition " +
-				"FROM input_scen_page_field " +
-				"WHERE scen_id='%d' AND scen_page_index='%d' ORDER BY scen_page_field_index",
-				CrmInputScenId, tFileinfo.pageId )) ;
-		
-    	while( !tmpCursor.isLast() ){
-    		tmpCursor.moveToNext();
-    		
-    		Cursor tmpInnerCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
-    				"FROM define_file_entry " +
-    				"WHERE file_code='%s' AND entry_field_code='%s' ORDER BY entry_field_index",
-    				tmpCursor.getString(0),tmpCursor.getString(1)) ) ;
-    		if( tmpInnerCursor.getCount() < 1 ) {
-    			continue ;
-    		}
-    		tmpInnerCursor.moveToNext();
-    		
-    		FieldType tFieldType = null ;
-   		
-    		if( tmpInnerCursor.getString(0).equals("number") ) {
-    			tFieldType = FieldType.FIELD_NUMBER ;
-    		}
-    		else {
-    			if( tmpInnerCursor.getString(0).equals("date") ) {
-    				tFieldType = FieldType.FIELD_DATETIME ;
-    			}
-    			else{
-        			if( tmpInnerCursor.getString(0).equals("link") ) {
-        				tFieldType = FieldType.FIELD_BIBLE ;
-        			}
-        			else{
-        				tFieldType = FieldType.FIELD_TEXT ;
-        			}
-    			}
-    		}
-    		
-    		CrmFileFieldDesc tmpField = new CrmFileFieldDesc( tFieldType, tmpInnerCursor.getString(3),
-    				tmpInnerCursor.getString(1) , tmpInnerCursor.getString(2) , tmpCursor.getString(2).equals("O"), false ) ;
-    		if( tmpCursor.getString(3).equals("O") ) {
-    			tmpField.fieldAutovalueIsOn = true ;
-    			tmpField.fieldAutovalueSrc = tmpCursor.getString(4) ;
-    		}
-    		if( tmpCursor.getString(5).equals("O") ) {
-    			tmpField.fieldSearchIsCondition = true ;
-    		}
-    		tFields.add( tmpField ) ;
-    	}
-    	tmpCursor.close() ;
-    	TransactionPageFields.add( tFields ) ;
-		
-    	if( tFileinfo.pageType == PageType.PAGETYPE_TABLE ) {
-    		if( true ) {
-    			CrmFileTransaction_initPage_preloadDataFromPivot( tFileinfo , tFields, tFileinfo.pageTableType==PageTableType.TABLE_AUTOFILL_ENABLED ) ;
-    		}
-    	}
-    	else {
-    		CrmFileTransaction_initPage_preloadDataSingle( tFileinfo , tFields ) ;
-    	}
+		returnArr.add(0,tmpPageInfo) ;
+		return returnArr ;
+	}
+	
+	private void pages_insert( int insertOffset,  List<CrmFilePageinfo> infosPages ) {
+		insertOffset-- ;
+		for( CrmFilePageinfo tFileinfo : infosPages ) {
+			insertOffset++ ;
+
+			if( tFileinfo.pageType == PageType.PAGETYPE_SAVE 
+					|| tFileinfo.pageType == PageType.PAGETYPE_NULL ) {
+				TransactionPages.add(insertOffset,tFileinfo) ;
+				TransactionPageFields.add(insertOffset, new ArrayList<CrmFileFieldDesc>() ) ;
+				TransactionPageRecords.add(insertOffset, new ArrayList<CrmFileRecord>() ) ;
+				continue ;
+			}
+
+			if( tFileinfo.pageType == PageType.PAGETYPE_PHOTO ) {
+				TransactionPages.add(insertOffset,tFileinfo) ;
+				TransactionPageFields.add(insertOffset, new ArrayList<CrmFileFieldDesc>() ) ;
+				TransactionPageRecords.add(insertOffset, new ArrayList<CrmFileRecord>() ) ;
+				continue ;
+			}
+
+			if( tFileinfo.pageType == PageType.PAGETYPE_CONTAINER ) {
+				//Log.w(TAG,"Init empty page") ;
+				TransactionPages.add(insertOffset,tFileinfo) ;
+				TransactionPageFields.add(insertOffset, new ArrayList<CrmFileFieldDesc>() ) ;
+				TransactionPageRecords.add(insertOffset, new ArrayList<CrmFileRecord>() ) ;
+				continue ;
+			}
+
+
+			// ******** Load de tous les FIELDS ************
+
+			ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
+
+			Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition " +
+					"FROM input_scen_page_field " +
+					"WHERE scen_id='%d' AND scen_page_index='%d' ORDER BY scen_page_field_index",
+					CrmInputScenId, tFileinfo.pageId )) ;
+
+			while( tmpCursor.moveToNext() ){
+
+				Cursor tmpInnerCursor = mDb.rawQuery( String.format("SELECT entry_field_type, entry_field_code, entry_field_lib, entry_field_linkbible " +
+						"FROM define_file_entry " +
+						"WHERE file_code='%s' AND entry_field_code='%s' ORDER BY entry_field_index",
+						tmpCursor.getString(0),tmpCursor.getString(1)) ) ;
+				if( tmpInnerCursor.getCount() < 1 ) {
+					continue ;
+				}
+				tmpInnerCursor.moveToNext();
+
+				FieldType tFieldType = null ;
+
+				if( tmpInnerCursor.getString(0).equals("number") ) {
+					tFieldType = FieldType.FIELD_NUMBER ;
+				}
+				else {
+					if( tmpInnerCursor.getString(0).equals("date") ) {
+						tFieldType = FieldType.FIELD_DATETIME ;
+					}
+					else{
+						if( tmpInnerCursor.getString(0).equals("link") ) {
+							tFieldType = FieldType.FIELD_BIBLE ;
+						}
+						else{
+							tFieldType = FieldType.FIELD_TEXT ;
+						}
+					}
+				}
+
+				CrmFileFieldDesc tmpField = new CrmFileFieldDesc( tFieldType, tmpInnerCursor.getString(3),
+						tmpInnerCursor.getString(1) , tmpInnerCursor.getString(2) , tmpCursor.getString(2).equals("O"), false ) ;
+				if( tmpCursor.getString(3).equals("O") ) {
+					tmpField.fieldAutovalueIsOn = true ;
+					tmpField.fieldAutovalueSrc = tmpCursor.getString(4) ;
+				}
+				if( tmpCursor.getString(5).equals("O") ) {
+					tmpField.fieldSearchIsCondition = true ;
+				}
+				tFields.add( tmpField ) ;
+			}
+			tmpCursor.close() ;
+			TransactionPages.add(insertOffset,tFileinfo) ;
+			TransactionPageFields.add(insertOffset, tFields ) ;
+			TransactionPageRecords.add(insertOffset, new ArrayList<CrmFileRecord>() ) ;
+
+			if( tFileinfo.pageType == PageType.PAGETYPE_TABLE ) {
+				if( true ) {
+					page_fillTable( insertOffset, null ) ;
+				}
+			}
+			else {
+				page_fillSingle(insertOffset) ;
+			}
+
+
     	
-    	
-    	
-		
+		}
 		return ;
 	}
-	private void CrmFileTransaction_initPage_preloadDataSingle( CrmFilePageinfo tFileinfo , ArrayList<CrmFileFieldDesc> tFields ) {
+	private void pages_delete( int deleteOffset, int deleteLength ) {
+		for( int i=0 ; i<deleteLength ; i++ ) {
+			TransactionPages.remove(deleteOffset) ;
+			TransactionPageFields.get(deleteOffset) ;
+			TransactionPageRecords.get(deleteOffset) ;
+		}
+	}
+	
+	
+	private void page_fillSingle( int pageOffset ) {
+		// *********** Création du record unique pour PAGE_LIST *******
+		CrmFilePageinfo tPageinfo = TransactionPages.get(pageOffset) ;
+		ArrayList<CrmFileFieldDesc> tFields = TransactionPageFields.get(pageOffset) ;
+		ArrayList<CrmFileRecord> tRecords = TransactionPageRecords.get(pageOffset) ;
 		
-		ArrayList<CrmFileRecord> tRecords = new ArrayList<CrmFileRecord>();
-		
-    	Iterator<CrmFileFieldDesc> mIter = tFields.iterator() ;
-    	CrmFileFieldDesc tFieldDesc ;
     	HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
-    	while( mIter.hasNext() ){
-    		tFieldDesc = mIter.next() ;
+    	for( CrmFileFieldDesc tFieldDesc : tFields ){
+    		
     		switch( tFieldDesc.fieldType ) {
     		case FIELD_DATE :
     		case FIELD_DATETIME :
@@ -734,7 +775,7 @@ public class CrmFileTransaction {
     							new String(""),
     							null,
     							new String(""),
-    							tFileinfo.pageType==PageType.PAGETYPE_LOGLIST ) ) ;
+    							tPageinfo.pageType==PageType.PAGETYPE_LOGLIST ) ) ;
     			break ;
     			
     		case FIELD_BIBLE :
@@ -768,114 +809,124 @@ public class CrmFileTransaction {
     		}
     	}
     	tRecords.add( new CrmFileRecord(0,recordData,false) ) ;
-    	TransactionPageRecords.add(tRecords) ;
+		
 	}
-	private void CrmFileTransaction_initPage_preloadDataFromPivot( CrmFilePageinfo tFileinfo , ArrayList<CrmFileFieldDesc> tFields, boolean enableAll ) {
-		// TransactionPageRecords.add(new ArrayList<CrmFileRecord>()) ;
+	private void page_fillTable( int pageOffset, ArrayList<BibleEntry> bibleConditions ) {
+		// ************ Création d'une table ************
+		//  - delete all records
+		//  - create tagged records
+		// ****************************************
 		
-		ArrayList<CrmFileRecord> tRecords = new ArrayList<CrmFileRecord>();
+		CrmFilePageinfo tPageinfo = TransactionPages.get(pageOffset) ;
+		ArrayList<CrmFileFieldDesc> tFields = TransactionPageFields.get(pageOffset) ;
+		ArrayList<CrmFileRecord> tRecords = TransactionPageRecords.get(pageOffset) ;
 		
-		Iterator<BibleHelper.BibleEntry> bibleIter ;
-    	Iterator<CrmFileFieldDesc> mIter = tFields.iterator() ;
-    	CrmFileFieldDesc tFieldDesc ;
+		// paramètres ?
+		boolean enableAll = tPageinfo.pageTableType==PageTableType.TABLE_AUTOFILL_ENABLED ;
+		
+		// vidage de la table
+		tRecords.clear() ;
+		
+		// recherche du pivot
+		CrmFileFieldDesc tFieldDescPivot = null ;
     	HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
-    	while( mIter.hasNext() ){
-    		tFieldDesc = mIter.next() ;
+    	for( CrmFileFieldDesc tFieldDesc : tFields ){
     		
     		if(tFieldDesc.fieldIsPivot) {
-    			
-    			
-    			
-    			// appel a bible helper
-    			BibleHelper bibleHelper = new BibleHelper(mContext) ;
-    			bibleIter = bibleHelper.queryBible(tFieldDesc.fieldLinkBible).iterator() ;
-    			BibleHelper.BibleEntry bibleEntry ;
-    			int a = 0 ;
-    	    	while( bibleIter.hasNext() ){
-    	    		bibleEntry = bibleIter.next() ; 
-    	    		
-    	    		recordData = new HashMap<String,CrmFileFieldValue>() ;
-    	    		
-    	    		// CREATION DU FIELD
-    	    		mIter = tFields.iterator() ;
-    	        	while( mIter.hasNext() ){
-    	        		tFieldDesc = mIter.next() ;
-    	        		if( tFieldDesc.fieldIsPivot ) {
-    	           			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							new String(bibleEntry.entryKey),
-    	        							null,
-    	        							new String(bibleEntry.displayStr),
-    	        							true) ) ;
-    	        			
-    	        			continue ;
-    	        		}
-    	        		
-    	        		
-    	        		
-    	        		
-    	        		switch( tFieldDesc.fieldType ) {
-    	        		case FIELD_DATE :
-    	        		case FIELD_DATETIME :
-    	        			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							null,
-    	        							new Date(),
-    	        							new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) ) ) ;
-    	        			break ;
-    	        			
-    	        		case FIELD_TEXT :
-    	           			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							new String(""),
-    	        							null,
-    	        							new String("") ) ) ;
-    	        			break ;
-    	        			
-    	        		case FIELD_BIBLE :
-    	           			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							new String(""),
-    	        							null,
-    	        							new String("") ) ) ;
-    	        			break ;
-    	        			
-    	        		case FIELD_NUMBER :
-    	           			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							null,
-    	        							null,
-    	        							new Integer(0).toString()) ) ;
-    	        			break ;
-    	        		
-    	        		default :
-    	           			recordData.put(tFieldDesc.fieldCode,
-    	        					new CrmFileFieldValue(tFieldDesc.fieldType,
-    	        							new Float(0),
-    	        							false,
-    	        							null,
-    	        							null,
-    	        							null) ) ;
-    	        		}
-    	        	}
-    	    		tRecords.add( new CrmFileRecord(a,recordData,!enableAll) ) ;
-    	    	}
-    	    	
-    	    	break ;
+    			tFieldDescPivot = tFieldDesc ;
+    			break ;
     		}
     	}
-    	TransactionPageRecords.add(tRecords) ;
+    	if( tFieldDescPivot == null ) {
+    		return ;
+    	}
+    	
+    	
+    	// appel a bible helper pour remplir la table
+    	BibleHelper bibleHelper = new BibleHelper(mContext) ;
+    	int a = 0 ;
+    	for( BibleHelper.BibleEntry bibleEntry : bibleHelper.queryBible(tFieldDescPivot.fieldLinkBible) ){
+
+    		recordData = new HashMap<String,CrmFileFieldValue>() ;
+
+    		// CREATION DU FIELD
+    		for( CrmFileFieldDesc tFieldDesc : tFields ){
+
+    			if( tFieldDesc.fieldIsPivot ) {
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								new String(bibleEntry.entryKey),
+    								null,
+    								new String(bibleEntry.displayStr),
+    								true) ) ;
+
+    				continue ;
+    			}
+
+
+
+
+    			switch( tFieldDesc.fieldType ) {
+    			case FIELD_DATE :
+    			case FIELD_DATETIME :
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								null,
+    								new Date(),
+    								new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) ) ) ;
+    				break ;
+
+    			case FIELD_TEXT :
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								new String(""),
+    								null,
+    								new String("") ) ) ;
+    				break ;
+
+    			case FIELD_BIBLE :
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								new String(""),
+    								null,
+    								new String("") ) ) ;
+    				break ;
+
+    			case FIELD_NUMBER :
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								null,
+    								null,
+    								new Integer(0).toString()) ) ;
+    				break ;
+
+    			default :
+    				recordData.put(tFieldDesc.fieldCode,
+    						new CrmFileFieldValue(tFieldDesc.fieldType,
+    								new Float(0),
+    								false,
+    								null,
+    								null,
+    								null) ) ;
+    			}
+    		}
+    		tRecords.add( new CrmFileRecord(a,recordData,!enableAll) ) ;
+    	}
+    	    	
+
+    	// TransactionPageRecords.add(tRecords) ;
 	}
+	
 	
 	
 	/*

@@ -58,10 +58,10 @@ public class FiledetailContainerFragment extends FiledetailFragment {
     	
     	//FragmentTransaction ft = getFragmentManager().beginTransaction();
     	mFragments = new ArrayList<Fragment>() ;
-    	for( int a=0 ; a<fpi.childPageIds.length ; a++ ) {
-    		Log.w(TAG,"Show child indexes "+fpi.childPageIds[a]) ;
+    	for( int a=1 ; a<=fpi.nbChildren ; a++ ) {
+    		int subPageIndex = getShownIndex() + a ;
+    		Log.w(TAG,"Show child indexes "+subPageIndex) ;
     		
-    		int subPageIndex = fpi.childPageIds[a] ;
     		CrmFileTransaction.PageType pageType = mTransaction.list_getPageType(subPageIndex) ;
     		
     		FiledetailFragment details = FiledetailFragmentFactory.getFiledetailFragment(subPageIndex, pageType);
