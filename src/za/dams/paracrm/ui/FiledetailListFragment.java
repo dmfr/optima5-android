@@ -102,7 +102,7 @@ public class FiledetailListFragment extends FiledetailFragment {
         
         za.dams.paracrm.widget.Utils.setListViewHeightBasedOnChildren( listView ) ;
          
-        if( pageId==0 ) { // cas de la 1ere page => unmask des autres pages
+        if( true ) { // cas de la 1ere page => unmask des autres pages
         	mTransaction.links_refresh() ;
         	((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
         }   

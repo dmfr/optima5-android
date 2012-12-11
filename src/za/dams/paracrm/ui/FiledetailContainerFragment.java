@@ -43,7 +43,7 @@ public class FiledetailContainerFragment extends FiledetailFragment {
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
 		mTransaction = mManager.getTransaction() ;
 		
-		Log.w(TAG,"Building fragments...") ;
+		// Log.w(TAG,"Building fragments...") ;
 		buildFraments() ;
 	}
 	
@@ -60,7 +60,7 @@ public class FiledetailContainerFragment extends FiledetailFragment {
     	mFragments = new ArrayList<Fragment>() ;
     	for( int a=1 ; a<=fpi.nbChildren ; a++ ) {
     		int subPageIndex = getShownIndex() + a ;
-    		Log.w(TAG,"Show child indexes "+subPageIndex) ;
+    		// Log.w(TAG,"Show child indexes "+subPageIndex) ;
     		
     		CrmFileTransaction.PageType pageType = mTransaction.list_getPageType(subPageIndex) ;
     		
@@ -86,7 +86,7 @@ public class FiledetailContainerFragment extends FiledetailFragment {
 			FragmentTransaction mTransaction = mFragmentMgr.beginTransaction();
 			for( Fragment childFragment : mFragments ) {
 				mTransaction.remove(childFragment);
-				Log.w(TAG,"Removing a fragment") ;
+				// Log.w(TAG,"Removing a fragment") ;
 			}
 			mTransaction.commit();
 			mFragments = null ;

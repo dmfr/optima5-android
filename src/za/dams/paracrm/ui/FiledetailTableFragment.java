@@ -236,8 +236,10 @@ public class FiledetailTableFragment extends FiledetailFragment {
 	    	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( FiledetailTableFragment.this.getActivity().getApplicationContext() ) ;
 	    	CrmFileTransaction mTransaction = mManager.getTransaction() ;
 	    	mTransaction.page_setRecordDisabled(pageId, recordId, !isChecked) ;
+	    	mTransaction.links_refresh() ;
 	    	saveValues() ;
 	    	syncWithData() ;
+	    	((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
 		}
 	} ;
 	
