@@ -122,6 +122,19 @@ public class BibleHelper {
     		// on renvoie le clone
     		return (BibleEntry)o;
     	}
+    	public boolean equals( Object be ) {
+    		if( this.bibleCode.equals( ((BibleEntry)be).bibleCode )
+    				&& this.entryKey.equals( ((BibleEntry)be).entryKey) ){
+    			return true;
+    		}
+    		return false ;
+    	}
+    	public int hashCode(){
+    		int result = 17 ;
+    		result = 31 * result + bibleCode.hashCode();
+    		result = 31 * result + entryKey.hashCode() ;
+    		return result ;
+    	}
     }
     
     public BibleHelper(Context c) {
@@ -328,10 +341,18 @@ public class BibleHelper {
     
     
     
-    private String getSqlConditionLocal( BibleCode localBible, BibleFieldCode localTargetField, BibleEntry foreignEntry ) {
-    	if( !localTargetField.linkBible.equals( foreignEntry.bibleCode ) ) {
-    		return null ;
+    private String getSqlConditionLocal( BibleCode localBible, BibleFieldCode localTargetField, ArrayList<BibleEntry> foreignEntries ) {
+    	
+    	ArrayList<String> foreignTreenodekeys = new ArrayList<String>() ;
+    	for( BibleEntry foreignEntry : foreignEntries ) {
+    		if( !localTargetField.linkBible.equals( foreignEntry.bibleCode ) ) {
+    			return null ;
+    		}
+    		foreignTreenodekeys.add("'"+foreignEntry.treenodeKey+"'") ;
     	}
+    	String sqlTreenodekeys = "("+implodeArray(foreignTreenodekeys.toArray(new String[foreignTreenodekeys.size()]), ",")+")" ;
+    	
+    	
     	
     	StringBuilder sb = new StringBuilder() ;
     	sb.append(" AND entry_key IN (") ;
@@ -348,11 +369,11 @@ public class BibleHelper {
     		switch( localTargetField.recordType ) {
     		case BIBLE_TREENODE :
     			sb.append(String.format(" AND tree_field_code='%s'",localTargetField.fieldCode)) ;
-    			sb.append(String.format(" AND treenode_field_linkmember_treenodekey='%s'",foreignEntry.treenodeKey)) ;
+    			sb.append(String.format(" AND treenode_field_linkmember_treenodekey IN %s",sqlTreenodekeys)) ;
    			break ;
     		case BIBLE_ENTRY :
     			sb.append(String.format(" AND entry_field_code='%s'",localTargetField.fieldCode)) ;
-    			sb.append(String.format(" AND entry_field_linkmember_treenodekey='%s'",foreignEntry.treenodeKey)) ;
+    			sb.append(String.format(" AND entry_field_linkmember_treenodekey IN %s",sqlTreenodekeys)) ;
     			break ;
     		}
     	sb.append(")") ;
@@ -360,29 +381,49 @@ public class BibleHelper {
     }
     
     
-    private String getSqlConditionForeign( BibleCode localBible, BibleFieldCode foreignTargetField, BibleEntry foreignEntry ) {
+    private String getSqlConditionForeign( BibleCode localBible, BibleFieldCode foreignTargetField, ArrayList<BibleEntry> foreignEntries ) {
     	if( !foreignTargetField.linkBible.equals( localBible.bibleCode ) ) {
     		return null ;
     	}
+    	String foreignBiblecode = null ;
+    	for( BibleEntry foreignEntry : foreignEntries ) {
+    		foreignBiblecode = foreignEntry.bibleCode ;
+    	}
+    	if( foreignBiblecode==null ){
+    		return null ;
+    	}
+    	
     	
     	StringBuilder sb = new StringBuilder() ;
     	sb.append(" AND treenode_key IN (") ;
 		switch( foreignTargetField.recordType ) {
 		case BIBLE_TREENODE :
+	    	ArrayList<String> foreignTreenodekeys = new ArrayList<String>() ;
+	    	for( BibleEntry foreignEntry : foreignEntries ) {
+	    		foreignTreenodekeys.add("'"+foreignEntry.treenodeKey+"'") ;
+	    	}
+	    	String sqlTreenodekeys = "("+implodeArray(foreignTreenodekeys.toArray(new String[foreignTreenodekeys.size()]), ",")+")" ;
+	    	
 			sb.append("select treenode_field_linkmember_treenodekey FROM store_bible_tree_field_linkmembers") ;
 			sb.append(String.format(
-					" WHERE bible_code='%s' AND treenode_key='%s' AND treenode_field_code='%s'",
-					foreignEntry.bibleCode,
-					foreignEntry.treenodeKey,
+					" WHERE bible_code='%s' AND treenode_key IN %s AND treenode_field_code='%s'",
+					foreignBiblecode,
+					sqlTreenodekeys,
 					foreignTargetField.fieldCode
 					));
 			break ;
 		case BIBLE_ENTRY :
-			sb.append("select entry_field_linkmember_treenodekey FROM store_bible_entry_field_linkmembers") ;
+	    	ArrayList<String> foreignEntrykeys = new ArrayList<String>() ;
+	    	for( BibleEntry foreignEntry : foreignEntries ) {
+	    		foreignEntrykeys.add("'"+foreignEntry.entryKey+"'") ;
+	    	}
+	    	String sqlEntrykeys = "("+implodeArray(foreignEntrykeys.toArray(new String[foreignEntrykeys.size()]), ",")+")" ;
+
+	    	sb.append("select entry_field_linkmember_treenodekey FROM store_bible_entry_field_linkmembers") ;
 			sb.append(String.format(
-					" WHERE bible_code='%s' AND entry_key='%s' AND entry_field_code='%s'",
-					foreignEntry.bibleCode,
-					foreignEntry.entryKey,
+					" WHERE bible_code='%s' AND entry_key IN %s AND entry_field_code='%s'",
+					foreignBiblecode,
+					sqlEntrykeys,
 					foreignTargetField.fieldCode
 					));
 			break ;
@@ -399,31 +440,52 @@ public class BibleHelper {
     	BibleCode localBible = new BibleCode(strBibleCode) ;
     	
     	
-    	
+    	ArrayList<BibleEntry> localBounds = null ;
     	
     	// ******* Construction de la requête sur entête *********
     	StringBuilder sbEnt = new StringBuilder() ;
     	sbEnt.append("SELECT * FROM store_bible_entry WHERE 1") ;
     	sbEnt.append(String.format(" AND bible_code='%s'",localBible.bibleCode)) ;
     	if( mForeignEntries != null ) {
-	    	// ***** Process de mForeignEntries ******
+    		// ***** Process de mForeignEntries ******
+    		
+    		// on groupe les entries par foreignbible (UNION)
+    		HashMap<String,ArrayList<BibleEntry>> tForeignEntriesByBible = new HashMap<String,ArrayList<BibleEntry>>() ;
 	    	for( BibleEntry foreignEntry : mForeignEntries ) {
 	    		BibleCode foreignBible = new BibleCode(foreignEntry.bibleCode) ;
+	    		
+	    		// on groupe les entries par foreignbible 
+	    		if( !tForeignEntriesByBible.containsKey(foreignEntry.bibleCode) ) {
+	    			tForeignEntriesByBible.put( foreignEntry.bibleCode, new ArrayList<BibleEntry>() ) ;
+	    		}
+	    		tForeignEntriesByBible.get(foreignEntry.bibleCode).add(foreignEntry) ;
+	    	}
+	    	
+	    	for( Map.Entry<String,ArrayList<BibleEntry>> map_Biblecode_BibleEntry : tForeignEntriesByBible.entrySet() ) {	
+	    		BibleCode foreignBible = new BibleCode(map_Biblecode_BibleEntry.getKey()) ;
+	    		ArrayList<BibleEntry> foreignEntries = map_Biblecode_BibleEntry.getValue() ;
 	    		
 	    		//Log.w(TAG,"Foreign "+foreignEntry.entryKey+" tree: "+foreignEntry.treenodeKey) ;
 	    		
 	    		// condition locale ?  ex: req STORE (condition SALES)
 	    		if( mapForeignLinks.get(localBible).containsValue(foreignBible) ) {
 	    			BibleFieldCode localTargetField = getKeyByValue(mapForeignLinks.get(localBible),foreignBible) ;
-	    			sbEnt.append(getSqlConditionLocal(localBible,localTargetField,foreignEntry)) ;
+	    			sbEnt.append(getSqlConditionLocal(localBible,localTargetField,foreignEntries)) ;
 	    			break ;
 	    		}
 	    		
 	    		// condition étrangère ? ex: req PROD (condition STORE)
 	    		if( mapForeignLinks.get(foreignBible).containsValue(localBible) ) {
 	    			BibleFieldCode foreignTargetField = getKeyByValue(mapForeignLinks.get(foreignBible),localBible) ;
-	    			sbEnt.append(getSqlConditionForeign(localBible,foreignTargetField,foreignEntry)) ;
+	    			sbEnt.append(getSqlConditionForeign(localBible,foreignTargetField,foreignEntries)) ;
 	    			break ;
+	    		}
+	    		
+	    		if( foreignBible.equals(localBible) ) {
+	    			if( localBounds==null ) {
+	    				localBounds = new ArrayList<BibleEntry>() ;
+	    			}
+	    			localBounds.addAll(foreignEntries) ;
 	    		}
 	    	}
     	}
@@ -499,6 +561,9 @@ public class BibleHelper {
        		HashMap<String,String> tmpBufSub =  tmpBuffer.get(entryKey) ;
        		
        		BibleEntry be = new BibleEntry(localBible.bibleCode,tmpBufSub.get("treenode_key"),tmpBufSub.get("entry_key")) ;
+       		if( localBounds != null && !localBounds.contains(be) ) {
+       			continue ;
+       		}
        		prettifyEntry(be,tmpBufSub) ;
        		retCollection.add(prettifyEntry(be,tmpBufSub)) ;
        	}
