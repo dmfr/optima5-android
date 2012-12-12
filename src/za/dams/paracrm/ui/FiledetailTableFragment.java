@@ -236,8 +236,8 @@ public class FiledetailTableFragment extends FiledetailFragment {
 	    	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( FiledetailTableFragment.this.getActivity().getApplicationContext() ) ;
 	    	CrmFileTransaction mTransaction = mManager.getTransaction() ;
 	    	mTransaction.page_setRecordDisabled(pageId, recordId, !isChecked) ;
-	    	mTransaction.links_refresh() ;
 	    	saveValues() ;
+	    	mTransaction.links_refresh() ;
 	    	syncWithData() ;
 	    	((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
 		}
@@ -276,7 +276,7 @@ public class FiledetailTableFragment extends FiledetailFragment {
 	}
 	public void onPause() {
 		saveValues() ;
-		
+		mTransaction.links_refresh() ;
 		super.onPause() ;
 	}
 	
