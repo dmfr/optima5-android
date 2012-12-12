@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.json.JSONArray;
@@ -126,7 +127,9 @@ public class CrmFileTransaction {
 				if( jsonObject.has("innerPivot") ) {
 					innerPivot = new CrmFilePivot( jsonObject.getJSONObject("innerPivot") ) ;
 				}
-				pivotTag = jsonObject.getString("pivotTag");
+				if( jsonObject.has("pivotTag") ) {
+					pivotTag = jsonObject.getString("pivotTag");
+				}
 				pivotForeignRefIdx = jsonObject.getInt("pivotForeignRefIdx");
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -156,7 +159,9 @@ public class CrmFileTransaction {
 				if( innerPivot != null ) {
 					jsonObject.put("innerPivot", innerPivot.toJSONObject()) ;
 				}
-				jsonObject.put("pivotTag", pivotTag) ;
+				if( pivotTag != null ) {
+					jsonObject.put("pivotTag", pivotTag) ;
+				}
 				jsonObject.put("pivotForeignRefIdx", pivotForeignRefIdx) ;
 				return jsonObject ;
 			} catch (JSONException e) {
@@ -182,6 +187,7 @@ public class CrmFileTransaction {
 		public boolean conditionSrc ;
 		public int conditionSrcPageId ;
 		public int conditionSrcFieldId ;
+		public HashMap<Integer,Integer> copymapDestfieldSrcfield ;
 		
 		public CrmFilePivot() {
 			
@@ -189,7 +195,9 @@ public class CrmFileTransaction {
     	public CrmFilePivot( JSONObject jsonObject ) {
     		try {
 				pivotType = PivotType.values()[jsonObject.getInt("pivotType")] ;
-				previousConditionsHash = jsonObject.getString("previousConditionsHash");
+				if( jsonObject.has("previousConditionsHash") ) {
+					previousConditionsHash = jsonObject.getString("previousConditionsHash");
+				}
 				containerPageId = jsonObject.getInt("containerPageId");
 				containerSize = jsonObject.getInt("containerSize");
 				targetBibleCode = jsonObject.getString("targetBibleCode");
@@ -198,6 +206,17 @@ public class CrmFileTransaction {
 				conditionSrc = jsonObject.getBoolean("conditionSrc");
 				conditionSrcPageId = jsonObject.getInt("conditionSrcPageId");
 				conditionSrcFieldId = jsonObject.getInt("conditionSrcFieldId");
+				if( jsonObject.has("copymapDestfieldSrcfield") ) {
+					copymapDestfieldSrcfield = new HashMap<Integer,Integer>() ;
+					JSONObject jsonObjCopymap = jsonObject.getJSONObject("copymapDestfieldSrcfield");
+					Iterator<String> jsonObjCopymapKeys = jsonObjCopymap.keys() ;
+					while( jsonObjCopymapKeys.hasNext() ) {
+						String jsonObjCopymapKey = jsonObjCopymapKeys.next() ;
+						int destFieldId = Integer.parseInt(jsonObjCopymapKey) ;
+						int srcFieldId = jsonObjCopymap.getInt(jsonObjCopymapKey) ;
+						copymapDestfieldSrcfield.put(destFieldId,srcFieldId) ;
+					}
+				}
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -207,7 +226,9 @@ public class CrmFileTransaction {
     		try {
     			JSONObject jsonObject = new JSONObject() ;
 				jsonObject.put("pivotType",pivotType.ordinal()) ;
-				jsonObject.put("previousConditionsHash",previousConditionsHash) ;
+				if( previousConditionsHash != null ) {
+					jsonObject.put("previousConditionsHash",previousConditionsHash) ;
+				}
 				jsonObject.put("containerPageId", containerPageId) ;
 				jsonObject.put("containerSize", containerSize) ;
 				jsonObject.put("targetBibleCode", targetBibleCode) ;
@@ -216,6 +237,13 @@ public class CrmFileTransaction {
 				jsonObject.put("conditionSrc", conditionSrc) ;
 				jsonObject.put("conditionSrcPageId", conditionSrcPageId) ;
 				jsonObject.put("conditionSrcFieldId", conditionSrcFieldId) ;
+				if( copymapDestfieldSrcfield != null ) {
+					JSONObject jsonObjCopymap = new JSONObject() ;
+					for( Map.Entry<Integer, Integer> mapentry : copymapDestfieldSrcfield.entrySet() ) {
+						jsonObjCopymap.put(String.valueOf(mapentry.getKey()), mapentry.getValue()) ;
+					}
+					jsonObject.put("copymapDestfieldSrcfield", jsonObjCopymap) ;
+				}
 				return jsonObject ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -395,7 +423,6 @@ public class CrmFileTransaction {
     	
     	public JSONObject toJSONObject() {
     		try {
-    			Log.w(TAG,"Field code "+this.fieldCode) ;
     			JSONObject jsonObject = new JSONObject() ;
     			jsonObject.put("fieldType",this.fieldType.ordinal()) ;
     			jsonObject.put("fieldLinkBible",this.fieldLinkBible) ;
@@ -414,7 +441,6 @@ public class CrmFileTransaction {
     			return jsonObject ;
     			
     		} catch (JSONException e) {
-    			Log.w(TAG,"Field code "+this.fieldCode) ;
     			e.printStackTrace();
     			return null ;
     		}
@@ -780,6 +806,21 @@ public class CrmFileTransaction {
 				break ;
 			default : break ;
 			}
+			
+			
+			if( cfpivot.pivotType == PivotType.PIVOT_CONTAINER ) {
+				cfpivot.copymapDestfieldSrcfield = new HashMap<Integer,Integer>() ;
+				
+				tmpInnerCursor = mDb.rawQuery( String.format("SELECT copydst_page_field_index,copysrc_page_field_index FROM input_scen_pagepivot_copymap WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
+				while( tmpInnerCursor.moveToNext() ) {
+					int copydst_page_field_index = tmpInnerCursor.getInt(0) ;
+					int copysrc_page_field_index = tmpInnerCursor.getInt(1) ;
+					if( copydst_page_field_index>0 && copysrc_page_field_index>0 ) {
+						cfpivot.copymapDestfieldSrcfield.put(copydst_page_field_index-1, copysrc_page_field_index-1);
+					}
+				}
+				tmpInnerCursor.close() ;
+			}
 		}
 		tmpCursor.close() ;
 		returnArr.add(0,tmpPageInfo) ;
@@ -1110,6 +1151,12 @@ public class CrmFileTransaction {
 			return TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) ;
 		}
 		return new CrmFileFieldValue(FieldType.FIELD_NULL,0,false,new String(),new Date(),new String())  ;
+	}
+	public void page_setRecordFieldValue( int pageId , int recordId, int fieldId, CrmFileFieldValue cfrv ) {
+		if( TransactionPageRecords.get(pageId).get(recordId).recordData.get(TransactionPageFields.get(pageId).get(fieldId).fieldCode) == null ) {
+			return ;
+		}
+		TransactionPageRecords.get(pageId).get(recordId).recordData.put(TransactionPageFields.get(pageId).get(fieldId).fieldCode,cfrv) ;
 	}
 	public ArrayList<CrmFileRecord> pageTable_getRecords( int pageId ) {
 		if( TransactionPageRecords.get(pageId) != null ) {
@@ -1472,22 +1519,31 @@ public class CrmFileTransaction {
 		for( CrmFilePivot fpivot : outerPivots ) {
 			String targetBiblecode = fpivot.targetBibleCode ;
 			
-			// ****** Gestion Source *********
+			boolean needUpdate = true ;
+			boolean needCopymap = true ;
+			
+			// ****** SOURCE : Gestion Source *********
+			int conditionSrcPageIdx = -1 ;
+			int conditionSrcFieldIdx = -1 ;
 			String foreignBiblecode = null ;
 			String foreignFieldkey = null ;
 			ArrayList<BibleHelper.BibleEntry> foreignEntries = null ;
 			if( !fpivot.conditionSrc ) {
-				// pas de source
+				// pas de source => pas de copyMap
+				needCopymap = false ;
 				
+				// examen du Hash => exécution du pivot 1 seule fois si null
 				if( fpivot.previousConditionsHash!=null && fpivot.previousConditionsHash.equals("*") ) {
-					continue ;
+					needUpdate = false ;
+				} else {
+					fpivot.previousConditionsHash = "*" ;
 				}
 				
 			} else {
 			
 				// recherche de la source ?
-				int conditionSrcPageIdx = pagetool_findOffset( fpivot.conditionSrcPageId, 0 ) ;
-				int conditionSrcFieldIdx = fpivot.conditionSrcFieldId ;
+				conditionSrcPageIdx = pagetool_findOffset( fpivot.conditionSrcPageId, 0 ) ;
+				conditionSrcFieldIdx = fpivot.conditionSrcFieldId ;
 				if( conditionSrcPageIdx == -1 ) {
 					// ??? mauvaise config
 					Log.w(TAG,"ERROR 4") ;
@@ -1515,101 +1571,147 @@ public class CrmFileTransaction {
 
 				// pas changé
 				if( fpivot.previousConditionsHash!=null && currentConditionsHash.equals(fpivot.previousConditionsHash) ) {
-					continue ;
+					needUpdate = false ;
+				} else {
+					fpivot.previousConditionsHash = currentConditionsHash ;
+					// Log.w(TAG,"New hash is "+currentConditionsHash) ;
+					
+					BibleHelper bh = new BibleHelper(mContext) ;
+					foreignEntries = new ArrayList<BibleHelper.BibleEntry>() ;
+					for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+						if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+							continue ;
+						}
+						foreignEntries.add(bh.getBibleEntry(foreignBiblecode, cfr.recordData.get(foreignFieldkey).valueString)) ;
+					}
 				}
-				fpivot.previousConditionsHash = currentConditionsHash ;
-				// Log.w(TAG,"New hash is "+currentConditionsHash) ;
+			}
+			
+			// ***** UPDATE : interroBible + création/delete pages
+			if( needUpdate ) {
+				// Interro bible
+				BibleHelper bibleHelper = new BibleHelper(mContext) ;
+				ArrayList<BibleEntry> tBibleEntries ;
+				if( foreignEntries != null && foreignEntries.size() == 0 ) {
+					tBibleEntries = new ArrayList<BibleEntry>() ;
+				} else {
+					tBibleEntries = bibleHelper.queryBible(targetBiblecode,foreignEntries) ;
+				}
 
-				BibleHelper bh = new BibleHelper(mContext) ;
-				foreignEntries = new ArrayList<BibleHelper.BibleEntry>() ;
-				for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
-					if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+				// PAGEtags objectif
+				ArrayList<String> pagetagsTarget = new ArrayList<String>() ;
+				for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ) {
+					pagetagsTarget.add(bibleEntry.entryKey) ;
+				}
+				// PAGEtags current
+				ArrayList<String> pagetagsCurrent = new ArrayList<String>() ;
+				for( CrmFilePageinfo fpi : TransactionPages ) {
+					if( fpi.pageId != fpivot.containerPageId ) {
 						continue ;
 					}
-					foreignEntries.add(bh.getBibleEntry(foreignBiblecode, cfr.recordData.get(foreignFieldkey).valueString)) ;
+					pagetagsCurrent.add(fpi.pivotTag) ;
+				}
+
+				// DELETE DES PAGES CONCERNEES
+				for( String pivotTag : pagetagsCurrent ) {
+					if( pagetagsTarget.contains(pivotTag) ) {
+						continue ;
+					}
+					int tmpIdx = -1 ;
+					for( CrmFilePageinfo fpi : TransactionPages ) {
+						tmpIdx++ ;
+						if( fpi.pageId == fpivot.containerPageId && fpi.pivotTag == pivotTag ) {
+							pages_delete( tmpIdx, fpivot.containerSize ) ;
+							break ;
+						}
+					}
+				}
+
+				// INSERTION PAGE
+				int insertOffset = TransactionPages.size() ;
+				for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ){
+
+					String pivotTag = bibleEntry.entryKey ;
+					if( pagetagsCurrent.contains(pivotTag) ) {
+						continue ;
+					}
+					
+					// TODO : Condition inverse sur la bible originale => pour le mapping
+					int pivotForeignRefIdx = -1 ; // par défaut => pas de source
+					if( fpivot.conditionSrc ) {
+						ArrayList<BibleEntry> localEntries = new ArrayList<BibleEntry>() ;
+						localEntries.add(bibleEntry) ;
+						
+						for( BibleEntry tForeignEntry : bibleHelper.queryBible(foreignBiblecode,localEntries) ) {
+							int recordIdx = -1 ;
+							for( CrmFileRecord testRecord : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+								recordIdx++ ;
+								if( tForeignEntry.entryKey.equals(testRecord.recordData.get(foreignFieldkey).valueString) ) {
+									pivotForeignRefIdx = recordIdx ;
+								}
+							}
+						}
+					}
+					if( pivotForeignRefIdx != -1 ) {
+						//Log.w(TAG,"Found ref record at pos "+pivotForeignRefIdx) ;
+					}
+					
+
+					List<CrmFilePageinfo> insertPages = pagetool_getCrmFilePageinfo( fpivot.containerPageId ) ;
+					for( CrmFilePageinfo fpi : insertPages) {
+						if( fpi.pageType == PageType.PAGETYPE_CONTAINER ) {
+							fpi.pageIsHidden = false ;
+							fpi.pageLib = bibleEntry.displayStr ;
+							fpi.pivotTag = pivotTag ;
+							fpi.pivotForeignRefIdx = pivotForeignRefIdx ;
+						}
+					}
+					pages_insert( insertOffset , insertPages ) ;
+
+					int targetPageId = fpivot.targetPageId ;
+					int targetFieldIdx = fpivot.targetFieldId ;
+					int targetPageIdx = pagetool_findOffset(targetPageId, insertOffset) ;
+					if( targetPageIdx != -1 ) {
+						for( int tmpIdx2=0 ; tmpIdx2 < TransactionPageRecords.get(targetPageIdx).size() ; tmpIdx2++ ) {
+							page_setRecordFieldValue_bible( targetPageIdx , tmpIdx2, targetFieldIdx, bibleEntry.entryKey ) ;
+						}
+						TransactionPageFields.get(targetPageIdx).get(targetFieldIdx).fieldIsReadonly = true ;
+					}
+
+					insertOffset += fpivot.containerSize ;
 				}
 			}
 			
-			// Interro bible
-			BibleHelper bibleHelper = new BibleHelper(mContext) ;
-			ArrayList<BibleEntry> tBibleEntries ;
-			if( foreignEntries != null && foreignEntries.size() == 0 ) {
-				tBibleEntries = new ArrayList<BibleEntry>() ;
-			} else {
-				tBibleEntries = bibleHelper.queryBible(targetBiblecode,foreignEntries) ;
+			// ***** copyMap => mapping des champs src=>target
+			if( fpivot.copymapDestfieldSrcfield==null || fpivot.copymapDestfieldSrcfield.size() == 0 ) {
+				needCopymap = false ;
 			}
-			
-			// PAGEtags objectif
-			ArrayList<String> pagetagsTarget = new ArrayList<String>() ;
-			for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ) {
-				pagetagsTarget.add(bibleEntry.entryKey) ;
-			}
-			// PAGEtags current
-			ArrayList<String> pagetagsCurrent = new ArrayList<String>() ;
-			for( CrmFilePageinfo fpi : TransactionPages ) {
-				if( fpi.pageId != fpivot.containerPageId ) {
-					continue ;
-				}
-				pagetagsCurrent.add(fpi.pivotTag) ;
-			}
-			
-			// DELETE DES PAGES CONCERNEES
-			for( String pivotTag : pagetagsCurrent ) {
-				if( pagetagsTarget.contains(pivotTag) ) {
-					continue ;
-				}
-				int tmpIdx = -1 ;
+			if( needCopymap ) {
+				// paramètres du copyMap
+				
+				// copy des champs pour chaque page
+				int tmpPageIdx = -1 ;
 				for( CrmFilePageinfo fpi : TransactionPages ) {
-					tmpIdx++ ;
-					if( fpi.pageId == fpivot.containerPageId && fpi.pivotTag == pivotTag ) {
-						pages_delete( tmpIdx, fpivot.containerSize ) ;
-						break ;
+					tmpPageIdx++ ;
+					if( fpi.pageId != fpivot.containerPageId ) {
+						continue ;
+					}
+					if( fpi.pivotForeignRefIdx == -1 ) {
+						continue ;
+					}
+					int targetPageIdx = pagetool_findOffset(fpivot.targetPageId, tmpPageIdx) ;
+					for( Map.Entry<Integer,Integer> tmap : fpivot.copymapDestfieldSrcfield.entrySet() ) {
+						int targetFieldIdx = tmap.getKey() ;
+						int srcPageIdx = conditionSrcPageIdx ;
+						int srcRecordIdx = fpi.pivotForeignRefIdx ;
+						int srcFieldIdx = tmap.getValue() ;
+						
+						CrmFileFieldValue refValue = page_getRecordFieldValue(srcPageIdx,srcRecordIdx,srcFieldIdx).clone() ;
+						page_setRecordFieldValue(targetPageIdx,0,targetFieldIdx,refValue.clone()) ;
+						page_setFieldReadonly(targetPageIdx,targetFieldIdx, true) ;
 					}
 				}
 			}
-			
-			// INSERTION PAGE
-			int insertOffset = TransactionPages.size() ;
-	    	for( BibleHelper.BibleEntry bibleEntry : tBibleEntries ){
-	    		
-	    		String pivotTag = bibleEntry.entryKey ;
-	    		
-	    		
-	    		// TODO : Condition inverse sur la bible originale => pour le mapping
-	    		
-	    		
-	    		if( pagetagsCurrent.contains(pivotTag) ) {
-	    			continue ;
-	    		}
-	    		
-	    		List<CrmFilePageinfo> insertPages = pagetool_getCrmFilePageinfo( fpivot.containerPageId ) ;
-	    		for( CrmFilePageinfo fpi : insertPages) {
-	    			if( fpi.pageType == PageType.PAGETYPE_CONTAINER ) {
-	    				fpi.pageIsHidden = false ;
-	    				fpi.pageLib = bibleEntry.displayStr ;
-	    				fpi.pivotTag = pivotTag ;
-	    			}
-	    		}
-	    		
-	    		pages_insert( insertOffset , insertPages ) ;
-	    		
-	    		int targetPageId = fpivot.targetPageId ;
-	    		int targetFieldIdx = fpivot.targetFieldId ;
-	    		
-	    		int targetPageIdx = pagetool_findOffset(targetPageId, insertOffset) ;
-	    		if( targetPageIdx != -1 ) {
-	    			for( int tmpIdx2=0 ; tmpIdx2 < TransactionPageRecords.get(targetPageIdx).size() ; tmpIdx2++ ) {
-	    				page_setRecordFieldValue_bible( targetPageIdx , tmpIdx2, targetFieldIdx, bibleEntry.entryKey ) ;
-	    			}
-	    			TransactionPageFields.get(targetPageIdx).get(targetFieldIdx).fieldIsReadonly = true ;
-	    		}
-	    		
-	    		
-	    		
-	    		
-	    		
-	    		insertOffset += fpivot.containerSize ;
-	    	}
 		}
 	}
 	private void pivots_refreshInner() {
