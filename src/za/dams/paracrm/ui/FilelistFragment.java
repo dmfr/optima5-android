@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import za.dams.paracrm.CrmFileTransaction;
+import za.dams.paracrm.CrmFileTransaction.PageType;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import android.app.FragmentManager;
@@ -99,7 +100,10 @@ public class FilelistFragment extends ListFragment {
     			mMap.put("tab_icon", R.drawable.crm_filesave) ;
     		}
     		else{
-    			if(tFileinfo.fileIsSubfile) {
+    			if(tFileinfo.pageType == PageType.PAGETYPE_CONTAINER ) {
+    				mMap.put("tab_icon", R.drawable.crm_foldergreen) ;
+    			}
+    			else if(tFileinfo.fileIsSubfile) {
     				mMap.put("tab_icon", R.drawable.crm_filechild) ;
     			}
     			else {
