@@ -187,6 +187,8 @@ public class CrmFileTransaction {
 		public boolean conditionSrc ;
 		public int conditionSrcPageId ;
 		public int conditionSrcFieldId ;
+		public boolean repeatSrc ;
+		public int repeatSrcFieldId ;
 		public HashMap<Integer,Integer> copymapDestfieldSrcfield ;
 		
 		public CrmFilePivot() {
@@ -206,6 +208,8 @@ public class CrmFileTransaction {
 				conditionSrc = jsonObject.getBoolean("conditionSrc");
 				conditionSrcPageId = jsonObject.getInt("conditionSrcPageId");
 				conditionSrcFieldId = jsonObject.getInt("conditionSrcFieldId");
+				repeatSrc = jsonObject.getBoolean("repeatSrc");
+				repeatSrcFieldId = jsonObject.getInt("repeatSrcFieldId");
 				if( jsonObject.has("copymapDestfieldSrcfield") ) {
 					copymapDestfieldSrcfield = new HashMap<Integer,Integer>() ;
 					JSONObject jsonObjCopymap = jsonObject.getJSONObject("copymapDestfieldSrcfield");
@@ -237,6 +241,8 @@ public class CrmFileTransaction {
 				jsonObject.put("conditionSrc", conditionSrc) ;
 				jsonObject.put("conditionSrcPageId", conditionSrcPageId) ;
 				jsonObject.put("conditionSrcFieldId", conditionSrcFieldId) ;
+				jsonObject.put("repeatSrc", repeatSrc) ;
+				jsonObject.put("repeatSrcFieldId", repeatSrcFieldId) ;
 				if( copymapDestfieldSrcfield != null ) {
 					JSONObject jsonObjCopymap = new JSONObject() ;
 					for( Map.Entry<Integer, Integer> mapentry : copymapDestfieldSrcfield.entrySet() ) {
@@ -640,7 +646,7 @@ public class CrmFileTransaction {
 		tmpCursor.close() ;
 		
 		// ******** Ajout de toutes les pages **********
-		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_index FROM input_scen_page WHERE scen_id='%d' AND scen_page_parent_index='0' ORDER BY scen_page_index",CrmInputScenId) ) ;
+		tmpCursor = mDb.rawQuery( String.format("SELECT scen_page_index FROM input_scen_page WHERE scen_id='%d' AND (scen_page_parent_index='0' OR scen_page_parent_index IS NULL) ORDER BY scen_page_index",CrmInputScenId) ) ;
 		whileCursor :
     	while( tmpCursor.moveToNext() ){
     		int insertOffset = TransactionPages.size() ; // on ajoute linéairement
@@ -794,6 +800,8 @@ public class CrmFileTransaction {
 			cfpivot.conditionSrcPageId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_index")) ;
 			cfpivot.conditionSrcFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_field_index")) - 1 ;
 			cfpivot.conditionSrc = tmpCursor.getString(tmpCursor.getColumnIndex("foreignsrc_is_on")).equals("O") ? true : false ;
+			cfpivot.repeatSrcFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("repeat_foreignsrc_page_field_index")) - 1 ;
+			cfpivot.repeatSrc = tmpCursor.getString(tmpCursor.getColumnIndex("repeat_foreignsrc_is_on")).equals("O") ? true : false ;
 			
 			switch( cfpivot.pivotType ) {
 			case PIVOT_CONTAINER :
@@ -914,7 +922,7 @@ public class CrmFileTransaction {
 			if( tFileinfo.innerPivot == null ) {
 				switch( tFileinfo.pageType ) {
 				case PAGETYPE_TABLE :
-					page_fillTable( insertOffset, null ) ;
+					//page_fillTable( insertOffset, null ) ;
 					break ;
 				default :
 					page_fillSingle(insertOffset) ;
@@ -1002,6 +1010,9 @@ public class CrmFileTransaction {
 		
 	}
 	private void page_fillTable( int pageOffset, ArrayList<BibleEntry> bibleConditions ) {
+		page_fillTable(pageOffset,bibleConditions,1) ;
+	}
+	private void page_fillTable( int pageOffset, ArrayList<BibleEntry> bibleConditions, int repeatCount ) {
 		// ************ Création d'une table ************
 		//  - delete all records
 		//  - create tagged records
@@ -1031,86 +1042,94 @@ public class CrmFileTransaction {
     		return ;
     	}
     	
+    	// repeatCount
+    	if( repeatCount < 0 ) {
+    		repeatCount = 1 ;
+    	}
+    	
     	
     	// appel a bible helper pour remplir la table
     	BibleHelper bibleHelper = new BibleHelper(mContext) ;
     	int a = 0 ;
     	for( BibleHelper.BibleEntry bibleEntry : bibleHelper.queryBible(tFieldDescPivot.fieldLinkBible,bibleConditions) ){
 
-    		recordData = new HashMap<String,CrmFileFieldValue>() ;
+    		for( int cnt=0 ; cnt<repeatCount ; cnt++ ) {
 
-    		// CREATION DU FIELD
-    		for( CrmFileFieldDesc tFieldDesc : tFields ){
+    			recordData = new HashMap<String,CrmFileFieldValue>() ;
 
-    			if( tFieldDesc.fieldIsPivot ) {
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								new String(bibleEntry.entryKey),
-    								null,
-    								new String(bibleEntry.displayStr),
-    								true) ) ;
+    			// CREATION DU FIELD
+    			for( CrmFileFieldDesc tFieldDesc : tFields ){
 
-    				continue ;
+    				if( tFieldDesc.fieldIsPivot ) {
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									new String(bibleEntry.entryKey),
+    									null,
+    									new String(bibleEntry.displayStr),
+    									true) ) ;
+
+    					continue ;
+    				}
+
+
+
+
+    				switch( tFieldDesc.fieldType ) {
+    				case FIELD_DATE :
+    				case FIELD_DATETIME :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									null,
+    									new Date(),
+    									new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) ) ) ;
+    					break ;
+
+    				case FIELD_TEXT :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									new String(""),
+    									null,
+    									new String("") ) ) ;
+    					break ;
+
+    				case FIELD_BIBLE :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									new String(""),
+    									null,
+    									new String("") ) ) ;
+    					break ;
+
+    				case FIELD_NUMBER :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									null,
+    									null,
+    									new Integer(0).toString()) ) ;
+    					break ;
+
+    				default :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									null,
+    									null,
+    									null) ) ;
+    				}
     			}
-
-
-
-
-    			switch( tFieldDesc.fieldType ) {
-    			case FIELD_DATE :
-    			case FIELD_DATETIME :
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								null,
-    								new Date(),
-    								new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) ) ) ;
-    				break ;
-
-    			case FIELD_TEXT :
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								new String(""),
-    								null,
-    								new String("") ) ) ;
-    				break ;
-
-    			case FIELD_BIBLE :
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								new String(""),
-    								null,
-    								new String("") ) ) ;
-    				break ;
-
-    			case FIELD_NUMBER :
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								null,
-    								null,
-    								new Integer(0).toString()) ) ;
-    				break ;
-
-    			default :
-    				recordData.put(tFieldDesc.fieldCode,
-    						new CrmFileFieldValue(tFieldDesc.fieldType,
-    								new Float(0),
-    								false,
-    								null,
-    								null,
-    								null) ) ;
-    			}
+    			tRecords.add( new CrmFileRecord(a,recordData,!enableAll) ) ;
     		}
-    		tRecords.add( new CrmFileRecord(a,recordData,!enableAll) ) ;
     	}
     	    	
 
@@ -1763,8 +1782,6 @@ public class CrmFileTransaction {
 				Log.w(TAG,"ERROR 4") ;
 				continue ;
 			}
-			
-			
 			String foreignBiblecode = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldLinkBible ;
 			String foreignFieldkey = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldCode ;
 			if( foreignBiblecode==null ) {
@@ -1773,13 +1790,30 @@ public class CrmFileTransaction {
 				continue ;
 			}
 			
+			
+			// mode Repeat Source
+			String repeatFieldKey = null ;
+			if( fpivot.repeatSrc ) {
+				int repeatSrcFieldIdx = fpivot.repeatSrcFieldId ;
+				repeatFieldKey = TransactionPageFields.get(conditionSrcPageIdx).get(repeatSrcFieldIdx).fieldCode ;
+			}
+			
+			
+			
+			
 			// calcul du hash (besoin d'un reset ?)
 			ArrayList<String> currentConditionsTab = new ArrayList<String>() ;
 			for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
 				if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
 					continue ;
 				}
-				currentConditionsTab.add(cfr.recordData.get(foreignFieldkey).valueString) ;
+				StringBuilder sb = new StringBuilder() ;
+				sb.append(cfr.recordData.get(foreignFieldkey).valueString) ;
+				if( repeatFieldKey != null ) {
+					sb.append("*") ;
+					sb.append(String.valueOf((int)cfr.recordData.get(repeatFieldKey).valueFloat)) ;
+				}
+				currentConditionsTab.add(sb.toString()) ;
 			}
 			String currentConditionsHash = implodeArray(currentConditionsTab.toArray(new String[currentConditionsTab.size()]),"+") ;
 			
@@ -1789,6 +1823,7 @@ public class CrmFileTransaction {
 			}
 			fpivot.previousConditionsHash = currentConditionsHash ;
 			
+			int repeatCount = 0 ;
 			BibleHelper bh = new BibleHelper(mContext) ;
 			ArrayList<BibleHelper.BibleEntry> foreignEntries = new ArrayList<BibleHelper.BibleEntry>() ;
 			for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
@@ -1796,9 +1831,18 @@ public class CrmFileTransaction {
 					continue ;
 				}
 				foreignEntries.add(bh.getBibleEntry(foreignBiblecode, cfr.recordData.get(foreignFieldkey).valueString)) ;
+				
+				// DAMS : pas rigoureux car on devrait examiner la valeur pour chaque résultat bible (requete BibleHelper inverse comme pour outer)
+				if( repeatFieldKey != null ) {
+					repeatCount = (int)cfr.recordData.get(repeatFieldKey).valueFloat ;
+				}
 			}
 			
-			page_fillTable( pageIdx, foreignEntries ) ;
+			if( fpivot.repeatSrc ) {
+				page_fillTable( pageIdx, foreignEntries, repeatCount ) ;
+			} else {
+				page_fillTable( pageIdx, foreignEntries ) ;
+			}
 		}
 	}
 	
