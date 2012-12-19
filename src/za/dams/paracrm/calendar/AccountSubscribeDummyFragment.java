@@ -76,10 +76,10 @@ public class AccountSubscribeDummyFragment extends ListFragment {
 
 	@Override
 	public void onPause() {
-		Log.w(TAG,"Save changes ?") ;
+		//Log.w(TAG,"Save changes ?") ;
 		final ListAdapter listAdapter = getListAdapter();
 		if (listAdapter != null) {
-			Log.w(TAG,"Save changes !") ;
+			//Log.w(TAG,"Save changes !") ;
 			// **** Save changes ****
 			boolean enabled = ((AccountSubscribeDummyAdapter) listAdapter).isEnabled() ;
 			PrefsCrm.setCalendarEnabled(getActivity(), mCalendarFileCode, enabled) ;

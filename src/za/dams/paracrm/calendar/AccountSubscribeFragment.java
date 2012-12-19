@@ -96,10 +96,10 @@ public class AccountSubscribeFragment extends ListFragment
     
     @Override
     public void onPause() {
-    	Log.w(TAG,"Save changes ?") ;
+    	//Log.w(TAG,"Save changes ?") ;
         final ListAdapter listAdapter = getListAdapter();
         if (listAdapter != null) {
-        	Log.w(TAG,"Save changes !") ;
+        	//Log.w(TAG,"Save changes !") ;
         	// **** Save changes ****
         	
             HashMap<String, CalendarRow> changes = ((AccountSubscribeAdapter) listAdapter)
