@@ -6,7 +6,6 @@ import za.dams.paracrm.R;
 import android.app.ActionBar;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -18,9 +17,9 @@ public class AccountsActivity extends PreferenceActivity {
     // ******** Fields for PARACRM ********
     private static final String BUNDLE_KEY_CRM_ID = "crmId";
     private static final String BUNDLE_KEY_CALFILECODE = "fileCode";
+    private static final String BUNDLE_KEY_CALFILELIB = "fileLib";
     private static final String BUNDLE_KEY_SRCBIBLECODE = "srcBibleCode";
     private int mCrmInputId ;
-    private CrmCalendarManager mCrmCalendarManager ;
 
     @Override
     protected void onCreate(Bundle icicle) {
@@ -32,8 +31,6 @@ public class AccountsActivity extends PreferenceActivity {
         
         if (icicle != null && icicle.containsKey(BUNDLE_KEY_CRM_ID)) {
         	mCrmInputId = icicle.getInt(BUNDLE_KEY_CRM_ID);
-        	
-        	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
         }
 
     	super.onCreate(savedIcicle);
@@ -43,20 +40,33 @@ public class AccountsActivity extends PreferenceActivity {
     public void onBuildHeaders(List<Header> target) {
         loadHeadersFromResource(R.xml.calendar_settings_headers, target);
         
-        if( mCrmCalendarManager != null 
-        		&& mCrmCalendarManager.isValid() 
-        		&& mCrmCalendarManager.getCalendarInfos().mAccountIsOn ){
+        for( CrmCalendarManager.CrmCalendarInput cci : CrmCalendarManager.inputsList(getApplicationContext()) ){
         	
-            Header accountHeader = new Header();
-            accountHeader.title = mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
-            accountHeader.fragment =
-                    "za.dams.paracrm.calendar.AccountSubscribeFragment";
+        	CrmCalendarManager tCrmCalendarManager = new CrmCalendarManager(getApplicationContext(), cci.mCrmInputId) ;
+        	
+    		if( tCrmCalendarManager.getCalendarInfos().mAccountIsOn ){
+                Header accountHeader = new Header();
+                accountHeader.title = tCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
+                accountHeader.fragment =
+                        "za.dams.paracrm.calendar.AccountSubscribeFragment";
 
-            Bundle args = new Bundle();
-            args.putString(BUNDLE_KEY_CALFILECODE, mCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode);
-            args.putString(BUNDLE_KEY_SRCBIBLECODE, mCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode);
-            accountHeader.fragmentArguments = args;
-            target.add(accountHeader);
+                Bundle args = new Bundle();
+                args.putString(BUNDLE_KEY_CALFILECODE, tCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode);
+                args.putString(BUNDLE_KEY_SRCBIBLECODE, tCrmCalendarManager.getCalendarInfos().mAccountSrcBibleCode);
+                accountHeader.fragmentArguments = args;
+                target.add(accountHeader);
+            } else {
+                Header accountHeader = new Header();
+                accountHeader.title = tCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
+                accountHeader.fragment =
+                        "za.dams.paracrm.calendar.AccountSubscribeDummyFragment";
+
+                Bundle args = new Bundle();
+                args.putString(BUNDLE_KEY_CALFILECODE, tCrmCalendarManager.getCalendarInfos().mCrmAgendaFilecode);
+                args.putString(BUNDLE_KEY_CALFILELIB, tCrmCalendarManager.getCalendarInfos().mCrmAgendaLib);
+                accountHeader.fragmentArguments = args;
+                target.add(accountHeader);
+            }
         }
 
     }
@@ -77,5 +87,5 @@ public class AccountsActivity extends PreferenceActivity {
         getActionBar().setDisplayOptions(ActionBar.DISPLAY_HOME_AS_UP, ActionBar.DISPLAY_HOME_AS_UP);
         return true;
     }
-    
+
 }

@@ -14,6 +14,22 @@ public class PrefsCrm {
 	private static final String SHARED_PREFS_NAME = "Calendar";
 	
 	
+	public static boolean isCalendarEnabled(Context context, String calendarFilecode) {
+        SharedPreferences prefs = context.getSharedPreferences(SHARED_PREFS_NAME,0);
+        String prefKey = calendarFilecode+"__accounts" ;
+        return prefs.getBoolean(prefKey, false);
+	}
+    public static void setCalendarEnabled(Context context, String calendarFilecode, boolean enabled) {
+        SharedPreferences prefs = context.getSharedPreferences(SHARED_PREFS_NAME,0);
+        String prefKey = calendarFilecode+"__accounts" ;
+        SharedPreferences.Editor prefsEditor = prefs.edit() ;
+        
+        prefsEditor.putBoolean(prefKey, enabled) ;
+        prefsEditor.commit() ;
+    }
+	
+	
+	
 	
     public static Set<String> getSubscribedAccounts(Context context, String calendarFilecode) {
         SharedPreferences prefs = context.getSharedPreferences(SHARED_PREFS_NAME,0);
