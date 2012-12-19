@@ -68,12 +68,19 @@ public class EditEventActivity extends Activity {
         mIsMultipane = true ;
 
         if (mIsMultipane) {
+        	StringBuilder sb = new StringBuilder() ;
+        	sb.append(mEventInfo.id == -1 ? "Create Event" : "Modify Event") ;
+        	if( mCrmCalendarManager != null ) {
+        		sb.append(" / ") ;
+        		sb.append(mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib) ;
+        	}
+        	
+        	
             getActionBar().setDisplayOptions(
                     ActionBar.DISPLAY_SHOW_TITLE,
                     ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_HOME
                             | ActionBar.DISPLAY_SHOW_TITLE);
-            getActionBar().setTitle(
-                    mEventInfo.id == -1 ? "Create Event" : "Modify Event");
+            getActionBar().setTitle(sb.toString());
         }
         else {
             getActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM,
@@ -153,7 +160,7 @@ public class EditEventActivity extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            Utils.returnToCalendarHome(this,mCrmInputId);
+            Utils.returnToCalendarHome(this);
             return true;
         }
         return super.onOptionsItemSelected(item);

@@ -158,7 +158,7 @@ public class EventInfoFragment extends DialogFragment
 					mColor = presets.get("&") ;
 				}
 				if( mColor == 0 ) {
-					mColor = Color.WHITE ;
+					mColor = Color.GRAY ;
 				}
 			}
 			else{

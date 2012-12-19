@@ -336,6 +336,10 @@ public class CrmCalendarManager {
 		
 		crmEventModel.mAllDay = false ;
 		
+		if( mCrmAgendaInfos.mAccountIsOn ) {
+			crmEventModel.hasAccount = true ;
+		}
+		
 		if( mCrmAgendaInfos.mIsDoneable ) {
 			crmEventModel.isDoneable = true ;
 		}
@@ -428,7 +432,7 @@ public class CrmCalendarManager {
 			if( mBibleHelper==null ) {
 				mBibleHelper = new BibleHelper(mContext) ;
 			}
-		
+			crmEventModel.hasAccount = true ;
 			crmEventModel.mAccountEntry = mBibleHelper.getBibleEntry(mCrmAgendaInfos.mAccountSrcBibleCode
 					, fields.get(mCrmAgendaInfos.mAccountTargetFileField).valueLink ) ;
 			

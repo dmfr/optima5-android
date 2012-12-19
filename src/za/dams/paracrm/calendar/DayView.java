@@ -82,6 +82,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Formatter;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -112,6 +113,9 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private static final int MENU_EVENT_CREATE = 6;
     private static final int MENU_EVENT_EDIT = 7;
     private static final int MENU_EVENT_DELETE = 8;
+    
+    private static final int MENU_EVENT_CREATE_MULTI = 10;
+    
 
     private static int DEFAULT_CELL_HEIGHT = 64;
     private static int MAX_CELL_HEIGHT = 150;
@@ -179,6 +183,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private String mEventCountTemplate;
     private CharSequence[] mLongPressItems;
     private String mLongPressTitle;
+    // ParaCRM :
+    private List<CrmCalendarManager.CrmCalendarInput> mCrmCalendars ;
 
     protected static StringBuilder mStringBuilder = new StringBuilder(50);
     // TODO recreate formatter when locale changes
@@ -731,6 +737,10 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         mEdgeEffectBottom = new EdgeEffect(context);
         */
         OVERFLING_DISTANCE = ViewConfiguration.get(context).getScaledOverflingDistance();
+        
+        // ParaCRM : newEventCalendarMaps
+        mCrmCalendars = CrmCalendarManager.inputsList(context) ;
+        
 
         init(context);
     }
@@ -1361,15 +1371,20 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             // If we selected a specific event, switch to EventInfo view.
             if (trackBallSelection) {
                 if (selectedEvent == null) {
-                    // Switch to the EditEvent view
-                    long startMillis = getSelectedTimeInMillis();
-                    long endMillis = startMillis + DateUtils.HOUR_IN_MILLIS;
-                    long extraLong = 0;
-                    if (mSelectionAllday) {
-                        extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
-                    }
-                    mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, -1,
-                            startMillis, endMillis, -1, -1, extraLong, -1);
+                	if( mCrmCalendars.size() != 1 ) {
+                		performLongClick() ;
+                	} else {
+                		// Switch to CREATE EVENT
+                		long startMillis = getSelectedTimeInMillis();
+                		long endMillis = startMillis + DateUtils.HOUR_IN_MILLIS;
+                		long extraLong = 0;
+                		if (mSelectionAllday) {
+                			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
+                		}
+                		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+                		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
+                				startMillis, endMillis, -1, -1, extraLong, -1);
+                	}
                 } else {
                     if (mIsAccessibilityEnabled) {
                         mAccessibilityMgr.interrupt();
@@ -1397,15 +1412,20 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             // If we selected a free slot, then create an event.
             // If we selected an event, then go to the EventInfo view.
             if (selectedEvent == null) {
-                // Switch to the EditEvent view
-                long startMillis = getSelectedTimeInMillis();
-                long endMillis = startMillis + DateUtils.HOUR_IN_MILLIS;
-                long extraLong = 0;
-                if (mSelectionAllday) {
-                    extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
-                }
-                mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, -1,
-                        startMillis, endMillis, -1, -1, extraLong, -1);
+            	if( mCrmCalendars.size() != 1 ) {
+            		performLongClick() ;
+            	} else {
+            		// Switch to the CREATE EVENT
+            		long startMillis = getSelectedTimeInMillis();
+            		long endMillis = startMillis + DateUtils.HOUR_IN_MILLIS;
+            		long extraLong = 0;
+            		if (mSelectionAllday) {
+            			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
+            		}
+            		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+            		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
+            				startMillis, endMillis, -1, -1, extraLong, -1);
+            	}
             } else {
                 if (mIsAccessibilityEnabled) {
                     mAccessibilityMgr.interrupt();
@@ -3791,14 +3811,19 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         if (pressedSelected) {
             // If the tap is on an already selected hour slot, then create a new
             // event
-            long extraLong = 0;
-            if (mSelectionAllday) {
-                extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
-            }
-            mSelectionMode = SELECTION_SELECTED;
-            mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, -1,
-                    getSelectedTimeInMillis(), 0, (int) ev.getRawX(), (int) ev.getRawY(),
-                    extraLong, -1);
+        	if( mCrmCalendars.size() != 1 ) {
+        		performLongClick() ;
+        	} else {
+        		long extraLong = 0;
+        		if (mSelectionAllday) {
+        			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
+        		}
+        		mSelectionMode = SELECTION_SELECTED;
+        		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+        		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
+        				getSelectedTimeInMillis(), 0, (int) ev.getRawX(), (int) ev.getRawY(),
+        				extraLong, -1);
+        	}
         } else if (mSelectedEvent != null) {
             // If the tap is on an event, launch the "View event" view
             if (mIsAccessibilityEnabled) {
@@ -4207,6 +4232,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         final String title = Utils.formatDateRange(mContext, startMillis, startMillis, flags);
         menu.setHeaderTitle(title);
 
+        /*
         int numSelectedEvents = mSelectedEvents.size();
         if (mNumDays == 1) {
             // Day view.
@@ -4279,6 +4305,17 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             item.setIcon(android.R.drawable.ic_menu_day);
             item.setAlphabeticShortcut('d');
         }
+        */
+        
+        int idx=-1 ;
+        for( CrmCalendarManager.CrmCalendarInput cci : mCrmCalendars ) {
+        	idx++ ;
+            item = menu.add(0, MENU_EVENT_CREATE_MULTI + idx, 0, "New event : "+cci.mCrmAgendaLib);
+            item.setOnMenuItemClickListener(mContextMenuHandler);
+            item.setIcon(android.R.drawable.ic_menu_add);
+            // item.setAlphabeticShortcut('n');
+        }
+        
 
         mPopup.dismiss();
     }
@@ -4331,6 +4368,18 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                     break;
                 }
                 default: {
+                	int idx ;
+                	if( (idx = item.getItemId() - MENU_EVENT_CREATE_MULTI) >= 0 ) {
+                        long startMillis = getSelectedTimeInMillis();
+                        long endMillis = startMillis + DateUtils.HOUR_IN_MILLIS;
+
+                        CrmCalendarManager.CrmCalendarInput cci = mCrmCalendars.get(idx) ;
+                		//Log.w(TAG,"Creating event "+cci.mCrmAgendaLib+ cci.mCrmInputId ) ;
+                		mController.sendEventRelatedEvent(this, EventType.CREATE_EVENT, cci.mCrmInputId,
+                                startMillis, endMillis, 0, 0, -1);
+                	}
+                	
+                	
                     return false;
                 }
             }
@@ -4702,6 +4751,8 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
     @Override
     public boolean onLongClick(View v) {
+    	return false ;
+    	/*
         int flags = DateUtils.FORMAT_SHOW_WEEKDAY;
         long time = getSelectedTimeInMillis();
         if (!mSelectionAllday) {
@@ -4727,6 +4778,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                     }
                 }).show().setCanceledOnTouchOutside(true);
         return true;
+        */
     }
 
     // The rest of this file was borrowed from Launcher2 - PagedView.java

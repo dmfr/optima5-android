@@ -45,6 +45,7 @@ public class CrmEventModel implements Serializable {
     public boolean isDoneable = false ;
     public boolean isDone = false ;
     
+    public boolean hasAccount = false ;
     public BibleHelper.BibleEntry mAccountEntry ;
     
     public ArrayList<CrmFileFieldDesc> mCrmFields ;

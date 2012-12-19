@@ -136,6 +136,8 @@ public class EditEventFragment extends Fragment
 
 				
 				mView.setAccountsData( accountRows ) ;
+			} else {
+				mView.setAccountsData( null ) ;
 			}
 			
 			return null;

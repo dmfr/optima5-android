@@ -66,7 +66,6 @@ public class CalendarController {
     // ******** Fields for PARACRM ********
     private static final String BUNDLE_KEY_CRM_ID = "crmId";
     private static final String BUNDLE_KEY_EVENT_ID = "key_event_id" ;
-    private int mCrmInputId ;
     
 
     // This uses a LinkedHashMap so that we can replace fragments based on the
@@ -221,21 +220,11 @@ public class CalendarController {
      *
      * @param context The activity if at all possible.
      */
-    public static CalendarController getInstance(Context context ) {
+    public static CalendarController getInstance( Context context ) {
         synchronized (instances) {
             CalendarController controller = instances.get(context);
             if (controller == null) {
-                controller = new CalendarController(context,0);
-                instances.put(context, controller);
-            }
-            return controller;
-        }
-    }
-    public static CalendarController getInstance(Context context, int crmInputId ) {
-        synchronized (instances) {
-            CalendarController controller = instances.get(context);
-            if (controller == null) {
-                controller = new CalendarController(context,crmInputId);
+                controller = new CalendarController(context);
                 instances.put(context, controller);
             }
             return controller;
@@ -252,12 +241,11 @@ public class CalendarController {
         instances.remove(context);
     }
 
-    private CalendarController(Context context, int crmInputId ) {
+    private CalendarController(Context context) {
         mContext = context;
         mUpdateTimezone.run();
         mTime.setToNow();
         
-        mCrmInputId = crmInputId ;
         /*
         mDetailViewType = Utils.getSharedPreference(mContext,
                 GeneralPreferences.KEY_DETAILED_VIEW,
@@ -538,7 +526,8 @@ public class CalendarController {
             long endTime = (event.endTime == null) ? -1 : event.endTime.toMillis(false);
             if (event.eventType == EventType.CREATE_EVENT) {
                 launchCreateEvent(event.startTime.toMillis(false), endTime,
-                        event.extraLong == EXTRA_CREATE_ALL_DAY);
+                        event.extraLong == EXTRA_CREATE_ALL_DAY,
+                        (int)event.id);
                 return;
             } else if (event.eventType == EventType.VIEW_EVENT) {
                 //launchViewEvent(event.id, event.startTime.toMillis(false), endTime);
@@ -694,9 +683,10 @@ public class CalendarController {
     	
     	
     	//Log.w(TAG,"Lauching for scen id "+eventId) ;
+    	int crmInputId = CrmCalendarManager.queryInputFromEvent(mContext, (int)eventId).mCrmInputId ;
     	
     	// Load de l'event
-    	CrmCalendarManager crmCalMan = new CrmCalendarManager(mContext,CrmCalendarManager.queryInputFromEvent(mContext, (int)eventId).mCrmInputId) ;
+    	CrmCalendarManager crmCalMan = new CrmCalendarManager(mContext,crmInputId) ;
     	CrmEventModel crmEventModel = new CrmEventModel(mContext) ;
     	crmCalMan.populateModelLoad(crmEventModel, (int)eventId) ;
     	// "Package" de données bible à forwarder
@@ -706,7 +696,7 @@ public class CalendarController {
     	}
     	
     	// Quel est le scenario Forward ??
-    	int scenId = CrmCalendarManager.scenForwardGetId(mContext, mCrmInputId) ;
+    	int scenId = CrmCalendarManager.scenForwardGetId(mContext, crmInputId) ;
     	
     	if( scenId > 0 ) {
     		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
@@ -729,26 +719,20 @@ public class CalendarController {
     }
 
     private void launchAccounts() {
-    	
-    	
-    	final Bundle bundle = new Bundle();
-    	bundle.putInt(BUNDLE_KEY_CRM_ID, mCrmInputId);
-    	
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setClass(mContext, AccountsActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        intent.putExtras(bundle) ;
         mContext.startActivity(intent);
     }
 
    
-    private void launchCreateEvent(long startMillis, long endMillis, boolean allDayEvent) {
+    private void launchCreateEvent(long startMillis, long endMillis, boolean allDayEvent, int crmInputId) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setClass(mContext, EditEventActivity.class);
         intent.putExtra("EXTRA_EVENT_BEGIN_TIME", startMillis);
         intent.putExtra("EXTRA_EVENT_END_TIME", endMillis);
         intent.putExtra("EXTRA_EVENT_ALL_DAY", allDayEvent);
-        intent.putExtra(BUNDLE_KEY_CRM_ID, mCrmInputId);
+        intent.putExtra(BUNDLE_KEY_CRM_ID, crmInputId);
         mEventId = -1;
         mContext.startActivity(intent);
     }

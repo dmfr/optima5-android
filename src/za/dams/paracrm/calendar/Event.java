@@ -261,7 +261,7 @@ public class Event implements Cloneable {
 			e.color = accountsColor.get("&") ;
 		}
 		if( e.color == 0 ) {
-			e.color = Color.WHITE ;
+			e.color = Color.GRAY ;
 		}
     	
     	

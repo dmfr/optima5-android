@@ -138,13 +138,6 @@ public class CalendarActivity extends Activity implements EventHandler,
     private CalendarViewAdapter mActionBarMenuSpinnerAdapter;
     //private QueryHandler mHandler;
     private boolean mCheckForAccounts = true;
-    
-    
-    // ******** Fields for PARACRM ********
-    private static final String BUNDLE_KEY_CRM_ID = "crmId";
-    private int mCrmInputId ;
-    private CrmCalendarManager mCrmCalendarManager ;
-    
 
     private String mHideString;
     private String mShowString;
@@ -281,19 +274,6 @@ public class CalendarActivity extends Activity implements EventHandler,
             mCheckForAccounts = icicle.getBoolean(BUNDLE_KEY_CHECK_ACCOUNTS);
         }
         
-
-        if (icicle != null && icicle.containsKey(BUNDLE_KEY_CRM_ID)) {
-        	mCrmInputId = icicle.getInt(BUNDLE_KEY_CRM_ID);
-
-        	mCrmCalendarManager = new CrmCalendarManager( getApplicationContext(), mCrmInputId ) ;
-        }
-        
-        if( mCrmCalendarManager == null || !mCrmCalendarManager.isValid() ){
-        	Log.w(TAG,"CrmCalendarManager reports non valid !");
-        	this.finish() ;
-        }
-        
-        
         // Launch add google account if this is first time and there are no
         // accounts yet
 //        if (mCheckForAccounts
@@ -306,7 +286,7 @@ public class CalendarActivity extends Activity implements EventHandler,
 //        }
 
         // This needs to be created before setContentView
-        mController = CalendarController.getInstance(this,mCrmInputId);
+        mController = CalendarController.getInstance(this);
 
         // This needs to be created before onResume / onPause
         mSyncBroadcastReceiver = new SyncBroadcastReceiver( this ) ;
@@ -462,10 +442,10 @@ public class CalendarActivity extends Activity implements EventHandler,
         }
         //mActionBar.setDisplayShowTitleEnabled(true) ;
         
-        if( mCrmCalendarManager.isValid() ) {
-        	String title = mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
+        if( true ) {
+        	// String title = mCrmCalendarManager.getCalendarInfos().mCrmAgendaLib ;
         	mActionBar.setSubtitle("Calendar") ;
-        	mActionBar.setTitle(title) ;
+        	mActionBar.setTitle("Agenda") ;
         }
     }
 
@@ -627,7 +607,6 @@ public class CalendarActivity extends Activity implements EventHandler,
             outState.putLong(BUNDLE_KEY_EVENT_ID, mController.getEventId());
         }
         outState.putBoolean(BUNDLE_KEY_CHECK_ACCOUNTS, mCheckForAccounts);
-        outState.putInt(BUNDLE_KEY_CRM_ID, mCrmInputId);
     }
 
     @Override
@@ -768,12 +747,11 @@ public class CalendarActivity extends Activity implements EventHandler,
         
         
         // ParaCRM, get AgendaId / AgendaInfos and unmask "Accounts" button
-        if( mCrmCalendarManager != null && mCrmCalendarManager.isValid() ) {
+        if( CrmCalendarManager.inputsList( getApplicationContext() ).size() > 0 ) {
         	MenuItem mAccountsMenuItem = menu.findItem(R.id.action_subscriptions);
         	if( mAccountsMenuItem != null ) {
-        		boolean accountIsOn = mCrmCalendarManager.getCalendarInfos().mAccountIsOn ;
-        		mAccountsMenuItem.setVisible(accountIsOn);
-        		mAccountsMenuItem.setEnabled(accountIsOn);
+        		mAccountsMenuItem.setVisible(true);
+        		mAccountsMenuItem.setEnabled(true);
         	}
         }
         
@@ -1388,11 +1366,13 @@ public class CalendarActivity extends Activity implements EventHandler,
             	CrmFileTransactionManager.purgeInstance( getApplicationContext() ) ;
             	
             	if( precedentEventId > 0 ) {
+            		int crmInputId = CrmCalendarManager.queryInputFromEvent(getApplicationContext(), precedentEventId).mCrmInputId ;
+            		CrmCalendarManager crmCalendarManager = new CrmCalendarManager( getApplicationContext(),crmInputId ) ;
             		CrmEventModel model = new CrmEventModel( this ) ; 
-            		mCrmCalendarManager.populateModelLoad(model, precedentEventId) ;
+            		crmCalendarManager.populateModelLoad(model, precedentEventId) ;
             		if( model.mCrmFileId == precedentEventId ) {
             			model.isDone = true ;
-            			mCrmCalendarManager.doneSaveModel(model);
+            			crmCalendarManager.doneSaveModel(model);
             		}
             	}
 				

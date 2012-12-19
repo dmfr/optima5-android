@@ -503,6 +503,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
      */
     public void setAccountsData( AccountRow[] accountRows ) {
     	//Log.w(TAG,"Spinner size = "+accountRows.length ) ;
+    	if( accountRows == null ) {
+    		return ;
+    	}
     	
         // populate the calendars spinner
         AccountsAdapter adapter = new AccountsAdapter(mActivity, accountRows);
@@ -653,7 +656,11 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     	}
     }
     private void updateView(){
-        mCalendarSelectorGroup.setVisibility(View.VISIBLE);
+    	if( mModel.hasAccount ) {
+    		mCalendarSelectorGroup.setVisibility(View.VISIBLE);
+    	} else {
+    		mCalendarSelectorGroup.setVisibility(View.GONE);
+    	}
         mCalendarStaticGroup.setVisibility(View.GONE);
         
         setAllDayViewsVisibility(mModel.mAllDay); 
@@ -672,7 +679,7 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 	
 	
 	public boolean prepareForSave(){
-		if( mModel.mAccountEntry == null ) {
+		if( mModel.hasAccount && mModel.mAccountEntry == null ) {
 			return false ;
 		}
 		// Log.w(TAG,"Prepare for save !!") ;

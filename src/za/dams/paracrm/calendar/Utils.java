@@ -16,14 +16,23 @@
 
 package za.dams.paracrm.calendar;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CalendarController.ViewType;
-
 import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
@@ -35,18 +44,6 @@ import android.text.format.DateUtils;
 import android.text.format.Time;
 import android.util.Log;
 import android.widget.SearchView;
-
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Formatter;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 public class Utils {
     private static final boolean DEBUG = false;
@@ -102,9 +99,6 @@ public class Utils {
 
     public static final String APPWIDGET_DATA_TYPE = "vnd.android.data/update";
     
-    // Paracrm
-    private static final String BUNDLE_KEY_CRM_ID = "crmId";
-
     // private static final TimeZoneUtils mTZUtils = new TimeZoneUtils(SHARED_PREFS_NAME);
     private static boolean mAllowWeekForDetailView = false;
     private static long mTardis = 0;
@@ -1066,9 +1060,8 @@ public class Utils {
      *
      * @param context
      */
-    public static void returnToCalendarHome(Context context, int crmInputId ) {
+    public static void returnToCalendarHome(Context context) {
     	final Bundle bundle = new Bundle();
-    	bundle.putInt(BUNDLE_KEY_CRM_ID, crmInputId);
     	bundle.putBoolean(INTENT_KEY_HOME, true);
     	
         Intent launchIntent = new Intent(context, CalendarActivity.class);

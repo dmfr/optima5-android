@@ -15,11 +15,9 @@ public class AccountsActivity extends PreferenceActivity {
 	ActionBar mActionBar ;
 	
     // ******** Fields for PARACRM ********
-    private static final String BUNDLE_KEY_CRM_ID = "crmId";
     private static final String BUNDLE_KEY_CALFILECODE = "fileCode";
     private static final String BUNDLE_KEY_CALFILELIB = "fileLib";
     private static final String BUNDLE_KEY_SRCBIBLECODE = "srcBibleCode";
-    private int mCrmInputId ;
 
     @Override
     protected void onCreate(Bundle icicle) {
@@ -27,10 +25,6 @@ public class AccountsActivity extends PreferenceActivity {
     	
         if( icicle == null ){
         	icicle = this.getIntent().getExtras();
-        }
-        
-        if (icicle != null && icicle.containsKey(BUNDLE_KEY_CRM_ID)) {
-        	mCrmInputId = icicle.getInt(BUNDLE_KEY_CRM_ID);
         }
 
     	super.onCreate(savedIcicle);
@@ -75,7 +69,7 @@ public class AccountsActivity extends PreferenceActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                Utils.returnToCalendarHome(this,mCrmInputId);
+                Utils.returnToCalendarHome(this);
                 return true;
         }
         return super.onOptionsItemSelected(item);
