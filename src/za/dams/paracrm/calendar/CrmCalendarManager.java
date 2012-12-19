@@ -782,12 +782,12 @@ public class CrmCalendarManager {
     	Time timeStart = new Time() ;
     	timeStart.setJulianDay(julianDayStart) ;
     	String sqlTimeStart = timeStart.format("%Y-%m-%d");
-    	sbEnt.append(String.format(" AND det_start.filerecord_field_value_date >= '%s'",sqlTimeStart)) ;
-		
     	Time timeEnd = new Time() ;
     	timeEnd.setJulianDay(julianDayEnd+1) ;
     	String sqlTimeEnd = timeEnd.format("%Y-%m-%d");
-    	sbEnt.append(String.format(" AND det_end.filerecord_field_value_date < '%s'",sqlTimeEnd)) ;
+
+    	sbEnt.append(String.format(" AND det_start.filerecord_field_value_date < '%s'",sqlTimeEnd)) ;
+    	sbEnt.append(String.format(" AND det_end.filerecord_field_value_date >= '%s'",sqlTimeStart)) ;
     	
     	if( this.mCrmAgendaInfos.mAccountIsOn && accounts.size() > 0 ) {
     		StringBuilder sbAcct = new StringBuilder() ;
