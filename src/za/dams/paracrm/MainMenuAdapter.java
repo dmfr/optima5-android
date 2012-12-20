@@ -74,15 +74,12 @@ public class MainMenuAdapter extends BaseAdapter {
 		
 		tmpCursor = mDbManager.rawQuery("SELECT * FROM input_calendar ORDER BY calendar_name") ;
 		if( tmpCursor.getCount() > 0 ) {
-	    	while( !tmpCursor.isLast() ){
-	    		tmpCursor.moveToNext();
-	    		aId++ ;
-	    		MODULES_DICT.add(new ModuleInfo(aId,
-	    				tmpCursor.getString(tmpCursor.getColumnIndex("calendar_name")), 
-	    				R.drawable.mainmenu_calendar, 
-	    				CalendarActivity.class,
-	    				tmpCursor.getInt(tmpCursor.getColumnIndex("calendar_id"))));
-	    	}
+			aId++ ;
+			MODULES_DICT.add(new ModuleInfo(aId,
+					"Calendar", 
+					R.drawable.mainmenu_calendar, 
+					CalendarActivity.class,
+					0 ));
 		}
 		tmpCursor.close() ;
 		
