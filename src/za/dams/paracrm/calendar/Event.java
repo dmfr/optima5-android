@@ -63,6 +63,7 @@ public class Event implements Cloneable {
 
     public long id;
     public int color;
+    public boolean colorFixed ;
     public CharSequence title;
     public CharSequence location;
     public boolean allDay;
@@ -106,6 +107,7 @@ public class Event implements Cloneable {
 
         e.title = title;
         e.color = color;
+        e.colorFixed = colorFixed ;
         e.location = location;
         e.allDay = allDay;
         e.startDay = startDay;
@@ -128,6 +130,7 @@ public class Event implements Cloneable {
         dest.id = id;
         dest.title = title;
         dest.color = color;
+        dest.colorFixed = colorFixed ;
         dest.location = location;
         dest.allDay = allDay;
         dest.startDay = startDay;
@@ -150,6 +153,7 @@ public class Event implements Cloneable {
         e.id = 0;
         e.title = null;
         e.color = 0;
+        e.colorFixed = false ;
         e.location = null;
         e.allDay = false;
         e.startDay = 0;
@@ -254,7 +258,12 @@ public class Event implements Cloneable {
     	e.hasAlarm = false ;
     	e.selfAttendeeStatus = 0 ;
     	
-		if( calManager.getCalendarInfos().mAccountIsOn ) {
+    	if( model.hasFixedColor ) {
+    		//Log.w(TAG,"Fixed color "+model.mFixedColor);
+    		e.color = model.mFixedColor ;
+    		e.colorFixed = true ;
+    	}
+    	else if( calManager.getCalendarInfos().mAccountIsOn ) {
 			e.color = accountsColor.get(model.mAccountEntry.entryKey) ;
 		}
 		else if( accountsColor.size() > 0 ) {

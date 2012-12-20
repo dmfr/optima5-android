@@ -18,6 +18,7 @@ import za.dams.paracrm.DatabaseManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.text.format.Time;
 import android.util.Log;
 
@@ -32,7 +33,7 @@ public class CrmCalendarManager {
 	private CrmCalendarAccount mCrmAgendaInfos ;
 	
 	public enum CalendarField {
-		CALFIELD_START, CALFIELD_END, CALFIELD_STATUS, CALFIELD_ACCOUNT
+		CALFIELD_START, CALFIELD_END, CALFIELD_STATUS, CALFIELD_ACCOUNT, CALFIELD_COLOR
 	}
 	public static class CrmCalendarInput {
 		public int mCrmInputId ;
@@ -65,6 +66,9 @@ public class CrmCalendarManager {
 		public boolean mAccountIsOn ;
 		public String mAccountTargetFileField ;
 		public String mAccountSrcBibleCode ;
+		
+		public boolean mColorIsFixed ;
+		public String mColorFileField ;
 		
 		public HashMap<String,CalendarDuration> mDurationsTable ;
 		
@@ -255,10 +259,15 @@ public class CrmCalendarManager {
     			mCrmAgendaInfos.mIsDoneable = true ;
     			mCrmAgendaInfos.mIsDoneFileField = tmpCursor.getString(tmpCursor.getColumnIndex("eventstatus_filefield")) ;
     		}
+    		if( tmpCursor.getString(tmpCursor.getColumnIndex("color_is_fixed")).equals("O") ) {
+    			mCrmAgendaInfos.mColorIsFixed = true ;
+    			mCrmAgendaInfos.mColorFileField = tmpCursor.getString(tmpCursor.getColumnIndex("color_filefield")) ;
+    		}
 			for( CrmFileFieldDesc fd : tFields ) {
 				if( fd.fieldCode.equals(mCrmAgendaInfos.mEventStartFileField) 
 						|| fd.fieldCode.equals(mCrmAgendaInfos.mEventEndFileField)
-						|| (mCrmAgendaInfos.mIsDoneable && fd.fieldCode.equals(mCrmAgendaInfos.mIsDoneFileField)) ) {
+						|| (mCrmAgendaInfos.mIsDoneable && fd.fieldCode.equals(mCrmAgendaInfos.mIsDoneFileField))
+						|| (mCrmAgendaInfos.mColorIsFixed && fd.fieldCode.equals(mCrmAgendaInfos.mColorFileField)) ) {
 					fieldsToRemove.add(fd) ;
 				}
 			}
@@ -338,6 +347,10 @@ public class CrmCalendarManager {
 		
 		if( mCrmAgendaInfos.mAccountIsOn ) {
 			crmEventModel.hasAccount = true ;
+		}
+		
+		if( mCrmAgendaInfos.mColorIsFixed ) {
+			crmEventModel.hasFixedColor = true ;
 		}
 		
 		if( mCrmAgendaInfos.mIsDoneable ) {
@@ -422,6 +435,14 @@ public class CrmCalendarManager {
 			crmEventModel.isDoneable = true ;
 			if( fields.containsKey(mCrmAgendaInfos.mIsDoneFileField) ) {
 				crmEventModel.isDone = (fields.get(mCrmAgendaInfos.mIsDoneFileField).valueNumber == 1)?true:false ;
+			}
+		}
+		if( mCrmAgendaInfos.mColorIsFixed ) {
+			crmEventModel.hasFixedColor = true ;
+			if( fields.containsKey(mCrmAgendaInfos.mColorFileField) ) {
+				try {
+					crmEventModel.mFixedColor = Color.parseColor("#"+fields.get(mCrmAgendaInfos.mColorFileField).valueString) ;
+				} catch( IllegalArgumentException e ) {}
 			}
 		}
 		
@@ -617,6 +638,12 @@ public class CrmCalendarManager {
     		if( !statusField.equals("") ) {
     			calFields.put(statusField, CalendarField.CALFIELD_STATUS) ;
     		}
+    		// color
+    		String colorFixed = tmpCursor.getString(tmpCursor.getColumnIndex("color_is_fixed")) ;
+    		String colorField = tmpCursor.getString(tmpCursor.getColumnIndex("color_filefield")) ;
+    		if( colorFixed.equals("O") && !colorField.equals("") ) {
+    			calFields.put(colorField, CalendarField.CALFIELD_COLOR) ;
+    		}
     		// account
     		String accountOn = tmpCursor.getString(tmpCursor.getColumnIndex("account_is_on")) ;
     		String accountField = tmpCursor.getString(tmpCursor.getColumnIndex("account_filefield")) ;
@@ -690,6 +717,13 @@ public class CrmCalendarManager {
 					cv.put("filerecord_id", currentFileId);
 					cv.put("filerecord_field_code", fileFieldCode);
 					cv.put("filerecord_field_value_link",crmEventModel.mAccountEntry.entryKey) ;
+					mDb.insert("store_file_field", cv);
+					break ;
+				case CALFIELD_COLOR :
+					cv = new ContentValues() ;
+					cv.put("filerecord_id", currentFileId);
+					cv.put("filerecord_field_code", fileFieldCode);
+					cv.put("filerecord_field_value_string",String.format("%06X", 0xFFFFFF & crmEventModel.mFixedColor)) ;
 					mDb.insert("store_file_field", cv);
 					break ;
 				}

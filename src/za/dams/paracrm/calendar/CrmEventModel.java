@@ -48,6 +48,9 @@ public class CrmEventModel implements Serializable {
     public boolean hasAccount = false ;
     public BibleHelper.BibleEntry mAccountEntry ;
     
+    public boolean hasFixedColor = false ;
+    public int mFixedColor = 0 ;
+
     public ArrayList<CrmFileFieldDesc> mCrmFields ;
     public ArrayList<CrmFileFieldValue> mCrmValues ;
     public String[] mCrmTitle ;

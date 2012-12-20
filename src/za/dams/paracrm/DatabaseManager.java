@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 16;
+    private final int DB_VERSION = 17;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -131,7 +131,9 @@ public class DatabaseManager {
                     + "account_filefield" + " VARCHAR(20),"
                     + "duration_is_fixed" + " VARCHAR(1),"
                     + "duration_src_filefield" + " VARCHAR(20),"
-                    + "duration_src_biblefield" + " VARCHAR(20)"
+                    + "duration_src_biblefield" + " VARCHAR(20),"
+                    + "color_is_fixed" + " VARCHAR(1),"
+                    + "color_filefield" + " VARCHAR(20)"
                     + ");";
             db.execSQL(createTableQuery);
 
