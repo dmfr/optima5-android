@@ -15,6 +15,8 @@ import za.dams.paracrm.R;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
+import za.dams.paracrm.widget.ColorPickerDialog;
+import za.dams.paracrm.widget.ColorPickerDialog.OnColorChangedListener;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
@@ -81,6 +83,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     View mCalendarSelectorGroup;
     View mCalendarSelectorWrapper;
     View mCalendarStaticGroup;
+    View mFixedColorGroup;
+    View mFixedColorWrapper;
+    View mFixedColor;
     View mAllDayRow ;
     View mIsDoneRow ;
     CheckBox mIsDoneCheckBox;
@@ -113,6 +118,10 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         // cache all the widgets
         mViewgroupTable = (ViewGroup)view.findViewById(R.id.calendar_editevent_table);
         
+        
+        mFixedColorGroup = view.findViewById(R.id.static_color_row);
+        mFixedColorWrapper = view.findViewById(R.id.static_color_wrapper);
+        mFixedColor = view.findViewById(R.id.static_color);
         mCalendarsSpinner = (Spinner) view.findViewById(R.id.calendars_spinner);
         mStartDateButton = (Button) view.findViewById(R.id.start_date);
         mEndDateButton = (Button) view.findViewById(R.id.end_date);
@@ -134,6 +143,40 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
 		mChangeListener = changeListener ;
 	}
 	
+	
+	private class ColorListener implements OnColorChangedListener {
+		private View mView ;
+		
+		public ColorListener( View view ) {
+			mView = view ;
+		}
+		
+		@Override
+		public void colorChanged(int color) {
+			if( mModel.hasFixedColor && mView == mFixedColorWrapper ) {
+				mFixedColor.setBackgroundColor(color) ;
+				mModel.mFixedColor = color ;
+			}
+            if( mChangeListener != null ) {
+            	mChangeListener.onEditEventViewChanged() ;
+            }
+		}
+		
+	}
+    private class ColorClickListener implements View.OnClickListener {
+    	
+        public ColorClickListener() {
+        }
+
+        public void onClick(View v) {
+        	FragmentTransaction ft = mActivity.getFragmentManager().beginTransaction();
+        	
+            ColorPickerDialog cpd = new ColorPickerDialog(mActivity, new ColorListener(v), mModel.mFixedColor);
+            //bpd.setTargetFragment(this, 0);
+            //bpd.setCanceledOnTouchOutside(true);
+            cpd.show(ft, "dialog") ;
+        }
+    }
 	
     private class TimeListener implements OnTimeSetListener {
         private View mView;
@@ -661,6 +704,15 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     	} else {
     		mCalendarSelectorGroup.setVisibility(View.GONE);
     	}
+    	
+    	if( mModel.hasFixedColor ) {
+    		mFixedColorGroup.setVisibility(View.VISIBLE);
+    		mFixedColorWrapper.setOnClickListener(new ColorClickListener()) ;
+    		mFixedColor.setBackgroundColor(mModel.mFixedColor) ;
+    	} else {
+    		mFixedColorGroup.setVisibility(View.GONE);
+    	}
+    	
         mCalendarStaticGroup.setVisibility(View.GONE);
         
         setAllDayViewsVisibility(mModel.mAllDay); 

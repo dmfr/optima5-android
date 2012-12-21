@@ -351,6 +351,7 @@ public class CrmCalendarManager {
 		
 		if( mCrmAgendaInfos.mColorIsFixed ) {
 			crmEventModel.hasFixedColor = true ;
+			crmEventModel.mFixedColor = Color.BLACK ;
 		}
 		
 		if( mCrmAgendaInfos.mIsDoneable ) {

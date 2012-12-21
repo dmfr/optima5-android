@@ -20,6 +20,44 @@
     android:shrinkColumns="1"
     android:id="@+id/calendar_editevent_table">
 
+    <!-- COLOR SELECTOR for events -->
+    <TableRow
+        android:gravity="center_vertical"
+        android:id="@+id/static_color_row"
+        android:visibility="visible"
+        android:focusable="true">
+        <TextView
+            android:id="@+id/static_color_label"
+            android:text="Event Color"
+            android:gravity="center_vertical"
+            style="@style/TextAppearance.EditEvent_Label" />
+        <FrameLayout
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginRight="12dip"
+            android:layout_marginLeft="12dip"
+            android:focusable="true">
+            <RelativeLayout
+                android:id="@+id/static_color_wrapper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" 
+                android:layout_marginRight="0dip"
+                android:layout_marginLeft="0dip"
+				style="@style/TextAppearance.EditEvent_Spinner">
+                <View
+                    android:id="@+id/static_color"
+                    android:layout_width="64dip"
+                    android:layout_height="32dip"
+                    android:layout_marginRight="4dip"
+                    android:layout_marginTop="8dip"
+                    android:background="#ff0000" />
+            </RelativeLayout>
+        </FrameLayout>
+	</TableRow>
+    
+   
     <!-- CALENDARS SELECTOR for new events -->
     <TableRow
         android:id="@+id/calendar_selector_group"
