@@ -1,6 +1,6 @@
 package za.dams.paracrm.widget;
 
-import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,11 +11,15 @@ import android.graphics.Shader;
 import android.graphics.SweepGradient;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
-public class ColorPickerDialog extends Dialog {
+public class ColorPickerDialog extends DialogFragment {
+	
+	private Context mContext ;
 
     public interface OnColorChangedListener {
         void colorChanged(int color);
@@ -199,32 +203,46 @@ public class ColorPickerDialog extends Dialog {
 
     public ColorPickerDialog(Context context, OnColorChangedListener listener,
             int initialColor) {
-        super(context);
+        //super(context);
 
         mListener = listener;
         mInitialColor = initialColor;
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
+    
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+    	super.onActivityCreated(savedInstanceState);
+    	
+    	mContext = getActivity();
+    	getDialog().setTitle("Pick a Color");
+    }
+    
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+    	
         OnColorChangedListener l = new OnColorChangedListener() {
             public void colorChanged(int color) {
                 mListener.colorChanged(color);
-                dismiss();
+                getDialog().dismiss();
             }
         };
-
-        LinearLayout layout = new LinearLayout(getContext());
+        
+        Context c = getActivity() ;
+    	
+        LinearLayout layout = new LinearLayout(c);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
         layout.setPadding(10, 10, 10, 10);
-        layout.addView(new ColorPickerView(getContext(), l, mInitialColor),
+        layout.addView(new ColorPickerView(c, l, mInitialColor),
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        setContentView(layout);
-        setTitle("Pick a Color");
+        return layout ;
     }
 }
