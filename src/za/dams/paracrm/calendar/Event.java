@@ -34,8 +34,9 @@ import android.util.Log;
 // TODO: should Event be Parcelable so it can be passed via Intents?
 public class Event implements Cloneable {
 
-    private static final String TAG = "CalEvent";
-    private static final boolean PROFILE = false;
+	private static final boolean DEBUG = false ;
+	private static final String TAG = "CalEvent";
+	private static final boolean PROFILE = false;
 
     /**
      * The sort order is:
@@ -249,7 +250,11 @@ public class Event implements Cloneable {
     	e.allDay = model.mAllDay ;
     	e.isDone = model.isDone ;
     	
-    	e.title = "Title "+e.id ;
+    	if( DEBUG ) {
+    		e.title = "Title "+e.id ;
+    	} else {
+    		e.title = "" ;
+    	}
     	e.location = Utils.implodeArray(model.mCrmTitle, System.getProperty("line.separator")) ;
     	
     	e.organizer = "" ;

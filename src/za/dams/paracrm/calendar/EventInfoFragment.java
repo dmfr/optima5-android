@@ -151,7 +151,11 @@ public class EventInfoFragment extends DialogFragment
 				}
 				
 				Map<String,Integer> presets = PrefsCrm.getAccountsColor(mContext, crmCalendarInput.mCrmAgendaId ) ;
-				if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
+				if( mModel.hasFixedColor ) {
+					//Log.w(TAG,"Fixed color "+model.mFixedColor);
+					mColor = mModel.mFixedColor ;
+				}
+				else if( mCrmCalendarManager.getCalendarInfos().mAccountIsOn ) {
 					mColor = presets.get(mModel.mAccountEntry.entryKey) ;
 				}
 				else if( presets.size() > 0 ) {
@@ -181,6 +185,8 @@ public class EventInfoFragment extends DialogFragment
 	
     public EventInfoFragment(Context context, long eventId, long startMillis, long endMillis,
             boolean isDialog, int windowStyle) {
+    	
+    	mContext = context ;
 
         if (isDialog) {
             Resources r = context.getResources();
