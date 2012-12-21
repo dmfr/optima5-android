@@ -136,10 +136,10 @@ public class AccountSubscribeDummyFragment extends ListFragment {
 				setText(view, R.id.status, mNotSyncedString);
 			}
 
-			/*
+			
 			View colorView = view.findViewById(R.id.color);
 			colorView.setVisibility(View.INVISIBLE) ;
-			*/
+			
 			
 			setText(view, R.id.calendar, AccountSubscribeDummyFragment.this.mCalendarFileLib);
 			return view;

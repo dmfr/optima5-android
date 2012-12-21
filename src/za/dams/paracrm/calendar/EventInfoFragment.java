@@ -132,16 +132,17 @@ public class EventInfoFragment extends DialogFragment
 		protected Void doInBackground(Void... arg0) {
 			
 			if (mEventId != -1) {
+				Context context = EventInfoFragment.this.getActivity() ;
 				int eventId = (int)mEventId ;
 
-				mModel = new CrmEventModel( mContext ) ; 
+				mModel = new CrmEventModel( context ) ; 
 				
 				/// ******* Appel à CrmCalendarManager to load CrmEventModel *******
-				CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(mContext, eventId) ;
+				CrmCalendarInput crmCalendarInput = CrmCalendarManager.queryInputFromEvent(context, eventId) ;
 				if( crmCalendarInput == null ){
 					return null ;
 				}
-				mCrmCalendarManager = new CrmCalendarManager( mContext, crmCalendarInput.mCrmAgendaId ) ;
+				mCrmCalendarManager = new CrmCalendarManager( context, crmCalendarInput.mCrmAgendaId ) ;
 				if( mCrmCalendarManager == null ) {
 					return null ;
 				}
@@ -150,7 +151,7 @@ public class EventInfoFragment extends DialogFragment
 					//Log.w(TAG,"Example : account is "+mModel.mAccountEntry.displayStr) ;
 				}
 				
-				Map<String,Integer> presets = PrefsCrm.getAccountsColor(mContext, crmCalendarInput.mCrmAgendaId ) ;
+				Map<String,Integer> presets = PrefsCrm.getAccountsColor(context, crmCalendarInput.mCrmAgendaId ) ;
 				if( mModel.hasFixedColor ) {
 					//Log.w(TAG,"Fixed color "+model.mFixedColor);
 					mColor = mModel.mFixedColor ;
@@ -186,8 +187,6 @@ public class EventInfoFragment extends DialogFragment
     public EventInfoFragment(Context context, long eventId, long startMillis, long endMillis,
             boolean isDialog, int windowStyle) {
     	
-    	mContext = context ;
-
         if (isDialog) {
             Resources r = context.getResources();
 
@@ -574,7 +573,7 @@ public class EventInfoFragment extends DialogFragment
     		mCrmFieldViews = new ArrayList<View>();
     	}
     	// Fin du detach 
-    	LayoutInflater inflater = mActivity.getLayoutInflater() ;
+    	LayoutInflater inflater = getActivity().getLayoutInflater() ;
     	View newView ;
     	int crmFieldsIndex = -1 ;
     	for( CrmFileFieldDesc fd : mModel.mCrmFields ) {
