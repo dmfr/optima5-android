@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.KeyEvent;
@@ -49,7 +50,6 @@ public class InputPickerDialog extends DialogFragment implements DialogInterface
 	}
 	public Dialog onCreateDialog(Bundle savedInstanceState) {
 		m_editText = new EditText(getActivity());
-		m_editText.setText(mOriginalValue) ;
 		switch( mInputType ) {
 		case TYPE_STRING :
 			m_editText.setSingleLine(true) ;
@@ -59,6 +59,7 @@ public class InputPickerDialog extends DialogFragment implements DialogInterface
 			m_editText.setSingleLine(false) ;
 			m_editText.setLines(5) ;
 			m_editText.setMaxLines(5) ;
+			m_editText.setGravity(Gravity.TOP) ;
 			break ;
 			
 		case TYPE_INTEGER :
@@ -90,6 +91,8 @@ public class InputPickerDialog extends DialogFragment implements DialogInterface
 			
 			break ;
 		}
+
+		m_editText.append(mOriginalValue) ;
 
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity()) ;
