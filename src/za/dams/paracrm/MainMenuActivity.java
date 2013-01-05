@@ -55,7 +55,6 @@ public class MainMenuActivity extends Activity {
 	
 	private MainMenuAdapter mAdapter ;
 	private MainMenuStaticAdapter mStaticMenuAdapter ;
-	private MenuModulesAdapter mMenuModulesAdapter ;
 	private Thread mStaticMenuAdapterRefreshThread ;
 	
 	private Thread asyncSanityCheker ;
@@ -138,26 +137,7 @@ public class MainMenuActivity extends Activity {
         
         
         
-        
-        mMenuModulesAdapter = new MenuModulesAdapter(this) ;
-        
-        GridView modulesGrid = (GridView) findViewById(R.id.modulesgridview);
-        modulesGrid.setAdapter(mMenuModulesAdapter);
-
-        modulesGrid.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-            	final MenuModulesAdapter.ModuleInfo mModule = mMenuModulesAdapter.getItem(position) ;
-            	if( mModule.classObject == null ) {
-            		return ;
-            	}
-        		Intent intent = new Intent(MainMenuActivity.this, mModule.classObject);
-        		startActivity(intent);
-            }
-        });
-        ((GridView)findViewById(R.id.modulesgridview)).setVisibility(View.GONE) ;
-        
-        
-        
+ 
         mAdapter = new MainMenuAdapter(this) ;
         
         GridView gridview = (GridView) findViewById(R.id.dynamicgridview);
