@@ -2,8 +2,6 @@ package za.dams.paracrm;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -43,13 +41,15 @@ import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.provider.Settings.Secure;
-import android.util.Base64;
-import android.util.Log;
 
 public class SyncService extends Service {
 	
 	public static final String TAG = "SyncService" ;
+	
+	public static final String EXTRA_MESSENGER = "za.dams.paracrm.SyncService.EXTRA_MESSENGER" ;
 	
 	public static final String SYNCSERVICE_BROADCAST = "SyncServiceBroadcast" ;
 	
@@ -59,6 +59,10 @@ public class SyncService extends Service {
 	
 	public static final String SYNCPULL_FILECODE = "SyncPullFilecode" ;
 	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullNoIncrement" ;
+	public static final String PULL_REQUEST = "PullRequest" ;
+	
+	private Messenger mMessenger ;
+	private SyncPullRequest mOriginalPullRequest ;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -79,14 +83,31 @@ public class SyncService extends Service {
 		if( intent != null ){
 			bundle = intent.getExtras() ;
 		}
-		if( bundle != null && bundle.containsKey(SYNCPULL_FILECODE) ){
+		
+		if( bundle != null && bundle.containsKey(EXTRA_MESSENGER) ) {
+			mMessenger = (Messenger)bundle.get(EXTRA_MESSENGER);
+		}
+		
+		if( bundle != null && bundle.containsKey(PULL_REQUEST) ) {
+			mOriginalPullRequest = (SyncPullRequest)bundle.getParcelable(PULL_REQUEST) ;
+			// Log.w(TAG,"Starting pull for "+mOriginalPullRequest.fileCode) ;
+			new SyncTask().execute(mOriginalPullRequest) ;
+		}
+		else if( bundle != null && bundle.containsKey(SYNCPULL_FILECODE) ){
 			String[] filesCodes = bundle.getStringArray(SYNCPULL_FILECODE) ;
-			if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
-				for( String fileCode : filesCodes ){
+			SyncPullRequest[] prs = new SyncPullRequest[filesCodes.length] ;
+			int idx = 0 ;
+			for( String fileCode : filesCodes ){
+				if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
 					syncPullResetLastTimestamp( fileCode ) ;
 				}
+				
+				SyncPullRequest pr = new SyncPullRequest() ;
+				pr.fileCode = fileCode ;
+				prs[idx] = pr ;
+				idx++ ;
 			}
-			new SyncTask().execute(filesCodes) ;
+			new SyncTask().execute(prs) ;
 		}
 		else {
 			new SyncTask().execute() ;
@@ -107,16 +128,41 @@ public class SyncService extends Service {
 	}
 	
 	
-	private class SyncTask extends AsyncTask<String, Integer, Boolean> {
+	private class SyncTask extends AsyncTask<SyncPullRequest, Integer, Boolean> {
     	protected void onPreExecute(){
     	}
-        protected Boolean doInBackground(String... filesCodes ) {
-        	SyncService.this.doSync( filesCodes ) ;
+        protected Boolean doInBackground(SyncPullRequest... prs ) {
+        	if( SyncServiceController.hasPendingPush(getApplicationContext())) {
+        		doPush() ;
+        	}
+        	for( SyncPullRequest pr : prs ) {
+        		if( pr != null ) {
+        			SyncService.this.doPull( pr ) ;
+        		}
+        	}
         	
         	return true ;
         }
         protected void onPostExecute(Boolean myBool) {
         	sendBroadcastComplete() ;
+        	
+        	if (SyncService.this.mMessenger !=null) {
+        		Message msg=Message.obtain();
+
+        		Bundle msgBundle = new Bundle() ;
+        		if( SyncService.this.mOriginalPullRequest != null ) {
+        			msgBundle.putParcelable(PULL_REQUEST,SyncService.this.mOriginalPullRequest) ;
+        		}
+        		msg.setData(msgBundle);
+        		try {
+        			// Log.w(TAG,"Sending end message ") ;
+        			SyncService.this.mMessenger.send(msg);
+        		}
+        		catch (android.os.RemoteException e1) {
+        			// Log.w(getClass().getName(), "Exception sending message", e1);
+        		}
+        	}
+
         	UploadServiceHelper.launchUpload( SyncService.this.getApplicationContext() ) ;
         	SyncService.this.stopSelf() ;
         }
@@ -125,14 +171,6 @@ public class SyncService extends Service {
 	
     
     
-    private void doSync( String[] pullFilesCodes ) {
-    	if( SyncServiceHelper.hasPendingUploads(getApplicationContext())) {
-    		doPush() ;
-    	}
-    	if( pullFilesCodes != null && pullFilesCodes.length > 0 ) {
-    		doPull( pullFilesCodes ) ;
-    	}
-    }
     
     private boolean doPush() {
     	DatabaseManager mDbManager = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
@@ -194,53 +232,73 @@ public class SyncService extends Service {
     	return new Boolean(true) ;
     }
     
-    private boolean doPull( String[] filesCodes ) {
-    	for( String fileCode : filesCodes ){
-    		// ***** timestamp du dernier sync pour ce fileCode ****
-        	long lastFileSyncTimestamp = syncPullGetLastTimestamp(fileCode) ;
-            
-        	
-        	HashMap<String,String> postParams = new HashMap<String,String>() ;
-        	postParams.put("_domain", "paramount");
-        	postParams.put("_moduleName", "paracrm");
-        	postParams.put("_action", "android_syncPull");
-        	postParams.put("file_code", fileCode);
-        	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
-        	String postString = HttpPostHelper.getPostString(postParams) ;
-        	
-    		try {
-    			URL url = new URL(getString(R.string.server_url));
-    			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-    			httpURLConnection.setDoOutput(true);
-    			httpURLConnection.setRequestMethod("POST");
-    			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-    			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-    			try {
-    				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-    				out.print(postString);
-    				out.close();
+    private boolean doPull( SyncPullRequest pr ) {
+    	// ***** timestamp du dernier sync pour ce fileCode ****
+    	long lastFileSyncTimestamp ;
+    	if( pr.supplyTimestamp ) {
+    		lastFileSyncTimestamp = syncPullGetLastTimestamp(pr.fileCode) ;
+    	} else {
+    		lastFileSyncTimestamp = 0 ;
+    	}
 
-    				InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
-    				long newSyncTimestamp = syncDbFromPull( fileCode, is ) ;
-                	if( newSyncTimestamp <= 0 ) {
-                		return false ;
-                	}
-    			}
-    			catch (IOException e) {
-    				
-    			}
-    			finally{
-    				httpURLConnection.disconnect() ;
-    			}
-    		} catch (MalformedURLException e) {
-    			// TODO Auto-generated catch block
-    			
-    		} catch (IOException e) {
-    			// TODO Auto-generated catch block
-    			
+
+    	HashMap<String,String> postParams = new HashMap<String,String>() ;
+    	postParams.put("_domain", "paramount");
+    	postParams.put("_moduleName", "paracrm");
+    	postParams.put("_action", "android_syncPull");
+    	postParams.put("file_code", pr.fileCode);
+    	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
+    	if( pr.fileConditions != null && pr.fileConditions.size() > 0 ) {
+			try {
+				JSONArray jsonArr = new JSONArray() ;
+				for( SyncPullRequest.SyncPullRequestFileCondition prfc : pr.fileConditions ) {
+					JSONObject jsonObj = new JSONObject() ;
+					jsonObj.put("entry_field_code", prfc.fileFieldCode) ;
+					jsonObj.put("condition_sign", prfc.conditionSign) ;
+					jsonObj.put("condition_value", prfc.conditionValue) ;
+					jsonArr.put(jsonObj) ;
+				}
+				postParams.put("filter", jsonArr.toString());
+			} catch (JSONException e) {
     		}
     	}
-    	
+    	if( pr.limitResults != 0 ) {
+    		postParams.put("limit", String.valueOf(pr.limitResults));
+    	}
+    	String postString = HttpPostHelper.getPostString(postParams) ;
+
+    	try {
+    		URL url = new URL(getString(R.string.server_url));
+    		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+    		httpURLConnection.setDoOutput(true);
+    		httpURLConnection.setRequestMethod("POST");
+    		httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
+    		httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+    		try {
+    			PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
+    			out.print(postString);
+    			out.close();
+
+    			InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
+    			long newSyncTimestamp = syncDbFromPull( pr.fileCode, is ) ;
+    			if( newSyncTimestamp <= 0 ) {
+    				return false ;
+    			}
+    		}
+    		catch (IOException e) {
+
+    		}
+    		finally{
+    			httpURLConnection.disconnect() ;
+    		}
+    	} catch (MalformedURLException e) {
+    		// TODO Auto-generated catch block
+
+    	} catch (IOException e) {
+    		// TODO Auto-generated catch block
+
+    	}
+
     	return true ;
     }
     
