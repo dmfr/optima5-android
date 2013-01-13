@@ -44,4 +44,47 @@
     <dimen name="event_info_text_size">14dip</dimen>
     <dimen name="event_info_desc_margin_left">0dip</dimen>
     <dimen name="event_info_desc_margin_right">0dip</dimen>
+    
+    
+    
+    
+    
+    <!-- EXPLORER -->
+    <dimen name="button_minWidth">100sp</dimen>
+    <dimen name="message_list_item_height_wide">70sp</dimen>
+    <dimen name="message_list_item_height_normal">70sp</dimen>
+    <dimen name="message_list_item_color_tip_width">35dip</dimen>
+    <dimen name="message_list_item_color_tip_height">6dip</dimen>
+    <dimen name="message_list_badge_margin">4dip</dimen>
+    <dimen name="message_list_icon_padding_compensation">3dip</dimen>
+
+    <dimen name="message_header_height">48dip</dimen>
+    <dimen name="message_header_badge_width">48dip</dimen>
+    <dimen name="message_header_name_margin">4dip</dimen>
+
+    <dimen name="error_message_height">48dip</dimen>
+
+    <dimen name="widget_senders_font_size">14sp</dimen>
+    <dimen name="widget_subject_font_size">14sp</dimen>
+    <dimen name="widget_date_font_size">14sp</dimen>
+
+    <dimen name="message_list_drag_offset">16dip</dimen>
+    <dimen name="message_list_drag_count_font_size">42sp</dimen>
+    <dimen name="message_list_drag_count_left_margin">16dip</dimen>
+    <dimen name="message_list_drag_message_font_size">18sp</dimen>
+    <dimen name="message_list_drag_message_right_margin">16dip</dimen>
+    
+    <!-- MessageListItem -->
+    <dimen name="minimum_width_wide_mode">720dip</dimen>
+
+    <!-- Username/password entry -->
+    <dimen name="setup_credentials_input_width">340dip</dimen>
+
+    <!-- Folder list item -->
+    <dimen name="mailbox_list_padding_left">8dip</dimen>
+    <dimen name="mailbox_list_padding_right">16dip</dimen>
+    <dimen name="mailbox_list_count_margin_left">8dip</dimen>
+    
+    <dimen name="message_list_width">160dip</dimen>
+    <dimen name="mailbox_list_width">160dip</dimen>
 </resources>

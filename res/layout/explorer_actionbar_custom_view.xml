@@ -13,11 +13,15 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<resources>
-    <dimen name="event_info_text_size">18dip</dimen>
-    <dimen name="event_info_desc_margin_left">16dip</dimen>
-    <dimen name="event_info_desc_margin_right">16dip</dimen>
-    
-    <dimen name="message_list_width">428dip</dimen>
-    <dimen name="mailbox_list_width">304dip</dimen>
-</resources>
+
+<!--
+    Custom view set to the action bar.
+
+    layout_width/height are set at runtime using ActionBar.setCustomView()
+-->
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/action_bar_custom_view"
+    >
+</FrameLayout>
