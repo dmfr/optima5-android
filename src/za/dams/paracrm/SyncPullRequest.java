@@ -13,6 +13,29 @@ public class SyncPullRequest implements Parcelable {
 		public String conditionValue ;
 		
 		public SyncPullRequestFileCondition() {}
+		
+		public boolean equals( Object o ) {
+			SyncPullRequestFileCondition sprfc = (SyncPullRequestFileCondition)o ;
+			if( !this.fileFieldCode.equals(sprfc.fileFieldCode) ) {
+				return false ;
+			}
+			if( !this.conditionSign.equals(sprfc.conditionSign) ) {
+				return false ;
+			}
+			if( !this.conditionValue.equals(sprfc.conditionValue) ) {
+				return false ;
+			}
+			return true ;
+		}
+		public int hashCode() {
+			int result = 17 ;
+			
+			result = 31 * result + fileFieldCode.hashCode() ;
+			result = 31 * result + conditionSign.hashCode() ;
+			result = 31 * result + conditionValue.hashCode() ;
+			
+			return result ;
+		}
 	}
 	
 	public String fileCode ;
@@ -67,6 +90,31 @@ public class SyncPullRequest implements Parcelable {
 		}
 		limitResults = in.readInt() ;
 		supplyTimestamp = (in.readByte() == 1) ;
+	}
+	
+	public boolean equals( Object o ) {
+		SyncPullRequest spr = (SyncPullRequest)o ;
+		if( !this.fileCode.equals(spr.fileCode) ) {
+			return false ;
+		}
+		if( !this.fileConditions.equals(spr.fileConditions) ) {
+			return false ;
+		}
+		if( !(this.limitResults == spr.limitResults) ) {
+			return false ;
+		}
+		if( !(this.supplyTimestamp == spr.supplyTimestamp) ) {
+			return false ;
+		}
+		return true ;
+	}
+	public int hashCode() {
+		int result = 17 ;
+		result = 31 * result + fileCode.hashCode() ;
+		result = 31 * result + fileConditions.hashCode() ;
+		result = 31 * result + limitResults ;
+		result = 31 * result + (supplyTimestamp ? 1 : 0);
+		return result ;
 	}
 
 }
