@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SearchView;
+import android.widget.TextView;
 
 
 public class ActionBarController {
@@ -26,6 +27,8 @@ public class ActionBarController {
     
     private View mSearchContainer;
     private SearchView mSearchView;
+    private final TextView mTitleLine1View;
+    private final TextView mTitleLine2View;
     
     /** Either {@link #MODE_NORMAL} or {@link #MODE_SEARCH}. */
     private int mSearchMode = MODE_NORMAL;
@@ -71,7 +74,8 @@ public class ActionBarController {
         // Prepare the custom view
         mActionBar.setCustomView(R.layout.explorer_actionbar_custom_view);
         mActionBarCustomView = (ViewGroup) mActionBar.getCustomView();
-
+        mTitleLine1View = UiUtilities.getView(mActionBarCustomView, R.id.actionbar_title_1);
+        mTitleLine2View = UiUtilities.getView(mActionBarCustomView, R.id.actionbar_title_2);
     }
 
     private void initSearchViews() {
@@ -180,6 +184,14 @@ public class ActionBarController {
         final boolean showUp = isInSearchMode() || mCallback.shouldShowUp();
         mActionBar.setDisplayOptions(showUp
                 ? ActionBar.DISPLAY_HOME_AS_UP : 0, ActionBar.DISPLAY_HOME_AS_UP);
+        
+        // Update Title
+        if( true ) {
+        	mTitleLine1View.setText("Explorer") ;
+        	mTitleLine1View.setVisibility(View.VISIBLE) ;
+        	mTitleLine2View.setText("Todo : Switch filter view") ;
+        	mTitleLine2View.setVisibility(View.VISIBLE) ;
+       }
     }
 
     private final SearchView.OnQueryTextListener mOnQueryText
