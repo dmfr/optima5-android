@@ -10,6 +10,8 @@ import org.json.JSONArray;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
 public class BibleHelper {
@@ -82,7 +84,7 @@ public class BibleHelper {
     
     
     
-    public static class BibleEntry implements Cloneable {
+    public static class BibleEntry implements Cloneable, Parcelable {
     	public String bibleCode ;
     	public String treenodeKey ;
     	public String entryKey ;
@@ -94,6 +96,9 @@ public class BibleHelper {
     		this.bibleCode = bibleCode ;
     		this.treenodeKey = treenodeKey ;
     		this.entryKey = entryKey ;
+    		this.displayStr = "" ;
+    		this.displayStr1 = "" ;
+    		this.displayStr2 = "" ;
     	}
     	public BibleEntry( String bibleCode, String treenodeKey, String entryKey, String displayStr, String displayStr1, String displayStr2 ) {
     		this.bibleCode = bibleCode ;
@@ -102,6 +107,14 @@ public class BibleHelper {
     		this.displayStr = displayStr ;
     		this.displayStr1 = displayStr1 ;
     		this.displayStr2 = displayStr2 ;
+    	}
+    	public BibleEntry( Parcel in ) {
+    		this.bibleCode = in.readString() ;
+    		this.treenodeKey = in.readString() ;
+    		this.entryKey = in.readString() ;
+    		this.displayStr = in.readString() ;
+    		this.displayStr1 = in.readString() ;
+    		this.displayStr2 = in.readString() ;
     	}
     	public void setDisplayStr(String displayStr, String displayStr1, String displayStr2 ) {
     		this.displayStr = displayStr ;
@@ -135,6 +148,33 @@ public class BibleHelper {
     		result = 31 * result + entryKey.hashCode() ;
     		return result ;
     	}
+    	
+		@Override
+		public int describeContents() {
+			return 0;
+		}
+		@Override
+		public void writeToParcel(Parcel out, int arg1) {
+			out.writeString(this.bibleCode);
+			out.writeString(this.treenodeKey);
+			out.writeString(this.entryKey);
+			out.writeString(this.displayStr);
+			out.writeString(this.displayStr1);
+			out.writeString(this.displayStr2);
+		}
+		
+		public static Parcelable.Creator<BibleEntry> CREATOR =
+				new Parcelable.Creator<BibleEntry>() {
+			@Override
+			public BibleEntry createFromParcel(Parcel source) {
+				return new BibleEntry(source);
+			}
+
+			@Override
+			public BibleEntry[] newArray(int size) {
+				return new BibleEntry[size];
+			}
+		};
     }
     
     public BibleHelper(Context c) {
