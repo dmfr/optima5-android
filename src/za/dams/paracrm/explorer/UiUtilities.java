@@ -2,7 +2,9 @@ package za.dams.paracrm.explorer;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.os.Handler;
 import android.view.View;
+import android.widget.ListView;
 
 public class UiUtilities {
     private UiUtilities() {
@@ -87,6 +89,22 @@ public class UiUtilities {
         if (a instanceof FragmentInstallable) {
             ((FragmentInstallable) a).onUninstallFragment(fragment);
         }
+    }
+
+    
+    
+    public static void listViewSmoothScrollToPosition(final Activity activity,
+            final ListView listView, final int position) {
+        // Workarond: delay-call smoothScrollToPosition()
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                if (activity.isFinishing()) {
+                    return; // Activity being destroyed
+                }
+                listView.smoothScrollToPosition(position);
+            }
+        });
     }
 
 }

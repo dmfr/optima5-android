@@ -71,9 +71,13 @@ public class CrmFileManager {
     	public boolean fieldIsHighlight ;
 	}
    
+	private boolean isInitialized = false ;
 	private ArrayList<String> mRootFileCodes = new ArrayList<String>() ;
 	private HashMap<String,CrmFileDesc> mFileDescriptors = new HashMap<String,CrmFileDesc>() ;
 
+	public boolean isInitialized() {
+		return isInitialized ;
+	}
 	public void fileInitDescriptors() {
 		DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
 		Cursor c = mDb.rawQuery("SELECT file_code FROM define_file WHERE file_parent_code IS NULL OR file_parent_code='' ORDER BY file_code") ;
@@ -81,6 +85,7 @@ public class CrmFileManager {
 			fileLoadDescriptor(c.getString(0)) ;
 		}
 		c.close() ;
+		isInitialized = true ;
 	}
 	public CrmFileDesc fileGetFileDescriptor( String fileCode ) {
 		if( !mFileDescriptors.containsKey(fileCode) ) {

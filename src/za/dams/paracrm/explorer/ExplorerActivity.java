@@ -80,6 +80,8 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
         if (savedInstanceState != null) {
             mUIController.onRestoreInstanceState(savedInstanceState);
         } else {
+        	// @DAMS TODO : récupérer le dernier ExplorerContext dans mController
+        	
             ExplorerContext viewContext = ExplorerContext.forNone() ;
             mUIController.open(viewContext,"",0) ;
         }

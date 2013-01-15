@@ -50,6 +50,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * @see FragmentInstallable
      */
     private DataListFragment mDataListFragment;
+    private EmptyListFragment mEmptyListFragment;
     private FileListFragment mFileListFragment;
     private FileViewFragment mFileViewFragment;
 
@@ -222,11 +223,13 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * {@link FragmentInstallable#onInstallFragment}.
      */
     public final void onInstallFragment(Fragment fragment) {
-        if (Explorer.DEBUG) {
+        if (true) {
             Log.d(LOGTAG, this + " onInstallFragment  fragment=" + fragment);
         }
         if (fragment instanceof DataListFragment) {
             installDataListFragment((DataListFragment) fragment);
+        } else if (fragment instanceof EmptyListFragment) {
+            installEmptyListFragment((EmptyListFragment) fragment);
         } else if (fragment instanceof FileListFragment) {
             installFileListFragment((FileListFragment) fragment);
         } else if (fragment instanceof FileViewFragment) {
@@ -247,6 +250,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
         // here - investigate why. same for the other installs.
         refreshActionBar();
     }
+
+    /** Install fragment */
+    protected void installEmptyListFragment(EmptyListFragment fragment) {
+        mEmptyListFragment = fragment;
+    }
+
 
     /** Install fragment */
     protected void installFileListFragment(FileListFragment fragment) {
@@ -368,6 +377,14 @@ public class ExplorerController implements ExplorerLayout.Callback,
     /**
      * Remove the fragment if it's installed.
      */
+    protected FragmentTransaction removeEmptyListFragment(FragmentTransaction ft) {
+        removeFragment(ft, mEmptyListFragment);
+        return ft;
+    }
+
+    /**
+     * Remove the fragment if it's installed.
+     */
     protected FragmentTransaction removeFileListFragment(FragmentTransaction ft) {
         removeFragment(ft, mFileListFragment);
         return ft;
@@ -449,38 +466,27 @@ public class ExplorerController implements ExplorerLayout.Callback,
      *     in the message list.
      */
     public final void open(final ExplorerContext explorerContext, final String bibleEntryKey, final long filerecordId ) {
-        setListContext(explorerContext);
-        openInternal(explorerContext, bibleEntryKey, filerecordId);
-
-        if (explorerContext.isSearch()) {
-            // mActionBarController.enterSearchMode(explorerContext.getSearchParams().mFilter);
-        }
-    }
-
-    /**
-     * Sets the internal value of the list context for the message list.
-     */
-    protected void setListContext(ExplorerContext explorerContext) {
         if (explorerContext.equals(mExplorerContext)) {
             return;
         }
 
         if (Explorer.DEBUG) {
-            Log.i(LOGTAG, this + " setListContext: " + explorerContext);
+            Log.i(LOGTAG, this + " open: " + explorerContext);
         }
         mExplorerContext = explorerContext;
-    }
-
-    public void openInternal(final ExplorerContext explorerContext, final String bibleEntryKey, final long filerecordId ) {
-        if (Explorer.DEBUG) {
-            Log.d(LOGTAG, this + " open " + explorerContext);
+        
+        final FragmentTransaction ft = mFragmentManager.beginTransaction();
+        
+        // Fragment DataList
+        updateDataList(ft, true);
+        
+        if( explorerContext.mMode == ExplorerContext.MODE_FILE ) {
+        	updateFileList(ft, true);
+        } else {
+        	updateEmptyList(ft, true);
         }
 
-        final FragmentTransaction ft = mFragmentManager.beginTransaction();
-        updateDataList(ft, true);
-        updateFileList(ft, true);
-
-        if (filerecordId != 0) {
+        if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
             updateFileView(ft, filerecordId);
             mThreePane.showRightPane();
         } else if (explorerContext.isSearch()) {
@@ -490,6 +496,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
             mThreePane.showLeftPane();
         }
         commitFragmentTransaction(ft);
+
+        if (explorerContext.isSearch()) {
+            // mActionBarController.enterSearchMode(explorerContext.getSearchParams().mFilter);
+        }
     }
 
 
@@ -505,12 +515,14 @@ public class ExplorerController implements ExplorerLayout.Callback,
         if (Explorer.DEBUG) {
             Log.d(LOGTAG, this + " updateMailboxList " );
         }
+        
+        // @DAMS : TODO : Construction d'un DataListFragment.DataListEntry à partir du Explorer.Context
 
         if ( true ) { // @DAMS : TODO : refresh everyTime ??
             removeDataListFragment(ft);
             boolean enableHighlight = !mExplorerContext.isSearch();
             ft.add(mThreePane.getLeftPaneId(),
-                    DataListFragment.newInstance(enableHighlight));
+                    DataListFragment.newInstance(enableHighlight,null));
         }
         if (clearDependentPane) {
             removeFileListFragment(ft);
@@ -529,13 +541,30 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
 
     /**
-     * Show the message list fragment for the given mailbox.
+     * Show the DUMMY empty fragment for the given fileCode.
+     *
+     * @param ft {@link FragmentTransaction} to use.
+     */
+    private void updateEmptyList(FragmentTransaction ft, boolean clearDependentPane) {
+        if (Explorer.DEBUG) {
+            Log.d(LOGTAG, this + " updateEmptyList " + mExplorerContext);
+        }
+
+        removeEmptyListFragment(ft);
+        ft.add(mThreePane.getMiddlePaneId(), EmptyListFragment.newInstance());
+        if (clearDependentPane) {
+            
+        }
+    }
+
+    /**
+     * Show the CrmFILE list fragment for the given fileCode.
      *
      * @param ft {@link FragmentTransaction} to use.
      */
     private void updateFileList(FragmentTransaction ft, boolean clearDependentPane) {
         if (Explorer.DEBUG) {
-            Log.d(LOGTAG, this + " updateMessageList " + mExplorerContext);
+            Log.d(LOGTAG, this + " updateFileList " + mExplorerContext);
         }
 
         if (mExplorerContext.mFileCode != getFileListFileCode()) {

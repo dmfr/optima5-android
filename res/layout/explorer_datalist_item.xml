@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dip"
+    android:background="?android:attr/activatedBackgroundIndicator"
+    >
+    <RelativeLayout
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/mailbox_list_padding_left"
+        >
+        <ImageView
+            android:id="@+id/folder_icon"
+            android:layout_width="32dip"
+            android:layout_height="32dip"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="8dip"
+            />
+        <TextView
+            android:id="@+id/mailbox_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/folder_icon"
+            android:layout_centerVertical="true"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textSize="18dip"
+            />
+    </RelativeLayout>
+    <ImageView
+        android:id="@+id/folder_expanded_icon"
+        android:layout_width="16dip"
+        android:layout_height="16dip"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:visibility="gone"
+        />
+</RelativeLayout>
