@@ -239,9 +239,24 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
     }
     
 	@Override
-	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-		// TODO Auto-generated method stub
-		
+	public void onItemClick(AdapterView<?> parent, View view, int position, long doNotUse) {
+		final DataListEntry clickDle = mListAdapter.getItem(position) ;
+		if( clickDle.isHeader ) {
+			return ;
+		}
+		switch( clickDle.dataType ) {
+		case DataListEntry.DATA_BIBLE :
+			mCallback.onBibleSelected(clickDle.bibleCode) ;
+			break ;
+		case DataListEntry.DATA_FILE :
+			mCallback.onFileSelected(clickDle.fileCode) ;
+			break ;
+		case DataListEntry.DATA_QUERY :
+			mCallback.onQuerySelected() ;
+			break ;
+		default :
+			break ;
+		}
 	}
 	
     public void setHighlightedDataListEntry(DataListEntry dle) {

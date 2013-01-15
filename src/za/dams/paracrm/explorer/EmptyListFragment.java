@@ -26,6 +26,11 @@ public class EmptyListFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         UiUtilities.installFragment(this);
     }
+    @Override
+    public void onDestroyView() {
+        UiUtilities.uninstallFragment(this);
+        super.onDestroyView();
+    }
     
 
 }

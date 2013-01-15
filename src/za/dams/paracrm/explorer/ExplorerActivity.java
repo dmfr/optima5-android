@@ -37,6 +37,9 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
     	}
     }
     private class TestRefresh implements RefreshManager.RefreshListener {
+    	public void onRefreshStart() {
+   			Log.w(LOGTAG,"Starting REFRESH ") ;
+    	}
     	public void onRefreshFileChanged( String refreshedFileCode ) {
     		if( refreshedFileCode != null ) {
     			Log.w(LOGTAG,"Finished REFRESH "+refreshedFileCode) ;

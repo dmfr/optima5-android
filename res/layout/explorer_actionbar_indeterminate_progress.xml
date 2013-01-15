@@ -25,6 +25,8 @@
         android:layout_width="32dip"
         android:layout_height="32dip"
         android:layout_gravity="center"
+        android:layout_marginLeft="16dip"
+        android:layout_marginRight="16dip"
         style="?android:attr/indeterminateProgressStyle"
         />
 </FrameLayout>

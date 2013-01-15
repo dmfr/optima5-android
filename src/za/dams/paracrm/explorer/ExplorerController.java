@@ -68,6 +68,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
         private MenuItem mRefreshIcon;
 
         @Override
+        public void onRefreshStart() {
+            updateRefreshIcon();
+        }
+        @Override
         public void onRefreshFileChanged(String fileCode) {
             updateRefreshIcon();
             
@@ -223,7 +227,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * {@link FragmentInstallable#onInstallFragment}.
      */
     public final void onInstallFragment(Fragment fragment) {
-        if (true) {
+        if (Explorer.DEBUG) {
             Log.d(LOGTAG, this + " onInstallFragment  fragment=" + fragment);
         }
         if (fragment instanceof DataListFragment) {
@@ -254,6 +258,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
     /** Install fragment */
     protected void installEmptyListFragment(EmptyListFragment fragment) {
         mEmptyListFragment = fragment;
+        refreshActionBar();
     }
 
 
@@ -294,6 +299,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
         mRemovedFragments.remove(fragment);
         if (fragment == mDataListFragment) {
             uninstallDataListFragment();
+        } else if (fragment == mEmptyListFragment) {
+            uninstallEmptyListFragment();
         } else if (fragment == mFileListFragment) {
             uninstallFileListFragment();
         } else if (fragment == mFileViewFragment) {
@@ -307,6 +314,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
     protected void uninstallDataListFragment() {
     	mDataListFragment.setCallback(null);
     	mDataListFragment = null;
+    }
+
+    /** Uninstall {@link MessageListFragment} */
+    protected void uninstallEmptyListFragment() {
+    	mEmptyListFragment = null;
     }
 
     /** Uninstall {@link MessageListFragment} */
@@ -501,6 +513,22 @@ public class ExplorerController implements ExplorerLayout.Callback,
             // mActionBarController.enterSearchMode(explorerContext.getSearchParams().mFilter);
         }
     }
+    public final void openEmptyList() {
+    	final ExplorerContext newExplorerContext = ExplorerContext.forNone() ;
+    	if( newExplorerContext.equals(mExplorerContext) ) {
+    		return ;
+    	}
+    	mExplorerContext = newExplorerContext;
+    	updateEmptyList(true);
+    }
+    public final void openFileList( String fileCode ) {
+    	final ExplorerContext newExplorerContext = ExplorerContext.forFile(fileCode, mExplorerContext.mSearchedBibleEntry) ;
+    	if( newExplorerContext.equals(mExplorerContext) ) {
+    		return ;
+    	}
+    	mExplorerContext = newExplorerContext;
+    	updateFileList(true);
+    }
 
 
     /**
@@ -547,14 +575,24 @@ public class ExplorerController implements ExplorerLayout.Callback,
      */
     private void updateEmptyList(FragmentTransaction ft, boolean clearDependentPane) {
         if (Explorer.DEBUG) {
-            Log.d(LOGTAG, this + " updateEmptyList " + mExplorerContext);
+            Log.d(LOGTAG, this + " updateEmptyList ");
         }
 
         removeEmptyListFragment(ft);
+        removeFileListFragment(ft);
         ft.add(mThreePane.getMiddlePaneId(), EmptyListFragment.newInstance());
         if (clearDependentPane) {
             
         }
+    }
+    /**
+     * Shortcut to call {@link #updateFileList(FragmentTransaction, boolean)} and
+     * commit.
+     */
+    private void updateEmptyList(boolean clearDependentPane) {
+        FragmentTransaction ft = mFragmentManager.beginTransaction();
+        updateEmptyList(ft, clearDependentPane);
+        commitFragmentTransaction(ft);
     }
 
     /**
@@ -568,6 +606,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
 
         if (mExplorerContext.mFileCode != getFileListFileCode()) {
+            removeEmptyListFragment(ft);
             removeFileListFragment(ft);
             ft.add(mThreePane.getMiddlePaneId(), FileListFragment.newInstance(mExplorerContext));
         }
@@ -577,10 +616,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
 
     /**
-     * Shortcut to call {@link #updateMessageList(FragmentTransaction, boolean)} and
+     * Shortcut to call {@link #updateFileList(FragmentTransaction, boolean)} and
      * commit.
      */
-    private void updateMessageList(boolean clearDependentPane) {
+    private void updateFileList(boolean clearDependentPane) {
         FragmentTransaction ft = mFragmentManager.beginTransaction();
         updateFileList(ft, clearDependentPane);
         commitFragmentTransaction(ft);
@@ -886,7 +925,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * @return true if the UI should enable the "refresh" command.
      */
     protected boolean isRefreshEnabled() {
-    	return true ;
+    	if( mExplorerContext.mMode == ExplorerContext.MODE_FILE ) {
+    		return true ;
+    	}
+    	return false ;
     }
 
     /**
@@ -985,13 +1027,13 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	@Override
 	public void onBibleSelected(String bibleCode) {
 		// TODO Auto-generated method stub
-		
+		openEmptyList() ;
 	}
 
 	// DataListFragment$Callback
 	@Override
 	public void onFileSelected(String fileCode) {
-		// TODO Auto-generated method stub
+		openFileList(fileCode) ;
 		
 	}
 
@@ -999,7 +1041,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	@Override
 	public void onQuerySelected() {
 		// TODO Auto-generated method stub
-		
+		openEmptyList() ;
 	}
 
 }

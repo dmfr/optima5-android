@@ -27,6 +27,7 @@ public class RefreshManager {
     
 
     public interface RefreshListener {
+    	public void onRefreshStart() ;
     	//public void onRefreshBibleChanged(String bibleCode);
     	public void onRefreshFileChanged(String fileCode);
     }
@@ -84,6 +85,11 @@ public class RefreshManager {
     		}
     	}
     	return false ;
+    }
+    private void notifyRefreshStart() {
+        for (RefreshListener l : mListeners) {
+            l.onRefreshStart() ;
+        }
     }
     private void notifyRefreshFileChanged(String fileCode) {
         for (RefreshListener l : mListeners) {
@@ -151,6 +157,7 @@ public class RefreshManager {
     	// Ajout dans la Queue des resultats
     	mPendingPullRequests.add(spr) ;
     	// Execution de PullRequest
+    	notifyRefreshStart() ;
     	mSyncServiceController.requestPull(spr) ;
     }
     
