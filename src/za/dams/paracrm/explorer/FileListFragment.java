@@ -332,6 +332,8 @@ public class FileListFragment extends ListFragment {
     private void onLoadMore() {
         if (isRefreshable()) {
             mRefreshManager.loadMoreFileList(getExplorerContext().mFileCode, getExplorerContext().mSearchedBibleEntry);
+            // Sans attendre, on peut forcer un reload de la liste (déjà en cache?)
+            forceReload() ;
         }
     }
     
@@ -548,20 +550,20 @@ public class FileListFragment extends ListFragment {
 			
 			if( (convertView != null && isWideLayout() && convertView instanceof FileListItemWide)
 				|| (convertView != null && !isWideLayout() && convertView instanceof FileListItemNormal) ) {
+				// able to reuse view
 				view = (FileListItem)convertView ;
-				view.buildCrmFields(null) ;
 			} else {
-				
-				
 				// build a new view
 				if( isWideLayout() ) {
 					view = (FileListItem)mInflater.inflate(R.layout.explorer_filelist_item_wide, parent, false) ;
 				} else {
 					view = (FileListItem)mInflater.inflate(R.layout.explorer_filelist_item_normal, parent, false) ;
 				}
-				
-				
 			}
+			
+			view.buildCrmFields(cfd) ;
+			
+			view.setCrmValues(getItem(position)) ;
 			
 			
 

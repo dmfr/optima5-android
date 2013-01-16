@@ -1,16 +1,24 @@
 package za.dams.paracrm.explorer;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.DatabaseManager;
+import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
+import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
+import za.dams.paracrm.CrmFileTransaction.CrmFilePhoto;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.util.Log;
 
 public class CrmFileManager {
 	
@@ -75,9 +83,39 @@ public class CrmFileManager {
     	public boolean fieldIsHeader ;
     	public boolean fieldIsHighlight ;
 	}
+	public static class CrmFileFieldValue {
+    	public FieldType fieldType ;
+    	public float valueFloat ;
+    	public boolean valueBoolean ;
+    	public String valueString ;
+    	public Date valueDate ;
+    	public String displayStr ;
+    	public String displayStr1 ;
+    	public String displayStr2 ;
+    	
+    	public CrmFileFieldValue( FieldType fieldType,
+    			float valueFloat ,
+    			boolean valueBoolean ,
+    			String valueString ,
+    			Date valueDate ,
+    			String displayStr ,
+    			String displayStr1 ,
+    			String displayStr2 )  {
+    		this.fieldType = fieldType ;
+    		this.valueFloat = valueFloat ;
+    		this.valueBoolean = valueBoolean ;
+    		this.valueString = valueString ;
+    		this.valueDate = valueDate ;
+    		this.displayStr = displayStr ;
+    		this.displayStr1 = displayStr1 ;
+    		this.displayStr2 = displayStr2 ;
+    	}
+	}
 	public static class CrmFileRecord {
 		public String fileCode ;
 		public long filerecordId ;
+    	public HashMap<String,CrmFileFieldValue> recordData ;
+    	public CrmFilePhoto recordPhoto ;
 	}
    
 	private boolean isInitialized = false ;
@@ -194,18 +232,130 @@ public class CrmFileManager {
     	pullFilterBe = be ;
     }
     public List<CrmFileRecord> filePullData( String fileCode ) {
+		class StoreFileFieldRecord {
+			public String fieldCode ;
+			public float valueNumber ;
+			public String valueString ;
+			public String valueDate ;
+			public String valueLink ;
+		}
     	
     	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
     	Cursor c ;
+    	BibleHelper mBibleHelper = null ;
     	
     	int limit = getFileVisibleLimit(fileCode) ;
+    	String queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
+    	
+		HashMap<Long,HashMap<String,StoreFileFieldRecord>> dbRecordFields = new HashMap<Long,HashMap<String,StoreFileFieldRecord>>() ;
+		c = mDb.rawQuery(String.format("SELECT * FROM store_file_field WHERE filerecord_id IN (%s)", queryMaster));
+		while( c.moveToNext() ) {
+			long filerecordId = c.getLong(c.getColumnIndex("filerecord_id")) ;
+			
+			if( !dbRecordFields.containsKey(filerecordId) ) {
+				dbRecordFields.put(filerecordId, new HashMap<String,StoreFileFieldRecord>()) ;
+			}
+			
+			StoreFileFieldRecord field = new StoreFileFieldRecord() ;
+			field.fieldCode = c.getString(c.getColumnIndex("filerecord_field_code")) ;
+			field.valueNumber = c.getFloat(c.getColumnIndex("filerecord_field_value_number")) ;
+			field.valueString = c.getString(c.getColumnIndex("filerecord_field_value_string")) ;
+			field.valueDate = c.getString(c.getColumnIndex("filerecord_field_value_date")) ;
+			field.valueLink = c.getString(c.getColumnIndex("filerecord_field_value_link")) ;
+			
+			dbRecordFields.get(filerecordId).put(field.fieldCode, field) ;
+		}
+		c.close() ;
+	
     	
     	ArrayList<CrmFileRecord> data = new ArrayList<CrmFileRecord>();
-    	c = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY filerecord_id DESC LIMIT %d",fileCode,limit)) ;
+    	c = mDb.rawQuery(queryMaster) ;
     	while( c.moveToNext() ) {
     		CrmFileRecord cfr = new CrmFileRecord();
     		cfr.fileCode = fileCode ;
     		cfr.filerecordId = (long)c.getInt(0) ;
+    		cfr.recordData = new HashMap<String,CrmFileFieldValue>() ;
+    		
+    		for( CrmFileFieldDesc fd : fileGetFileDescriptor(fileCode).fieldsDesc ) {
+    			if( !dbRecordFields.containsKey(cfr.filerecordId) || !dbRecordFields.get(cfr.filerecordId).containsKey(fd.fieldCode) ) {
+    				cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								new Float(0),false,"",new Date(),
+    								"","",""
+    								)
+    						) ;
+    				continue ;
+    			}
+    			
+    			StoreFileFieldRecord sffr = dbRecordFields.get(cfr.filerecordId).get(fd.fieldCode) ;
+    			
+    			switch( fd.fieldType ) {
+    			case FIELD_BIBLE :
+    				if( mBibleHelper==null ) {
+    					mBibleHelper = new BibleHelper(mContext) ;
+    				}
+    				String bibleCode = fd.fieldLinkBible ;
+    				String bibleEntryKey = sffr.valueLink ;
+    				BibleEntry tBe = mBibleHelper.getBibleEntry(bibleCode, bibleEntryKey) ;
+    				String displayStr = "" ;
+    				String displayStr1 = "" ;
+    				String displayStr2 = "" ;
+    				if( tBe != null ) {
+    					displayStr = tBe.displayStr ;
+    					displayStr1 = tBe.displayStr1 ;
+    					displayStr2 = tBe.displayStr2 ;
+    				} else {
+    					//Log.w("CRMFILEMAN","Cant find "+bibleCode+" "+bibleEntryKey) ;
+    				}
+    				
+    				cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								new Float(0),false,bibleEntryKey,new Date(),
+    								displayStr,displayStr1,displayStr2
+    								)
+    						) ;
+    				break ;
+    			
+    			case FIELD_DATE :
+    			case FIELD_DATETIME :
+        			Date tDate = new Date() ;
+        			try {
+    					tDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(sffr.valueDate) ;
+    				} catch (ParseException e) {
+    					// TODO Auto-generated catch block
+    					//e.printStackTrace();
+    				}
+        			cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								new Float(0),false,null,tDate,
+    								new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate),"",""
+    								)
+    						) ;
+    				break ;
+    			
+    			case FIELD_TEXT :
+    				String tText = sffr.valueString ;
+    				cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								new Float(0),false,tText,new Date(),
+    								tText,"",""
+    								)
+    						) ;				
+    				break ;
+    			
+    			case FIELD_NUMBER :
+    				Float tFloat = sffr.valueNumber ;
+    				cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								tFloat,false,null,new Date(),
+    								new Float(tFloat).toString(),"",""
+    								)
+    						) ;								
+    				break ;
+    			}
+    		}
+    		
+    		
     		data.add(cfr) ;
     	}
     	c.close() ;

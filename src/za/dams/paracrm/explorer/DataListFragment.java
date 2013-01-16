@@ -263,10 +263,10 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
         if (!getEnableHighlight()) {
             return;
         }
-        if (mHighlightedDataListEntry == dle) {
+        if (dle!=null && dle.equals(mNextHighlightedDataListEntry)) {
             return; // already highlighted.
         }
-        if ( mListAdapter.isDataLoaded() ) {
+        if ( !mListAdapter.isDataLoaded() ) {
             // List not loaded yet.  Just remember the ID here and let onLoadFinished() update
             // mHighlightedMailboxId.
         	mNextHighlightedDataListEntry = dle;
@@ -289,7 +289,7 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
             // TODO Don't mix list view & list adapter indices. This is a recipe for disaster.
             final int count = lv.getCount();
             for (int i = 0; i < count; i++) {
-                if (mListAdapter.getItem(i) != mHighlightedDataListEntry) {
+                if (!mListAdapter.getItem(i).equals(mHighlightedDataListEntry)) {
                     continue;
                 }
                 found = true;
@@ -313,10 +313,10 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 		
 		public int dataType ;
 		public boolean isHeader ;
-		public String bibleCode ;
-		public String bibleName ;
-		public String fileCode ;
-		public String fileName ;
+		public String bibleCode = "" ;
+		public String bibleName = "" ;
+		public String fileCode = "" ;
+		public String fileName = "" ;
 		
 		public DataListEntry( Parcel in ) {
 			dataType = in.readInt() ;
@@ -357,6 +357,10 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 		};
 		
 		public boolean equals( Object o ) {
+			if( o==null ) {
+				return false ;
+			}
+			
 			DataListEntry dle = (DataListEntry)o ;
 			if( this.dataType != dle.dataType ) {
 				return false ;
@@ -453,11 +457,17 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 	    	return isLoaded ;
 	    }
 	    
+	    @Override
 	    public int getViewTypeCount() {
 	    	return 2 ;
 	    }
+	    @Override
 	    public int getItemViewType( int position ) {
 	    	return (getItem(position).isHeader)? TYPE_HEADER : TYPE_ITEM ;
+	    }
+	    @Override
+	    public boolean isEnabled(int position) {
+	        return !(getItem(position).isHeader);
 	    }
 
 		@Override

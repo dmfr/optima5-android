@@ -273,7 +273,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
         
         if (isDataListInstalled()) {
         	// @DAMS : TODO !
-            // getDataListFragment().setHighlightedFile(fragment.getFileCode());
+        	DataListFragment.DataListEntry dle = new DataListFragment.DataListEntry() ;
+        	dle.dataType = DataListFragment.DataListEntry.DATA_FILE ;
+        	dle.fileCode = fragment.getFileCode() ;
+            getDataListFragment().setHighlightedDataListEntry(dle);
         }
         getFileListFragment().setLayout(mThreePane);
     }
