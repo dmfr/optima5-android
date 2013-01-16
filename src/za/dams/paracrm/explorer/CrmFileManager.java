@@ -32,6 +32,11 @@ public class CrmFileManager {
         }
         return sInstance;
     }
+    public static synchronized void clearInstance() {
+    	if( sInstance != null ) {
+    		sInstance = null ;
+    	}
+    }
 	private CrmFileManager( Context context ) {
 		mContext = context.getApplicationContext() ;
 	}
@@ -125,7 +130,11 @@ public class CrmFileManager {
 	public boolean isInitialized() {
 		return isInitialized ;
 	}
-	public void fileInitDescriptors() {
+	public synchronized void fileInitDescriptors() {
+		if( isInitialized ) {
+			return ;
+		}
+		
 		DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
 		Cursor c = mDb.rawQuery("SELECT file_code FROM define_file WHERE file_parent_code IS NULL OR file_parent_code='' ORDER BY file_code") ;
 		while( c.moveToNext() ) {

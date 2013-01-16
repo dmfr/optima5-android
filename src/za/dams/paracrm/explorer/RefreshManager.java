@@ -41,6 +41,11 @@ public class RefreshManager {
         }
         return sInstance;
     }
+    public static synchronized void clearInstance() {
+    	if( sInstance != null ) {
+    		sInstance = null ;
+    	}
+    }
     protected RefreshManager(Context context, SyncServiceController controller, Clock clock,
             Handler handler) {
         mClock = clock ;
