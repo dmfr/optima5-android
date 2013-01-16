@@ -24,7 +24,8 @@ public class RefreshManager {
 
     // Pending pull requests
     private ArrayList<SyncPullRequest> mPendingPullRequests = new ArrayList<SyncPullRequest>() ;
-    
+    // Last refresh(s)
+    private HashMap<String,Long> mFilesLastRefresh = new HashMap<String,Long>() ;
 
     public interface RefreshListener {
     	public void onRefreshStart() ;
@@ -86,6 +87,16 @@ public class RefreshManager {
     	}
     	return false ;
     }
+    public boolean isFileStale( String fileCode ) {
+    	if( !mFilesLastRefresh.containsKey(fileCode) ) {
+    		return true ;
+    	}
+    	long lastRefresh = mFilesLastRefresh.get(fileCode) ;
+    	if( (mClock.getTime() - lastRefresh) > FILE_AUTO_REFRESH_INTERVAL ) {
+    		return true ;
+    	}
+    	return false ;
+    }
     private void notifyRefreshStart() {
         for (RefreshListener l : mListeners) {
             l.onRefreshStart() ;
@@ -100,6 +111,7 @@ public class RefreshManager {
     	public void onServiceEndCallback( int status, SyncPullRequest pr ) {
     		if( pr != null && mPendingPullRequests.contains(pr) ) {
     			mPendingPullRequests.remove(pr) ;
+    			mFilesLastRefresh.put(pr.fileCode, mClock.getTime()) ;
     			notifyRefreshFileChanged(pr.fileCode) ;
     		}
     	}

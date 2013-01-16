@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- extends LinearLayout  -->
+<za.dams.paracrm.explorer.FileListItemWide
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:paddingLeft="16dip"
+    android:paddingRight="16dip"
+    android:layout_width="match_parent"
+    android:layout_height="70sp"
+    android:orientation="horizontal"
+    android:background="@drawable/conversation_wide_read_selector">
+    <ImageView
+        android:id="@+id/fileicon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dip"
+        android:layout_marginRight="16dip"
+        android:layout_gravity="center_vertical"
+        android:src="@drawable/ic_explorer_fileicon" />
+    <TextView
+        android:id="@+id/filerecord_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="@dimen/mailbox_list_padding_right"
+        android:layout_width="100sp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:visibility="gone"
+        style="@android:style/TextAppearance.Small"
+        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:id="@+id/crm_fields">
+    </LinearLayout>
+</za.dams.paracrm.explorer.FileListItemWide>

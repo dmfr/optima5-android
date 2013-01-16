@@ -2,8 +2,10 @@ package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 
@@ -43,6 +45,9 @@ public class CrmFileManager {
     public void increaseFileVisibleLimit(String fileCode) {
     	mFileVisibleLimit.put(fileCode,getFileVisibleLimit(fileCode)+VISIBLE_LIMIT_INCREMENT) ;
     }
+    public void resetFileVisibleLimit(String fileCode) {
+    	mFileVisibleLimit.put(fileCode,VISIBLE_LIMIT_DEFAULT) ;
+    }
 	
 	
     // File descriptions
@@ -69,6 +74,10 @@ public class CrmFileManager {
     	
     	public boolean fieldIsHeader ;
     	public boolean fieldIsHighlight ;
+	}
+	public static class CrmFileRecord {
+		public String fileCode ;
+		public long filerecordId ;
 	}
    
 	private boolean isInitialized = false ;
@@ -177,5 +186,29 @@ public class CrmFileManager {
     		mRootFileCodes.add(fileCode) ;
     	}
     	mFileDescriptors.put(cfd.fileCode,cfd) ;
+    }
+    
+    
+    private BibleHelper.BibleEntry pullFilterBe ;
+    public void setPullFilter( BibleHelper.BibleEntry be ) {
+    	pullFilterBe = be ;
+    }
+    public List<CrmFileRecord> filePullData( String fileCode ) {
+    	
+    	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
+    	Cursor c ;
+    	
+    	int limit = getFileVisibleLimit(fileCode) ;
+    	
+    	ArrayList<CrmFileRecord> data = new ArrayList<CrmFileRecord>();
+    	c = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY filerecord_id DESC LIMIT %d",fileCode,limit)) ;
+    	while( c.moveToNext() ) {
+    		CrmFileRecord cfr = new CrmFileRecord();
+    		cfr.fileCode = fileCode ;
+    		cfr.filerecordId = (long)c.getInt(0) ;
+    		data.add(cfr) ;
+    	}
+    	c.close() ;
+    	return data ;
     }
 }

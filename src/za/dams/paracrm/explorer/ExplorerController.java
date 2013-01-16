@@ -76,6 +76,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
             updateRefreshIcon();
             
             // @DAMS : Tell FileListFragment (if any) that something changed => it will tell the loader to reload
+            if( isFileListInstalled() && fileCode.equals(getFileListFragment().getFileCode()) ) {
+            	getFileListFragment().forceReload() ;
+            }
         }
 
         void setRefreshIcon(MenuItem icon) {
@@ -1042,6 +1045,13 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	public void onQuerySelected() {
 		// TODO Auto-generated method stub
 		openEmptyList() ;
+	}
+
+	// FileListFragment$Callback
+	@Override
+	public void onFilerecordOpen(long filerecordId) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
