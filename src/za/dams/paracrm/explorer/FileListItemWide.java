@@ -80,6 +80,7 @@ public class FileListItemWide extends FileListItem {
 				break ;
 			default :
 				((TextView)v.findViewById(R.id.text)).setText(cffv.displayStr) ;
+				break ;
 			}
 		}
 	}

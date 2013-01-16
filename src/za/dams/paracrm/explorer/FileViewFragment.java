@@ -2,9 +2,11 @@ package za.dams.paracrm.explorer;
 
 import android.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 public class FileViewFragment extends Fragment implements View.OnClickListener {
+	private static final String LOGTAG = "FileViewFragment";
 
     /** Argument name(s) */
     private static final String ARG_FILERECORD_ID = "filerecordId";
@@ -35,11 +37,53 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     }
     
     
+    private Long mImmutableFilerecordId;
+
+    private void initializeArgCache() {
+        if (mImmutableFilerecordId != null) return;
+        mImmutableFilerecordId = getArguments().getLong(ARG_FILERECORD_ID);
+    }
+
+    /**
+     * @return the message ID passed to {@link #newInstance}.  Safe to call even before onCreate.
+     */
     public long getFilerecordId() {
-    	return 0 ;
+        initializeArgCache();
+        return mImmutableFilerecordId;
     }
     
     
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        if (Explorer.DEBUG) {
+            Log.d(LOGTAG, this + " onActivityCreated");
+        }
+        super.onActivityCreated(savedInstanceState);
+        /*
+        mController.addResultCallback(mControllerCallback);
+
+        resetView();
+        new LoadMessageTask(true).executeParallel();
+        */
+
+        UiUtilities.installFragment(this);
+    }
+    @Override
+    public void onDestroyView() {
+        if (Explorer.DEBUG) {
+            Log.d(LOGTAG, this + " onDestroyView");
+        }
+        UiUtilities.uninstallFragment(this);
+        /*
+        mController.removeResultCallback(mControllerCallback);
+        cancelAllTasks();
+        */
+
+        // We should clean up the Webview here, but it can't release resources until it is
+        // actually removed from the view tree.
+
+        super.onDestroyView();
+    }
     
 	@Override
 	public void onClick(View v) {

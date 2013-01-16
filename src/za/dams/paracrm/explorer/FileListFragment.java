@@ -1,5 +1,6 @@
 package za.dams.paracrm.explorer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import za.dams.paracrm.R;
@@ -16,7 +17,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -173,6 +174,7 @@ public class FileListFragment extends ListFragment {
         
         final ListView lv = getListView();
         lv.setItemsCanFocus(false);
+        lv.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
         mListFooterView = getActivity().getLayoutInflater().inflate(
                 R.layout.explorer_filelist_item_footer, lv, false);
@@ -308,7 +310,8 @@ public class FileListFragment extends ListFragment {
     @Override
     public void onListItemClick(ListView parent, View view, int position, long id) {
         if (view != mListFooterView) {
-
+        	long clickedFilerecordId = mListAdapter.getItem(position).filerecordId ;
+        	mCallback.onFilerecordOpen(clickedFilerecordId) ;
         } else {
             doFooterClick();
         }
@@ -367,7 +370,6 @@ public class FileListFragment extends ListFragment {
                 setListAdapter(mListAdapter);
                 lv.onRestoreInstanceState(listState);
             }
-
             mListFooterProgress = mListFooterView.findViewById(R.id.progress);
             mListFooterText = (TextView) mListFooterView.findViewById(R.id.main_text);
         } else {
@@ -397,6 +399,7 @@ public class FileListFragment extends ListFragment {
      * Handle a click in the list footer, which changes meaning depending on what we're looking at.
      */
     private void doFooterClick() {
+    	highlightSelectedFilerecord(mIsFirstLoad) ;
         switch (mListFooterMode) {
             case LIST_FOOTER_MODE_NONE: // should never happen
                 break;
@@ -409,6 +412,15 @@ public class FileListFragment extends ListFragment {
     /**
      * Highlight the selected message.
      */
+    public void setSelectedFilerecord(long filerecordId) {
+        if (mSelectedFilerecordId == filerecordId) {
+            return;
+        }
+        mSelectedFilerecordId = filerecordId;
+        if (mResumed) {
+        	highlightSelectedFilerecord(true);
+        }
+    }
     private void highlightSelectedFilerecord(boolean ensureSelectionVisible) {
         if (!isViewCreated()) {
             return;
@@ -423,7 +435,7 @@ public class FileListFragment extends ListFragment {
 
         final int count = lv.getCount();
         for (int i = 0; i < count; i++) {
-            if (lv.getItemIdAtPosition(i) != mSelectedFilerecordId) {
+            if ( ((CrmFileManager.CrmFileRecord)lv.getItemAtPosition(i)).filerecordId != mSelectedFilerecordId) {
                 continue;
             }
             lv.setItemChecked(i, true);
@@ -448,7 +460,6 @@ public class FileListFragment extends ListFragment {
 	
 	
 	private class FileListLoaderCallbacks implements LoaderCallbacks<FileListFragmentLoaderResult> {
-		private boolean mIsFirstLoad;
 		
 		@Override
 		public Loader<FileListFragmentLoaderResult> onCreateLoader(int arg0, Bundle arg1) {
@@ -459,23 +470,17 @@ public class FileListFragment extends ListFragment {
 
 		@Override
 		public void onLoadFinished(Loader<FileListFragmentLoaderResult> loader, FileListFragmentLoaderResult data) {
-            // Save list view state (primarily scroll position)
-            final ListView lv = getListView();
-            final Parcelable listState;
-            if (mSavedListState != null) {
-                listState = mSavedListState;
-                mSavedListState = null;
-            } else {
-                listState = lv.onSaveInstanceState();
-            }
-            
-            // on peut faire tout ceci ici BECAUSE The loader manager doesn't deliver results when a fragment is stopped.
+			
+            // On peut faire tout ceci ici BECAUSE The loader manager doesn't deliver results when a fragment is stopped.
+            //Parcelable listState = lv.onSaveInstanceState();
 			mListAdapter.setData(data.fileDesc,data.records) ;
+			
 			
 			autoRefreshStaleFile();
 			updateFooterView();
 
 			highlightSelectedFilerecord(mIsFirstLoad) ;
+			
 			
             if (mIsFirstLoad) {
                 mListPanel.setVisibility(View.VISIBLE);
@@ -490,8 +495,9 @@ public class FileListFragment extends ListFragment {
                 setListAdapter(mListAdapter);
             }
 			
-            lv.onRestoreInstanceState(listState);
-
+            if (mSavedListState != null) {
+            	getListView().onRestoreInstanceState(mSavedListState);
+            }
 			
             mIsFirstLoad = false;
 		}
@@ -507,27 +513,31 @@ public class FileListFragment extends ListFragment {
 		}
 		
 	}
-	private class FileListFragmentAdapter extends ArrayAdapter<CrmFileManager.CrmFileRecord> {
+	private class FileListFragmentAdapter extends BaseAdapter {
 		
 		private ExplorerLayout mLayout ;
 		private boolean isLoaded = false ;
-		private CrmFileManager.CrmFileDesc cfd ;
+		
+		private CrmFileManager.CrmFileDesc mCfd ;
+		private ArrayList<CrmFileManager.CrmFileRecord> mData ;
 		
 		LayoutInflater mInflater ;
 
 		public FileListFragmentAdapter(Context context) {
-			super(context, android.R.layout.simple_list_item_2);
+			super();
+			mData = new ArrayList<CrmFileManager.CrmFileRecord>() ;
 			mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		}
 	    public void setData( CrmFileManager.CrmFileDesc fileDesc, List<CrmFileManager.CrmFileRecord> data) {
-	        clear() ;
-	        cfd = fileDesc ;
+	    	mData.clear() ;
+	        mCfd = fileDesc ;
 	        if (data != null) {
-	            addAll(data);
+	        	mData.addAll(data);
 	            isLoaded = true ;
 	        } else {
 	        	isLoaded = false ;
 	        }
+	        notifyDataSetChanged() ;
 	    }
 	    public boolean isDataLoaded() {
 	    	return isLoaded ;
@@ -561,13 +571,25 @@ public class FileListFragment extends ListFragment {
 				}
 			}
 			
-			view.buildCrmFields(cfd) ;
+			view.buildCrmFields(mCfd) ;
 			
 			view.setCrmValues(getItem(position)) ;
 			
 			
 
 			return view;
+		}
+		@Override
+		public int getCount() {
+			return mData.size() ;
+		}
+		@Override
+		public CrmFileManager.CrmFileRecord getItem(int position) {
+			return mData.get(position);
+		}
+		@Override
+		public long getItemId(int position) {
+			return position;
 		}
 	}
 	

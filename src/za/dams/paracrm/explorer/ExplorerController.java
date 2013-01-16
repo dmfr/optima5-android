@@ -289,8 +289,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         refreshActionBar();
         
         if( isFileListInstalled() ) {
-        	// @DAMS : TODO !
-        	// getMessageListFragment().setSelectedMessage(fragment.getMessageId());
+        	getFileListFragment().setSelectedFilerecord(fragment.getFilerecordId());
         }
     }
 
@@ -427,7 +426,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
 
     /** @return true if a {@link MessageViewFragment} is installed. */
-    protected final boolean isMessageViewInstalled() {
+    protected final boolean isFileViewInstalled() {
         return mFileViewFragment != null;
     }
 
@@ -475,6 +474,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
     protected String getFileListFileCode() {
         return isFileListInstalled() ? getFileListFragment().getFileCode()
                 : null ;
+    }
+    protected long getFileViewFilerecordId() {
+        return isFileViewInstalled() ? getFileViewFragment().getFilerecordId()
+                : 0 ;
     }
 
     /**
@@ -535,6 +538,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
     	mExplorerContext = newExplorerContext;
     	updateFileList(true);
     }
+    public final void openFilerecord( long filerecordId ) {
+        if (getFileViewFilerecordId() != filerecordId) {
+            navigateToFile(filerecordId);
+            mThreePane.showRightPane();
+        }
+    }
 
 
     /**
@@ -569,7 +578,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * be hidden.
      */
     private void goBackToMailbox() {
-        if (isMessageViewInstalled()) {
+        if (isFileViewInstalled()) {
             mThreePane.showLeftPane(); // Show mailbox list
         }
     }
@@ -645,7 +654,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
             throw new IllegalArgumentException();
         }
 
-        if (filerecordId == getFilerecordId()) {
+        if (filerecordId == getFileViewFilerecordId()) {
             return; // nothing to do.
         }
 
@@ -669,7 +678,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
     private void unselectMessage() {
         commitFragmentTransaction(removeFileViewFragment(mFragmentManager.beginTransaction()));
         if (isFileListInstalled()) {
-            // getFileListFragment().setSelectedFile(Message.NO_MESSAGE); //@DAMS ???
+            getFileListFragment().setSelectedFilerecord(-1);
         }
     }
     
@@ -901,15 +910,6 @@ public class ExplorerController implements ExplorerLayout.Callback,
         return true;
     }
 
-    /**
-     * @return the ID of the message in focus and visible, if any. Returns
-     *     {@link Message#NO_MESSAGE} if no message is opened.
-     */
-    protected long getFilerecordId() {
-        return isMessageViewInstalled()
-                ? getFileViewFragment().getFilerecordId()
-                : 0;
-    }
 
 
     /**
@@ -997,13 +997,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
 
         @Override
         public boolean shouldShowUp() {
-        	/*
             final int visiblePanes = mThreePane.getVisiblePanes();
-            final boolean leftPaneHidden = ((visiblePanes & ThreePaneLayout.PANE_LEFT) == 0);
-            return leftPaneHidden
-                    || (isMailboxListInstalled() && getMailboxListFragment().canNavigateUp());
-            */
-        	return false ;
+            final boolean leftPaneHidden = ((visiblePanes & ExplorerLayout.PANE_LEFT) == 0);
+            return leftPaneHidden ;
         }
 
         @Override
@@ -1046,15 +1042,13 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	// DataListFragment$Callback
 	@Override
 	public void onQuerySelected() {
-		// TODO Auto-generated method stub
 		openEmptyList() ;
 	}
 
 	// FileListFragment$Callback
 	@Override
 	public void onFilerecordOpen(long filerecordId) {
-		// TODO Auto-generated method stub
-		
+		openFilerecord(filerecordId) ;
 	}
 
 }
