@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -44,6 +45,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.provider.Settings.Secure;
+import android.util.Log;
 
 public class SyncService extends Service {
 	
@@ -60,6 +62,8 @@ public class SyncService extends Service {
 	public static final String SYNCPULL_FILECODE = "SyncPullFilecode" ;
 	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullNoIncrement" ;
 	public static final String PULL_REQUEST = "PullRequest" ;
+	
+	private static final int FILE_TTL_PURGE = 2 * 24 * 60 * 60 ; // 2 days in seconds
 	
 	private Messenger mMessenger ;
 	private SyncPullRequest mOriginalPullRequest ;
@@ -232,6 +236,7 @@ public class SyncService extends Service {
     	return new Boolean(true) ;
     }
     
+    
     private boolean doPull( SyncPullRequest pr ) {
     	// ***** timestamp du dernier sync pour ce fileCode ****
     	long lastFileSyncTimestamp ;
@@ -280,10 +285,8 @@ public class SyncService extends Service {
     			out.close();
 
     			InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
-    			long newSyncTimestamp = syncDbFromPull( pr.fileCode, is ) ;
-    			if( newSyncTimestamp <= 0 ) {
-    				return false ;
-    			}
+    			int newPullTimestamp = syncDbFromPull( pr.fileCode, is ) ;
+    			afterPullTTLpurge(newPullTimestamp) ;
     		}
     		catch (IOException e) {
 
@@ -423,9 +426,9 @@ public class SyncService extends Service {
 	}
 	
 	
-	private long syncDbFromPull( String bibleCode , InputStream is ) {
+	private int syncDbFromPull( String bibleCode , InputStream is ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
-		
+		int pullTimestamp = (int)(System.currentTimeMillis() / 1000) ;
 		
     	long versionTimestamp = 0 ;
     	
@@ -535,7 +538,7 @@ public class SyncService extends Service {
 					
 					if(jsonArr.length() == 0 ) {
 						//Log.w(TAG,"Committing "+tableName) ;
-						syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+						syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId,pullTimestamp) ;
 						insertBuffer = new ArrayList<ContentValues>() ;
 						tableName = null ;
 						nbRowstmp = 0 ;
@@ -561,7 +564,7 @@ public class SyncService extends Service {
 		    		nbRowstmp++ ;
 		    		
 		    		if( nbRowstmp > 1000 ) {
-		    			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+		    			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId,pullTimestamp) ;
 		    			insertBuffer = new ArrayList<ContentValues>() ;
 		    			nbRowstmp = 0 ;
 		    		}
@@ -572,16 +575,16 @@ public class SyncService extends Service {
 					break ;
 				}
 			}
-			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId) ;
+			syncDbFromPull_bulkReplace(tableName,insertBuffer,eqivRemoteIdToLocalId,pullTimestamp) ;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			//e.printStackTrace();
 			return 0 ;
 		}
     	
-    	return versionTimestamp ;
+    	return pullTimestamp ;
 	}
-	private void syncDbFromPull_bulkReplace( String tableName, ArrayList<ContentValues> cvs, HashMap<Integer,Integer> eqivRemoteIdToLocalId ) {
+	private void syncDbFromPull_bulkReplace( String tableName, ArrayList<ContentValues> cvs, HashMap<Integer,Integer> eqivRemoteIdToLocalId, int pullTimestamp ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
 		
     	if( cvs.isEmpty() ){
@@ -598,18 +601,21 @@ public class SyncService extends Service {
     			cv = iter.next() ;
     			
     			int updateId = 0 ;
+    			int existingSyncTimestamp = -1 ;
 
     			if( cv.getAsString("sync_vuid").equals("") ) {
     				continue ;
     			}
     			
-    			Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
+    			Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id , sync_timestamp FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
     			while( cursor.moveToNext() ) {
     				updateId = cursor.getInt(0) ;
+    				existingSyncTimestamp = cursor.getInt(1) ;
     			}
     			cursor.close();
-
+    			
     			cv.put("sync_is_synced", "O") ;
+    			cv.put("pull_timestamp",pullTimestamp) ;
     			int localId ;
     			int remoteId = cv.getAsInteger("filerecord_id") ;
     			if( updateId > 0 ) {
@@ -622,6 +628,11 @@ public class SyncService extends Service {
         			localId = (int)mDb.insert(tableName, cv);
     			}
 
+    			if( updateId > 0 && (existingSyncTimestamp == cv.getAsInteger("sync_timestamp")) ) {
+    				// Log.w(TAG,"Timestamp's the same!!!") ;
+    				continue ;
+    			}
+    			
     			eqivRemoteIdToLocalId.put(remoteId, localId) ;
     		}
     	
@@ -659,6 +670,26 @@ public class SyncService extends Service {
         mDb.execSQL(String.format("UPDATE store_file SET sync_timestamp='0' WHERE file_code='%s'",fileCode)) ;
 	}
     
+    private boolean afterPullTTLpurge( int newPullTimestamp )
+    {
+    	int deadLine = (newPullTimestamp - FILE_TTL_PURGE) ;
+    	boolean doIt = false ;
+    	
+    	DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+    	Cursor c = mDb.rawQuery(String.format("SELECT count(*) FROM store_file WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
+    	while( c.moveToNext() ) {
+    		doIt = (c.getInt(0)>0) ? true : false ;
+    		break ;
+    	}
+    	c.close() ;
+    	
+    	if( doIt ) {
+    		mDb.execSQL(String.format("DELETE FROM store_file WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
+    		mDb.execSQL("delete from store_file_field where filerecord_id NOT IN (select filerecord_id from store_file)") ;
+    	}
+    	
+    	return true ;
+    }
     
     
 	

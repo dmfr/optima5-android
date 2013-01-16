@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 17;
+    private final int DB_VERSION = 18;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -241,7 +241,8 @@ public class DatabaseManager {
                     + "sync_vuid" + " VARCHAR(100),"
                     + "sync_is_synced" + " VARCHAR(1),"
                     + "sync_is_deleted" + " VARCHAR(1),"
-                    + "sync_timestamp" + " INTEGER"
+                    + "sync_timestamp" + " INTEGER,"
+                    + "pull_timestamp" + " INTEGER"
                     + ");";
             db.execSQL(createTableQuery);
     		createTableQuery = "CREATE INDEX IF NOT EXISTS "
