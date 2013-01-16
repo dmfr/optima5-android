@@ -263,7 +263,7 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
         if (!getEnableHighlight()) {
             return;
         }
-        if (dle!=null && dle.equals(mNextHighlightedDataListEntry)) {
+        if (dle!=null && dle.equals(mHighlightedDataListEntry)) {
             return; // already highlighted.
         }
         if ( !mListAdapter.isDataLoaded() ) {
@@ -554,7 +554,7 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 			if( !cfm.isInitialized() ) {
 				cfm.fileInitDescriptors() ;
 				try {
-					Thread.sleep(1500) ;
+					Thread.sleep(500) ;
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
