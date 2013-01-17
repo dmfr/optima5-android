@@ -618,6 +618,14 @@ public class SyncService extends Service {
     			cv.put("pull_timestamp",pullTimestamp) ;
     			int localId ;
     			int remoteId = cv.getAsInteger("filerecord_id") ;
+    			int remoteParentId = cv.getAsInteger("filerecord_parent_id") ;
+    			if( remoteParentId > 0 ) {
+    				if( !eqivRemoteIdToLocalId.containsKey(remoteParentId) ) {
+    					continue ;
+    				}
+    				int localParentId = eqivRemoteIdToLocalId.get(remoteParentId) ;
+    				cv.put("filerecord_parent_id", localParentId) ;
+    			}
     			if( updateId > 0 ) {
     				cv.put("filerecord_id",updateId) ;
     				mDb.update(tableName, cv, "filerecord_id="+updateId);
