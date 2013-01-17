@@ -266,4 +266,9 @@
         <item name="android:layout_height">match_parent</item>
     </style>
     
+    <style name="message_view_horizontal_divider">
+        <item name="android:layout_height">1dip</item>
+        <item name="android:background">?android:attr/dividerHorizontal</item>
+    </style>
+    
 </resources>

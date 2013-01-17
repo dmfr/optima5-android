@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/crm_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="8dp">
+    <TextView
+	android:id="@+id/crm_label"
+	android:text=""
+	android:layout_gravity="top"
+	android:textStyle="bold"
+	android:textColor="@android:color/black"
+	android:layout_height="wrap_content"
+	style="@android:style/TextAppearance.Medium" />
+    <View
+	android:layout_height="match_parent"
+	android:layout_width="32dp"/>
+    <TextView
+	android:id="@+id/crm_text"
+	android:text=""
+	android:layout_gravity="top"
+	android:textColor="@android:color/black"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	style="@android:style/TextAppearance.Medium" />
+</TableRow>

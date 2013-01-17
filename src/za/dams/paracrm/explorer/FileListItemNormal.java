@@ -44,7 +44,7 @@ public class FileListItemNormal extends FileListItem {
 			case FIELD_DATE:
 			case FIELD_DATETIME:
 			case FIELD_BIBLE:
-				((TextView)v).setTypeface(null, Typeface.BOLD);
+				//((TextView)v).setTypeface(null, Typeface.BOLD);
 				break ;
 			default :
 				break ;
@@ -74,7 +74,7 @@ public class FileListItemNormal extends FileListItem {
 			View v = mCrmFieldViews.get(idx) ;
 			switch( cffd.fieldType ) {
 			case FIELD_BIBLE:
-				((TextView)v).setText(cffv.displayStr2) ;
+				((TextView)v).setText(cffv.displayStr) ;
 				break ;
 			default :
 				((TextView)v).setText(cffv.displayStr) ;

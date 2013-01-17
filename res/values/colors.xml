@@ -173,6 +173,6 @@
     
     
     
-    
+    <color name="text_primary_color">#000000</color>
     <color name="error_bar_background">#ffff66</color>
 </resources>

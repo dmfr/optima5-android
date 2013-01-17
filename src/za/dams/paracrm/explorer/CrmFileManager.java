@@ -119,6 +119,7 @@ public class CrmFileManager {
 	public static class CrmFileRecord {
 		public String fileCode ;
 		public long filerecordId ;
+		public String syncVuid ;
     	public HashMap<String,CrmFileFieldValue> recordData ;
     	public CrmFilePhoto recordPhoto ;
 	}
@@ -241,6 +242,9 @@ public class CrmFileManager {
     	pullFilterBe = be ;
     }
     public List<CrmFileRecord> filePullData( String fileCode ) {
+    	return filePullData(fileCode,0,0) ;
+    }
+    public List<CrmFileRecord> filePullData( String fileCode, long filerecordId, long filerecordParentId ) {
 		class StoreFileFieldRecord {
 			public String fieldCode ;
 			public float valueNumber ;
@@ -253,16 +257,23 @@ public class CrmFileManager {
     	Cursor c ;
     	BibleHelper mBibleHelper = null ;
     	
-    	int limit = getFileVisibleLimit(fileCode) ;
-    	String queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
+    	String queryMaster ;
+    	if( filerecordId > 0 ) {
+    		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_id='%d'",fileCode,filerecordId) ;
+    	} else if( filerecordParentId > 0 ) {
+    		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_parent_id='%d'",fileCode,filerecordParentId) ;
+    	} else {
+        	int limit = getFileVisibleLimit(fileCode) ;
+        	queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
+    	}
     	
 		HashMap<Long,HashMap<String,StoreFileFieldRecord>> dbRecordFields = new HashMap<Long,HashMap<String,StoreFileFieldRecord>>() ;
 		c = mDb.rawQuery(String.format("SELECT * FROM store_file_field WHERE filerecord_id IN (%s)", queryMaster));
 		while( c.moveToNext() ) {
-			long filerecordId = c.getLong(c.getColumnIndex("filerecord_id")) ;
+			long cfilerecordId = c.getLong(c.getColumnIndex("filerecord_id")) ;
 			
-			if( !dbRecordFields.containsKey(filerecordId) ) {
-				dbRecordFields.put(filerecordId, new HashMap<String,StoreFileFieldRecord>()) ;
+			if( !dbRecordFields.containsKey(cfilerecordId) ) {
+				dbRecordFields.put(cfilerecordId, new HashMap<String,StoreFileFieldRecord>()) ;
 			}
 			
 			StoreFileFieldRecord field = new StoreFileFieldRecord() ;
@@ -272,17 +283,18 @@ public class CrmFileManager {
 			field.valueDate = c.getString(c.getColumnIndex("filerecord_field_value_date")) ;
 			field.valueLink = c.getString(c.getColumnIndex("filerecord_field_value_link")) ;
 			
-			dbRecordFields.get(filerecordId).put(field.fieldCode, field) ;
+			dbRecordFields.get(cfilerecordId).put(field.fieldCode, field) ;
 		}
 		c.close() ;
 	
     	
     	ArrayList<CrmFileRecord> data = new ArrayList<CrmFileRecord>();
-    	c = mDb.rawQuery(queryMaster) ;
+    	c = mDb.rawQuery(String.format("SELECT filerecord_id, sync_vuid FROM store_file WHERE filerecord_id IN (%s)",queryMaster)) ;
     	while( c.moveToNext() ) {
     		CrmFileRecord cfr = new CrmFileRecord();
     		cfr.fileCode = fileCode ;
     		cfr.filerecordId = (long)c.getInt(0) ;
+    		cfr.syncVuid = c.getString(1) ;
     		cfr.recordData = new HashMap<String,CrmFileFieldValue>() ;
     		
     		for( CrmFileFieldDesc fd : fileGetFileDescriptor(fileCode).fieldsDesc ) {
@@ -354,10 +366,11 @@ public class CrmFileManager {
     			
     			case FIELD_NUMBER :
     				Float tFloat = sffr.valueNumber ;
+    				float f = sffr.valueNumber ;
     				cfr.recordData.put(fd.fieldCode,
     						new CrmFileFieldValue(fd.fieldType,
     								tFloat,false,null,new Date(),
-    								new Float(tFloat).toString(),"",""
+    								displayFloat( f ),"",""
     								)
     						) ;								
     				break ;
@@ -369,5 +382,25 @@ public class CrmFileManager {
     	}
     	c.close() ;
     	return data ;
+    }
+    
+    
+    public String lookupFilecodeForId( long filerecordId ) {
+    	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
+    	Cursor c ;
+    	c = mDb.rawQuery(String.format("SELECT file_code FROM store_file WHERE filerecord_id='%d'",filerecordId)) ;
+    	if( c.getCount() != 1 ) {
+    		return null ;
+    	}
+    	c.moveToNext() ;
+    	return c.getString(0) ;
+    }
+    
+    public String displayFloat( float f ) {
+    	if( f==(int)(f) ) {
+    		return String.valueOf((int)f) ;
+    	} else {
+    		return String.valueOf(f) ;
+    	}
     }
 }
