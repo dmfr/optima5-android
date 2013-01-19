@@ -20,7 +20,7 @@ import org.apache.http.params.HttpParams;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import za.dams.paracrm.calendar.EditEventFragment;
+import za.dams.paracrm.explorer.Explorer;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -238,9 +238,9 @@ public class MainMenuActivity extends Activity {
     }
     protected void onStart() {
     	super.onStart() ;
-    	if( SyncServiceHelper.hasPendingUploads(mContext) ) {
+    	if( SyncServiceController.hasPendingPush(mContext) ) {
     		// @DAMS : build proper sync system
-    		SyncServiceHelper.launchSync( mContext ) ;
+    		SyncServiceController.getInstance(mContext).requestPush() ;
     	}
     	else if( UploadServiceHelper.hasPendingUploads(mContext) ) {
     		UploadServiceHelper.launchUpload( mContext ) ;
@@ -303,7 +303,7 @@ public class MainMenuActivity extends Activity {
 			// e.printStackTrace();
 		}
     	if( nightlyVersion > localVersion ) {
-    		if( !SyncServiceHelper.isServiceRunning(mContext) && !SyncServiceHelper.hasPendingUploads(mContext) 
+    		if( !SyncServiceController.isServiceRunning(mContext) && !SyncServiceController.hasPendingPush(mContext) 
     				&& !UploadServiceHelper.isServiceRunning(mContext) && !UploadServiceHelper.hasPendingUploads(mContext) ) {
             	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
         			@Override
@@ -477,6 +477,8 @@ public class MainMenuActivity extends Activity {
     }
     
     public void myQuitActivity() {
+    	Explorer.clearContext() ;
+    	
     	if( CrmFileTransactionManager.getInstance(getApplicationContext()).getNbTransactions() == 0 ) {
     		finish() ;
     		return ;
@@ -570,6 +572,8 @@ public class MainMenuActivity extends Activity {
 
 	    })).start();
 	    // ...
+	    
+	    Explorer.clearContext() ;
 	}
 	
 	public void myRefreshDb(){
@@ -602,7 +606,7 @@ public class MainMenuActivity extends Activity {
 	
 	public void myUploadService(){
         // @DAMS : build proper sync system
-		SyncServiceHelper.launchSync( mContext ) ;
+		SyncServiceController.getInstance(mContext).requestPush() ;
 	}
 
 	
@@ -704,6 +708,9 @@ public class MainMenuActivity extends Activity {
             }
             Toast.makeText(mContext, toastMsg, Toast.LENGTH_LONG).show();
             mAdapter.notifyDataSetChanged();
+            
+            // Destruction des sigletons
+            Explorer.clearContext() ;
         }
     }
 
