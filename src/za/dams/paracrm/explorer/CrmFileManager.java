@@ -261,10 +261,10 @@ public class CrmFileManager {
     	if( filerecordId > 0 ) {
     		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_id='%d'",fileCode,filerecordId) ;
     	} else if( filerecordParentId > 0 ) {
-    		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_parent_id='%d'",fileCode,filerecordParentId) ;
+    		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_parent_id='%d' AND ( sync_is_deleted IS NULL OR sync_is_deleted<>'O' )",fileCode,filerecordParentId) ;
     	} else {
         	int limit = getFileVisibleLimit(fileCode) ;
-        	queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
+        	queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND ( sync_is_deleted IS NULL OR sync_is_deleted<>'O' ) ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
     	}
     	
 		HashMap<Long,HashMap<String,StoreFileFieldRecord>> dbRecordFields = new HashMap<Long,HashMap<String,StoreFileFieldRecord>>() ;
@@ -287,9 +287,9 @@ public class CrmFileManager {
 		}
 		c.close() ;
 	
-    	
+    
     	ArrayList<CrmFileRecord> data = new ArrayList<CrmFileRecord>();
-    	c = mDb.rawQuery(String.format("SELECT filerecord_id, sync_vuid FROM store_file WHERE filerecord_id IN (%s)",queryMaster)) ;
+    	c = mDb.rawQuery(String.format("SELECT filerecord_id, sync_vuid FROM store_file WHERE filerecord_id IN (%s) ORDER BY sync_timestamp DESC",queryMaster)) ;
     	while( c.moveToNext() ) {
     		CrmFileRecord cfr = new CrmFileRecord();
     		cfr.fileCode = fileCode ;
