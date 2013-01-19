@@ -650,9 +650,11 @@ public class DatabaseManager {
     
     public void syncTagVuid( String android_id, String timestamp ){
     	//Log.w(TAG,"My Vuid is "+android_id ) ;
-    	String query = String.format("UPDATE store_file SET sync_vuid='%s'||'-'||'%s'||'-'||filerecord_id  WHERE sync_vuid IS NULL",android_id,timestamp) ;
+    	String query1 = String.format("UPDATE store_file SET sync_vuid='%s'||'-'||'%s'||'-'||filerecord_id  WHERE sync_vuid IS NULL",android_id,timestamp) ;
+    	String query2 = String.format("UPDATE store_file SET sync_timestamp='%s' WHERE sync_timestamp IS NULL",android_id,timestamp) ;
     	mDb.beginTransaction() ;
-    	mDb.execSQL(query) ;
+    	mDb.execSQL(query1) ;
+    	mDb.execSQL(query2) ;
     	mDb.setTransactionSuccessful() ;
     	mDb.endTransaction() ;
     }

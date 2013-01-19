@@ -1,6 +1,7 @@
 package za.dams.paracrm;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -11,8 +12,14 @@ public class SyncPullRequest implements Parcelable {
 		public String fileFieldCode ;
 		public String conditionSign ;
 		public String conditionValue ;
+		public List<String> conditionValueArr ;
 		
-		public SyncPullRequestFileCondition() {}
+		public SyncPullRequestFileCondition() {
+			fileFieldCode = "";
+			conditionSign = "";
+			conditionValue = "";
+			conditionValueArr = new ArrayList<String>();
+		}
 		
 		public boolean equals( Object o ) {
 			SyncPullRequestFileCondition sprfc = (SyncPullRequestFileCondition)o ;
@@ -25,6 +32,9 @@ public class SyncPullRequest implements Parcelable {
 			if( !this.conditionValue.equals(sprfc.conditionValue) ) {
 				return false ;
 			}
+			if( !this.conditionValueArr.equals(sprfc.conditionValueArr) ) {
+				return false ;
+			}
 			return true ;
 		}
 		public int hashCode() {
@@ -33,6 +43,7 @@ public class SyncPullRequest implements Parcelable {
 			result = 31 * result + fileFieldCode.hashCode() ;
 			result = 31 * result + conditionSign.hashCode() ;
 			result = 31 * result + conditionValue.hashCode() ;
+			result = 31 * result + conditionValueArr.hashCode() ;
 			
 			return result ;
 		}
@@ -67,6 +78,10 @@ public class SyncPullRequest implements Parcelable {
 			out.writeString(prfc.fileFieldCode);
 			out.writeString(prfc.conditionSign);
 			out.writeString(prfc.conditionValue);
+			out.writeInt(prfc.conditionValueArr.size()) ;
+			for( String s : prfc.conditionValueArr ) {
+				out.writeString(s);
+			}
 		}
 		out.writeInt(limitResults);
 		out.writeByte( (byte)(supplyTimestamp ? 1:0) );
@@ -86,6 +101,10 @@ public class SyncPullRequest implements Parcelable {
 			prfc.fileFieldCode = in.readString() ;
 			prfc.conditionSign = in.readString() ;
 			prfc.conditionValue = in.readString() ;
+			int nbValueArr = in.readInt();
+			for( int idxb=0 ; idxb<nbValueArr ; idxb++ ) {
+				prfc.conditionValueArr.add(in.readString()) ;
+			}
 			fileConditions.add(prfc) ;
 		}
 		limitResults = in.readInt() ;

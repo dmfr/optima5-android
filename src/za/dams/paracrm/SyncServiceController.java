@@ -125,7 +125,11 @@ public class SyncServiceController {
 		}
 		
 		Intent intent = new Intent(mContext, SyncService.class) ;
-		intent.putExtra(SyncService.PULL_REQUEST, pr) ;
+		if( pr!=null ) {
+			intent.putExtra(SyncService.PULL_REQUEST, pr) ;
+		} else {
+			intent.putExtra(SyncService.PUSH_DO, true) ;
+		}
 		intent.putExtra(SyncService.EXTRA_MESSENGER, new Messenger(mHandler));
 		mContext.startService(intent) ;
 	}

@@ -62,6 +62,7 @@ public class SyncService extends Service {
 	public static final String SYNCPULL_FILECODE = "SyncPullFilecode" ;
 	public static final String SYNCPULL_NO_INCREMENTIAL = "SyncPullNoIncrement" ;
 	public static final String PULL_REQUEST = "PullRequest" ;
+	public static final String PUSH_DO = "PushDo" ;
 	
 	private static final int FILE_TTL_PURGE = 2 * 24 * 60 * 60 ; // 2 days in seconds
 	
@@ -94,27 +95,11 @@ public class SyncService extends Service {
 		
 		if( bundle != null && bundle.containsKey(PULL_REQUEST) ) {
 			mOriginalPullRequest = (SyncPullRequest)bundle.getParcelable(PULL_REQUEST) ;
-			// Log.w(TAG,"Starting pull for "+mOriginalPullRequest.fileCode) ;
 			new SyncTask().execute(mOriginalPullRequest) ;
-		}
-		else if( bundle != null && bundle.containsKey(SYNCPULL_FILECODE) ){
-			String[] filesCodes = bundle.getStringArray(SYNCPULL_FILECODE) ;
-			SyncPullRequest[] prs = new SyncPullRequest[filesCodes.length] ;
-			int idx = 0 ;
-			for( String fileCode : filesCodes ){
-				if( bundle.getBoolean(SYNCPULL_NO_INCREMENTIAL, false)) {
-					syncPullResetLastTimestamp( fileCode ) ;
-				}
-				
-				SyncPullRequest pr = new SyncPullRequest() ;
-				pr.fileCode = fileCode ;
-				prs[idx] = pr ;
-				idx++ ;
-			}
-			new SyncTask().execute(prs) ;
-		}
-		else {
+		} else if( bundle != null && bundle.containsKey(PUSH_DO) && bundle.getBoolean(PUSH_DO)==true ) {
 			new SyncTask().execute() ;
+		} else {
+			SyncService.this.stopSelf() ;
 		}
 		
 		return Service.START_REDELIVER_INTENT ;
@@ -236,14 +221,17 @@ public class SyncService extends Service {
     	return new Boolean(true) ;
     }
     
-    
     private boolean doPull( SyncPullRequest pr ) {
-    	// ***** timestamp du dernier sync pour ce fileCode ****
-    	long lastFileSyncTimestamp ;
-    	if( pr.supplyTimestamp ) {
-    		lastFileSyncTimestamp = syncPullGetLastTimestamp(pr.fileCode) ;
-    	} else {
-    		lastFileSyncTimestamp = 0 ;
+    	
+    	// ***** Constition de la liste locale (WHAT-I-HAVE) ****    	
+    	HashMap<String,Integer> hashmapLocalVuidSync = doPull_getLocalSyncHashmap(pr);
+    	JSONObject jsonHashmapLocalVuidSync = new JSONObject() ;
+    	try {
+    		for( Map.Entry<String,Integer> me : hashmapLocalVuidSync.entrySet() ) {
+    			jsonHashmapLocalVuidSync.put(me.getKey(), ((int)me.getValue())) ;
+    		}
+    	} catch (JSONException e) {
+    		e.printStackTrace();
     	}
 
 
@@ -252,7 +240,7 @@ public class SyncService extends Service {
     	postParams.put("_moduleName", "paracrm");
     	postParams.put("_action", "android_syncPull");
     	postParams.put("file_code", pr.fileCode);
-    	postParams.put("sync_timestamp", String.valueOf(lastFileSyncTimestamp));
+    	postParams.put("local_sync_hashmap", jsonHashmapLocalVuidSync.toString()) ;
     	if( pr.fileConditions != null && pr.fileConditions.size() > 0 ) {
 			try {
 				JSONArray jsonArr = new JSONArray() ;
@@ -260,7 +248,15 @@ public class SyncService extends Service {
 					JSONObject jsonObj = new JSONObject() ;
 					jsonObj.put("entry_field_code", prfc.fileFieldCode) ;
 					jsonObj.put("condition_sign", prfc.conditionSign) ;
-					jsonObj.put("condition_value", prfc.conditionValue) ;
+					if( prfc.conditionValueArr!=null && prfc.conditionValueArr.size() > 0 ) {
+						JSONArray jsonArrValues = new JSONArray() ;
+						for( String s : prfc.conditionValueArr ) {
+							jsonArrValues.put(s) ;
+						}
+						jsonObj.put("condition_value", jsonArrValues) ;
+					} else {
+						jsonObj.put("condition_value", prfc.conditionValue) ;
+					}
 					jsonArr.put(jsonObj) ;
 				}
 				postParams.put("filter", jsonArr.toString());
@@ -303,6 +299,96 @@ public class SyncService extends Service {
     	}
 
     	return true ;
+    }
+    private HashMap<String,Integer> doPull_getLocalSyncHashmap( SyncPullRequest pr ) {
+    	
+    	// execution d'une requete locale avec les conditions pour trouver :
+    	StringBuilder sb = new StringBuilder() ;
+    	sb.append(String.format("SELECT sync_vuid,sync_timestamp FROM store_file mstr")) ;
+    	for( SyncPullRequest.SyncPullRequestFileCondition sprfc : pr.fileConditions ) {
+    		String joinPrefix = "det_"+sprfc.fileFieldCode ;
+    		
+    		sb.append(" JOIN store_file_field "+joinPrefix) ;
+    		sb.append(" ON ( "+joinPrefix+".filerecord_id=mstr.filerecord_id") ;
+    		sb.append(" AND " +joinPrefix+".filerecord_field_code='"+sprfc.fileFieldCode+"'") ;
+    		sb.append(")") ;
+    	}
+    	sb.append(String.format(" WHERE mstr.file_code='%s'",pr.fileCode)) ;
+    	for( SyncPullRequest.SyncPullRequestFileCondition sprfc : pr.fileConditions ) {
+    		String joinPrefix = "det_"+sprfc.fileFieldCode ;
+    		String storeFileFieldValue = doPull_getDefineFieldValue( pr.fileCode, sprfc.fileFieldCode ) ;
+    		
+    		if( sprfc.conditionSign.equals("in") && sprfc.conditionValueArr.size() == 0 ) {
+    			sb.append(" AND 0") ;
+    			continue ;
+    		}
+    		
+    		sb.append(" AND "+joinPrefix+"."+storeFileFieldValue) ;
+    		if( sprfc.conditionSign.equals("eq") || sprfc.conditionSign.equals("=") ) {
+    			sb.append(" = ") ;
+    		} else if( sprfc.conditionSign.equals("lt") || sprfc.conditionSign.equals("<=") || sprfc.conditionSign.equals("<") ) {
+    			sb.append(" <= ") ;
+    		} else if( sprfc.conditionSign.equals("gt") || sprfc.conditionSign.equals(">=") || sprfc.conditionSign.equals(">") ) {
+    			sb.append(" >= ") ;
+    		} else if( sprfc.conditionSign.equals("in") ) {
+    			sb.append(" IN ") ;
+    		} else {
+    			sb.append(" = ") ;
+    		}
+    		
+    		if( sprfc.conditionValueArr.size() > 0 ) {
+    			sb.append("(") ;
+    			for( String s : sprfc.conditionValueArr ) {
+    				sb.append("'"+s+"'") ;
+    			}
+    			sb.append(")") ;
+    		} else {
+    			sb.append("'"+sprfc.conditionValue+"'") ;
+    		}
+    	}
+    	if( pr.limitResults > 0 ) {
+    		sb.append("ORDER BY sync_timestamp DESC LIMIT " + pr.limitResults) ;
+    	}
+    	
+    	// Log.w(TAG,sb.toString()) ;
+    	String query = sb.toString() ;
+    	
+    	HashMap<String,Integer> hashmapLocalVuidSync = new HashMap<String,Integer>() ;
+    	DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+    	Cursor c = mDb.rawQuery(query) ;
+    	while( c.moveToNext() ) {
+    		hashmapLocalVuidSync.put(c.getString(0), c.getInt(1)) ;
+    	}
+    	c.close() ;
+    	
+    	// retour sync_vuid => sync_timestamp
+    	return hashmapLocalVuidSync ;
+    }
+    private String doPull_getDefineFieldValue( String fileCode, String fileFieldCode ) {
+    	String query = String.format("SELECT entry_field_type FROM define_file_entry WHERE file_code='%s' AND entry_field_code='%s'",fileCode,fileFieldCode) ;
+    	
+    	String defineFieldValue = null ;
+    	DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
+    	Cursor c = mDb.rawQuery(query) ;
+    	if( !c.moveToNext() ) {
+    		return null ;
+    	}
+    	defineFieldValue = c.getString(0) ;
+    	c.close() ;
+    	
+    	if( defineFieldValue.equals("date") ) {
+    		defineFieldValue = "filerecord_field_value_date" ;
+    	} else if( defineFieldValue.equals("string") ) {
+    		defineFieldValue = "filerecord_field_value_string" ;
+    	} else if( defineFieldValue.equals("link") ) {
+    		defineFieldValue = "filerecord_field_value_link" ;
+    	} else if( defineFieldValue.equals("number") || defineFieldValue.equals("bool") ) {
+    		defineFieldValue = "filerecord_field_value_number" ;
+    	} else {
+    		return null ;
+    	}
+    	
+    	return defineFieldValue ;
     }
     
     
@@ -636,11 +722,6 @@ public class SyncService extends Service {
         			localId = (int)mDb.insert(tableName, cv);
     			}
 
-    			if( updateId > 0 && (existingSyncTimestamp == cv.getAsInteger("sync_timestamp")) ) {
-    				// Log.w(TAG,"Timestamp's the same!!!") ;
-    				continue ;
-    			}
-    			
     			eqivRemoteIdToLocalId.put(remoteId, localId) ;
     		}
     	
