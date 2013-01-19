@@ -16,21 +16,17 @@
 
 package za.dams.paracrm.calendar;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
-import za.dams.paracrm.SyncBroadcastReceiver ;
-import za.dams.paracrm.SyncService;
-import za.dams.paracrm.SyncServiceHelper;
+import za.dams.paracrm.SyncServiceController;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CalendarController.ViewType;
-import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
 import android.animation.ObjectAnimator;
@@ -42,10 +38,8 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
@@ -70,7 +64,7 @@ import android.widget.TextView;
 
 public class CalendarActivity extends Activity implements EventHandler,
         OnSharedPreferenceChangeListener, SearchView.OnQueryTextListener, ActionBar.TabListener,
-        ActionBar.OnNavigationListener, OnSuggestionListener, SyncBroadcastReceiver.OnSyncListener {
+        ActionBar.OnNavigationListener, OnSuggestionListener {
     private static final String TAG = "AllInOneActivity";
     private static final boolean DEBUG = false;
     private static final String EVENT_INFO_FRAGMENT_TAG = "EventInfoFragment";
@@ -92,7 +86,11 @@ public class CalendarActivity extends Activity implements EventHandler,
     private static final int BUTTON_AGENDA_INDEX = 3;
 
     private CalendarController mController;
-    private SyncBroadcastReceiver mSyncBroadcastReceiver ;
+    
+    private static final int REFRESH_HANDLER_KEY = 1;
+    private RefreshManager mRefreshManager ;
+    private RefreshListener mRefreshListener ;
+    
     private static boolean mIsMultipane;
     private static boolean mIsTabletConfig;
     private static boolean mShowAgendaWithMonth;
@@ -235,6 +233,49 @@ public class CalendarActivity extends Activity implements EventHandler,
             eventsChanged();
         }
     };
+    
+    private class RefreshListener implements RefreshManager.RefreshListener {
+        private MenuItem mRefreshIcon;
+        private boolean mLastStatusIcon = false ;
+
+        @Override
+        public void onRefreshStart() {
+            updateRefreshIcon();
+        }
+        @Override
+        public void onRefreshFileChanged(String fileCode) {
+            updateRefreshIcon();
+            
+            // @DAMS : Tell FileListFragment (if any) that something changed => it will send an "CEvent" to force reload
+            eventsChanged();
+        }
+
+        void setRefreshIcon(MenuItem icon) {
+            mRefreshIcon = icon;
+            updateRefreshIcon();
+        }
+
+        private void updateRefreshIcon() {
+            if (mRefreshIcon == null) {
+                return;
+            }
+            
+            boolean newStatusIcon = isRefreshInProgress() ;
+            if( newStatusIcon == mLastStatusIcon ) {
+            	return ;
+            }
+            if (newStatusIcon) {
+                mRefreshIcon.setActionView(R.layout.explorer_actionbar_indeterminate_progress);
+            } else {
+                mRefreshIcon.setActionView(null);
+            }
+            mLastStatusIcon = newStatusIcon ;
+        }
+    };
+    private boolean isRefreshInProgress() {
+    	return mRefreshManager.isRefreshing() ;
+    }
+    
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -289,7 +330,10 @@ public class CalendarActivity extends Activity implements EventHandler,
         mController = CalendarController.getInstance(this);
 
         // This needs to be created before onResume / onPause
-        mSyncBroadcastReceiver = new SyncBroadcastReceiver( this ) ;
+        mRefreshListener = new RefreshListener() ;
+        mRefreshManager = RefreshManager.getInstance( this ) ;
+        mRefreshManager.registerListener(mRefreshListener) ;
+        mController.registerEventHandler(REFRESH_HANDLER_KEY, mRefreshManager) ;
 
         // Get time from intent or icicle
         long timeMillis = -1;
@@ -395,14 +439,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         mContentResolver = getContentResolver();
         
         
-        // ***** DAMS : launch sync ******
-        // @DAMS : build proper sync system
-        ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
-        for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
-        	calendarFilecodes.add(cci.mCrmAgendaId) ;
-        }
-        String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
-		SyncServiceHelper.launchSyncAndPull( this , filecodes ) ;
+        // ***** DAMS : launch sync, Edit 2013-01 moved to onResume() ******
     }
 
     private long parseViewAction(final Intent intent) {
@@ -514,6 +551,11 @@ public class CalendarActivity extends Activity implements EventHandler,
     protected void onResume() {
         super.onResume();
         
+        // ***** DAMS : launch sync ******
+        Log.w(TAG,"Attempt to launch sync") ;
+        mRefreshManager.refreshCalendars(false);
+
+        
         // Must register as the first activity because this activity can modify
         // the list of event handlers in it's handle method. This affects who
         // the rest of the handlers the controller dispatches to are.
@@ -530,8 +572,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         }
         Time t = new Time(mTimeZone);
         t.set(mController.getTime());
-        mController.sendEvent(this, EventType.UPDATE_TITLE, t, t, -1, ViewType.CURRENT,
-                mController.getDateFlags(), null, null);
+        // mController.sendEvent(this, EventType.UPDATE_TITLE, t, t, -1, ViewType.CURRENT, mController.getDateFlags(), null, null);
         // Make sure the drop-down menu will get its date updated at midnight
         if (mActionBarMenuSpinnerAdapter != null) {
             mActionBarMenuSpinnerAdapter.refresh(this);
@@ -559,8 +600,6 @@ public class CalendarActivity extends Activity implements EventHandler,
             mIntentEventStartMillis = -1;
             mIntentEventEndMillis = -1;
         }
-        
-        registerReceiver(mSyncBroadcastReceiver, new IntentFilter(SyncService.SYNCSERVICE_BROADCAST));
     }
 
     @Override
@@ -573,7 +612,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (mActionBarMenuSpinnerAdapter != null) {
             mActionBarMenuSpinnerAdapter.onPause();
         }
-        // @DAMS : content observer replaced with mSyncBroadcastReceiver
+        // @DAMS : content observer replaced with mSyncBroadcastReceiver , Edit 2013-01 : now RefreshManager
         //mContentResolver.unregisterContentObserver(mObserver);
         if (isFinishing()) {
             // Stop listening for changes that would require this to be refreshed
@@ -586,8 +625,6 @@ public class CalendarActivity extends Activity implements EventHandler,
         if (mController.getViewType() != ViewType.EDIT) {
             Utils.setDefaultView(this, mController.getViewType());
         }
-        
-		unregisterReceiver(mSyncBroadcastReceiver);
     }
 
     @Override
@@ -617,7 +654,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         SharedPreferences prefs = GeneralPreferences.getSharedPreferences(this);
         prefs.unregisterOnSharedPreferenceChangeListener(this);
         */
-
+        mRefreshManager.unregisterListener(mRefreshListener) ;
         mController.deregisterAllEventHandlers();
 
         CalendarController.removeInstance(this);
@@ -717,8 +754,6 @@ public class CalendarActivity extends Activity implements EventHandler,
         mOptionsMenu = menu;
         getMenuInflater().inflate(R.menu.calendar_allinone_titlebar, menu);
         
-        menu.findItem(R.id.action_wipe_refresh).setVisible(false) ;
-
         mSearchMenu = menu.findItem(R.id.action_search);
         mSearchView = (SearchView) mSearchMenu.getActionView();
         if (mSearchView != null) {
@@ -757,6 +792,14 @@ public class CalendarActivity extends Activity implements EventHandler,
         
         return true;
     }
+    
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+    	MenuItem item = menu.findItem(R.id.action_refresh);
+        item.setVisible(true);
+        mRefreshListener.setRefreshIcon(item);
+    	return true ;
+    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -764,20 +807,10 @@ public class CalendarActivity extends Activity implements EventHandler,
         int viewType = ViewType.CURRENT;
         long extras = CalendarController.EXTRA_GOTO_TIME;
 
-    	ArrayList<String> calendarFilecodes = new ArrayList<String>() ;
-    	for( CrmCalendarInput cci : CrmCalendarManager.inputsList( this ) ) {
-    		calendarFilecodes.add(cci.mCrmAgendaId) ;
-    	}
-    	String[] filecodes = calendarFilecodes.toArray(new String[calendarFilecodes.size()]) ;
-   
         switch (item.getItemId()) {
-	        case R.id.action_wipe_refresh:
-	        	// mController.refreshCalendars();
-	        	SyncServiceHelper.launchSyncAndPull( this , filecodes, true ) ;
-	        	return true ;
             case R.id.action_refresh:
+            	mRefreshManager.refreshCalendars(true) ;
                 // mController.refreshCalendars();
-        		SyncServiceHelper.launchSyncAndPull( this , filecodes ) ;
                 return true;
             case R.id.action_today:
                 viewType = ViewType.CURRENT;
@@ -1335,18 +1368,6 @@ public class CalendarActivity extends Activity implements EventHandler,
         }
         return false;
     }
-
-	@Override
-	public void onSyncStarted() {
-		//Log.w(TAG,"TEMP SYNC STARTED") ;
-	}
-
-	@Override
-	public void onSyncComplete(boolean hasChanged) {
-		//Log.w(TAG,"TEMP SYNC DONE !!!!!") ;
-		eventsChanged();
-	}
-	
 	
 	// Retour de l'activité FILE CAPTURE
 	static final int ACT_FILECAPTURE = 0;
@@ -1357,7 +1378,7 @@ public class CalendarActivity extends Activity implements EventHandler,
             if (resultCode == RESULT_OK) {
             	CrmFileTransactionManager.getInstance( getApplicationContext() ).purgeTransactions() ;
             	
-            	SyncServiceHelper.launchSync( this ) ;
+            	SyncServiceController.getInstance(this).requestPush() ;
             	
             	//int precedentEventId = (int)mController.getForwardedEventId() ;
             	int precedentEventId = (int)CrmFileTransactionManager.getInstance( getApplicationContext() ).getForwardedEventId() ;

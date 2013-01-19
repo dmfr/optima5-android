@@ -6,23 +6,20 @@ import java.util.Map;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
-import za.dams.paracrm.SyncServiceHelper;
-import za.dams.paracrm.calendar.CalendarController.EventType;
+import za.dams.paracrm.SyncServiceController;
 import za.dams.paracrm.calendar.CalendarController.EventHandler;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
+import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.EditEventView.AccountRow;
-import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.ProgressDialog;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -32,7 +29,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.LinearLayout;
 
 public class EditEventFragment extends Fragment 
 	implements EventHandler, EditEventView.OnEditEventViewChangeListener {
@@ -206,7 +202,7 @@ public class EditEventFragment extends Fragment
 			}
 			
 			// @DAMS : build proper sync system
-			SyncServiceHelper.launchSync( EditEventFragment.this.mContext ) ;
+			SyncServiceController.getInstance(EditEventFragment.this.mContext).requestPush() ;
 			
 			Activity a = EditEventFragment.this.getActivity() ;
             if (a != null) {

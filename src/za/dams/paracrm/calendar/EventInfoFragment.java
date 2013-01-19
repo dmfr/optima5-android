@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.R;
-import za.dams.paracrm.SyncServiceHelper;
+import za.dams.paracrm.SyncServiceController;
 import za.dams.paracrm.calendar.CalendarController.EventInfo;
 import za.dams.paracrm.calendar.CalendarController.EventType;
 import za.dams.paracrm.calendar.CrmCalendarManager.CrmCalendarInput;
@@ -26,7 +26,6 @@ import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.text.format.Time;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -415,8 +414,7 @@ public class EventInfoFragment extends DialogFragment
             }
 
             // @DAMS : build proper sync system
-			SyncServiceHelper.launchSync( EventInfoFragment.this.mContext ) ;
-            
+			SyncServiceController.getInstance(EventInfoFragment.this.mContext).requestPush() ;
         }
     };
 

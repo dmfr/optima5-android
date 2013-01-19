@@ -31,22 +31,16 @@
         android:visible="false"
         android:showAsAction="ifRoom" />
     <item
-        android:id="@+id/action_create_event"
-        android:alphabeticShortcut="n"
-        android:title="New Event"
-        android:icon="@drawable/ic_menu_add_event_holo_light"
-        android:showAsAction="never" />
-    <item
         android:id="@+id/action_refresh"
         android:alphabeticShortcut="r"
         android:title="Refresh"
         android:icon="@drawable/ic_menu_refresh_holo_light"
-        android:showAsAction="never" />
+        android:showAsAction="ifRoom" />
     <item
-        android:id="@+id/action_wipe_refresh"
-        android:alphabeticShortcut="w"
-        android:title="Wipe Refresh"
-        android:icon="@drawable/ic_menu_refresh_holo_light"
+        android:id="@+id/action_create_event"
+        android:alphabeticShortcut="n"
+        android:title="New Event"
+        android:icon="@drawable/ic_menu_add_event_holo_light"
         android:showAsAction="never" />
     <item
         android:id="@+id/action_search"

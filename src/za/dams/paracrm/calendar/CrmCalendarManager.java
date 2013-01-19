@@ -675,7 +675,7 @@ public class CrmCalendarManager {
     	}
     	else {
     		currentFileId = crmEventModel.mCrmFileId ;
-    		mDb.execSQL(String.format("UPDATE store_file SET sync_is_synced=NULL WHERE filerecord_id='%d'",currentFileId));
+    		mDb.execSQL(String.format("UPDATE store_file SET sync_is_synced=NULL,sync_timestamp=NULL WHERE filerecord_id='%d'",currentFileId));
     	}
     	
     	
