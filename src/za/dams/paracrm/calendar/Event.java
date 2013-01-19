@@ -187,8 +187,11 @@ public class Event implements Cloneable {
     		if( lCalManager.getCalendarInfos().mAccountIsOn ) {
     			models = lCalManager.queryModels(startDay,endDay,PrefsCrm.getSubscribedAccounts(context, ci.mCrmAgendaId)) ;
     		}
-    		else{
+    		else if( PrefsCrm.isCalendarEnabled(context, ci.mCrmAgendaId) ) {
     			models = lCalManager.queryModels(startDay,endDay) ;
+    		}
+    		else {
+    			models = new ArrayList<CrmEventModel>() ;
     		}
     		Map<String,Integer> accountsColor = PrefsCrm.getAccountsColor(context, lCalManager.getCalendarInfos().mCrmAgendaFilecode ) ;
     		
