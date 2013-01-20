@@ -1,6 +1,8 @@
 package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
+
+import za.dams.paracrm.CrmImageLoader;
 import za.dams.paracrm.R;
 import za.dams.paracrm.explorer.CrmFileManager.CrmFileDesc;
 import za.dams.paracrm.explorer.CrmFileManager.CrmFileFieldDesc;
@@ -18,6 +20,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -49,10 +53,6 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
 	
 	// Adapters pour les photos
 	private ArrayList<MediaAdapter> mMediaAdapters ;
-	
-	// CRM media loader
-	private CrmMediaLoader mMediaLoader ;
-	private MediaLoaderListener mMediaLoaderListener ;
 	
 	// CRM data
 	private CrmFileDesc mMstrDesc ;
@@ -104,8 +104,8 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
         super.onCreate(savedInstanceState);
 
         mContext = getActivity().getApplicationContext();
-        mMediaLoader = CrmMediaLoader.getInstance(mContext) ;
-        mMediaLoaderListener = new MediaLoaderListener() ;
+        
+        mMediaAdapters = new ArrayList<MediaAdapter>() ;
         
         if (savedInstanceState != null) {
             restoreInstanceState(savedInstanceState);
@@ -142,7 +142,6 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
 		// Not needed
         resetView();
         */
-        mMediaLoader.registerListener(mMediaLoaderListener) ;
         
         mInflater = getActivity().getLayoutInflater() ;
         
@@ -158,7 +157,6 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
         }
         UiUtilities.uninstallFragment(this);
         
-        mMediaLoader.unregisterListener(mMediaLoaderListener) ;
         /*
         // Virer l'AsyncTask ?
         cancelAllTasks();
@@ -183,15 +181,6 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
         mRestoredTab = state.getInt(BUNDLE_KEY_CURRENT_TAB);
     }
     
-    
-    
-    private class MediaLoaderListener implements CrmMediaLoader.Listener {
-    	public void onDownloadComplete( String syncVuid ) {
-    		for( MediaAdapter ma : mMediaAdapters ) {
-    			ma.notifyDataSetChanged();
-    		}
-    	}
-    }
     
 	private class FileViewLoadTask extends AsyncTask<Void, Void, Boolean> {
 		protected Boolean doInBackground(Void... arg0) {
@@ -285,17 +274,13 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     private void setViewChildren() {
     	int idx = -1 ;
     	for( CrmFileDesc cfd : mChildrenDescs ) {
-    		Log.w(LOGTAG,"Adding for "+cfd.fileCode) ;
+    		// Log.w(LOGTAG,"Adding for "+cfd.fileCode) ;
     		
     		idx++ ;
     		ArrayList<CrmFileRecord> arrCfr = mChildrenRecords.get(idx) ;
     		
     		if( cfd.fileIsMediaImg ) {
-    			ArrayList<String> syncVuids = new ArrayList<String>() ;
-    			for( CrmFileRecord cfr : arrCfr ) {
-    				syncVuids.add(cfr.syncVuid) ;
-    			}
-    			subSetViewChildMediaGrid(cfd,syncVuids) ;
+    			subSetViewChildMediaGrid(cfd,arrCfr) ;
     		} else {
     			subSetViewChildTable( cfd, arrCfr) ;
     		}
@@ -359,12 +344,25 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     	return table ;
     }
     
-    private void subSetViewChildMediaGrid( CrmFileDesc cfd, ArrayList<String> syncVuids ) {
+    private void subSetViewChildMediaGrid( CrmFileDesc cfd, ArrayList<CrmFileRecord> arrCfr ) {
     	// ici création :
     	// - tab (textview) > mTabs
     	// - grid view > mTabViews liée à un adapter
     	// - baseadapter > mMediaAdapters
     	// - enregistrement du l
+    	Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
+    	b.setText(cfd.fileName) ;
+    	mTabsContainer.addView(b) ;
+    	mTabs.add(b) ;
+    	
+    	MediaAdapter gridAdapter = new MediaAdapter(mContext);
+    	gridAdapter.setData(arrCfr) ;
+    	GridView gridView = (GridView)mInflater.inflate(R.layout.explorer_gallery, null) ;
+    	gridView.setAdapter(gridAdapter) ;
+    	mMediaAdapters.add(gridAdapter) ;
+    	mTabViewsContainer.addView(gridView) ;
+    	mTabViews.add(gridView) ;
+    	
     }
     
     
@@ -419,32 +417,61 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
 	
 	private class MediaAdapter extends BaseAdapter {
 		
-		public MediaAdapter( Context c , CrmMediaLoader mediaLoader ) {
+		Context mAdapterContext ;
+		
+		LayoutInflater mInflater ;
+		ArrayList<CrmFileRecord> mArrCfr ;
+		
+		CrmImageLoader mCrmImageLoader ;
+		
+		public MediaAdapter( Context c ) {
 			super() ;
+			mAdapterContext = c.getApplicationContext() ;
+			mInflater = (LayoutInflater) c.getSystemService( Context.LAYOUT_INFLATER_SERVICE );
+			mCrmImageLoader = new CrmImageLoader(mAdapterContext) ;
+		}
+		
+		public void setData( ArrayList<CrmFileRecord> arrCfr ) {
+			mArrCfr = arrCfr ;
 		}
 
 		@Override
 		public int getCount() {
-			// TODO Auto-generated method stub
-			return 0;
+			return mArrCfr.size() ;
 		}
 
 		@Override
 		public Object getItem(int position) {
-			// TODO Auto-generated method stub
-			return null;
+			return mArrCfr.get(position);
 		}
 
 		@Override
 		public long getItemId(int position) {
-			// TODO Auto-generated method stub
-			return 0;
+			return position ;
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			// TODO Auto-generated method stub
-			return null;
+			
+			CrmFileRecord cfr = mArrCfr.get(position) ;
+			
+			if( convertView==null ) {
+				convertView = mInflater.inflate(R.layout.explorer_gallery_item, null) ;
+			}
+			//((ImageView)convertView.findViewById(R.id.imageView)).setImageResource(R.drawable.sample_2) ;
+			//((TextView)convertView.findViewById(R.id.textView)).setText("oookok") ;
+			convertView.findViewById(R.id.textView).setVisibility(View.GONE) ;
+			
+			CrmImageLoader.CrmUrl crmUrl = new CrmImageLoader.CrmUrl() ;
+			crmUrl.syncVuid = cfr.syncVuid ;
+			crmUrl.thumbnail = true ;
+			
+			ImageView imgView = (ImageView)convertView.findViewById(R.id.imageView) ;
+			
+			mCrmImageLoader.download(crmUrl, imgView) ;
+			
+
+			return convertView;
 		}
 		
 	}
