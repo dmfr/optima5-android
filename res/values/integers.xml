@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Size of event info dialog box -->
+    <integer name="explorer_showimage_dialog_width">400</integer>
+    <integer name="explorer_showimage_dialog_height">300</integer>
+</resources>

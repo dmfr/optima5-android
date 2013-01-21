@@ -1,10 +1,8 @@
 package za.dams.paracrm;
 
-import java.io.BufferedReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -42,7 +40,7 @@ public class CrmImageLoader {
     private final Bitmap mBitmapLoading ;
     private final Bitmap mBitmapError ;
 
-    public static class CrmUrl {
+    public static class CrmUrl implements Cloneable {
     	public String syncVuid ;
     	public boolean thumbnail ;
     	
@@ -68,9 +66,28 @@ public class CrmImageLoader {
     		String retStr = "syncVuid="+syncVuid+" thumbnail="+(thumbnail?"yes":"no") ;
     		return retStr ;
     	}
+    	public CrmUrl clone() {
+    		Object o = null;
+    		try {
+    			// On récupère l'instance à renvoyer par l'appel de la 
+    			// méthode super.clone()
+    			o = super.clone();
+    		} catch(CloneNotSupportedException cnse) {
+    			// Ne devrait jamais arriver car nous implémentons 
+    			// l'interface Cloneable
+    			// cnse.printStackTrace(System.err);
+    		}
+    		// on renvoie le clone
+    		return (CrmUrl)o;
+    	}
     }
+    
+    private Callback mCallback ;
     public interface Callback {
-    	public void onImageLoaded( ImageView imageView ) ;
+    	public void onImageLoaded( CrmUrl crmUrlRequested, ImageView imageView ) ;
+    }
+    public void setCallback( Callback callback ) {
+    	mCallback = callback ;
     }
     
     
@@ -127,7 +144,7 @@ public class CrmImageLoader {
         BitmapDownloaderTask bitmapDownloaderTask = getBitmapDownloaderTask(imageView);
 
         if (bitmapDownloaderTask != null) {
-            CrmUrl bitmapCrmUrl = bitmapDownloaderTask.crmUrl;
+            CrmUrl bitmapCrmUrl = bitmapDownloaderTask.crmUrlRequested;
             if ((bitmapCrmUrl == null) || (!bitmapCrmUrl.equals(crmUrl))) {
                 bitmapDownloaderTask.cancel(true);
             } else {
@@ -258,7 +275,8 @@ public class CrmImageLoader {
      * The actual AsyncTask that will asynchronously download the image.
      */
     class BitmapDownloaderTask extends AsyncTask<CrmUrl, Void, Bitmap> {
-        private CrmUrl crmUrl;
+        private CrmUrl crmUrlRequested ;
+        private CrmUrl crmUrlDownload ;
         private final WeakReference<ImageView> imageViewReference;
 
         public BitmapDownloaderTask(ImageView imageView) {
@@ -270,8 +288,10 @@ public class CrmImageLoader {
          */
         @Override
         protected Bitmap doInBackground(CrmUrl... params) {
-            crmUrl = params[0];
-            return downloadBitmap(crmUrl);
+        	
+        	crmUrlRequested = params[0];
+        	crmUrlDownload = crmUrlRequested.clone() ;
+            return downloadBitmap(crmUrlDownload);
         }
 
         /**
@@ -283,7 +303,7 @@ public class CrmImageLoader {
                 bitmap = null;
             }
 
-            addBitmapToCache(crmUrl, bitmap);
+            addBitmapToCache(crmUrlDownload, bitmap);
 
             if (imageViewReference != null) {
                 ImageView imageView = imageViewReference.get();
@@ -293,7 +313,12 @@ public class CrmImageLoader {
                 if( this == bitmapDownloaderTask ) {
                     imageView.setImageBitmap(bitmap);
                 }
+                
+                if( mCallback!=null && crmUrlDownload.equals(crmUrlRequested) ) {
+                	mCallback.onImageLoaded( crmUrlRequested, imageView ) ;
+                }
             }
+            
         }
     }
 

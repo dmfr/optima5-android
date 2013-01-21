@@ -8,6 +8,8 @@ import za.dams.paracrm.explorer.CrmFileManager.CrmFileDesc;
 import za.dams.paracrm.explorer.CrmFileManager.CrmFileFieldDesc;
 import za.dams.paracrm.explorer.CrmFileManager.CrmFileRecord;
 import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -18,6 +20,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.GridView;
@@ -28,7 +31,7 @@ import android.widget.TextView;
 
 public class FileViewFragment extends Fragment implements View.OnClickListener {
 	private static final String LOGTAG = "FileViewFragment";
-	private static final String BUNDLE_KEY_CURRENT_TAB = "MessageViewFragmentBase.currentTab";
+	private static final String BUNDLE_KEY_CURRENT_TAB = "FileViewFragment.currentTab";
 	
 	private Context mContext;
 	private LayoutInflater mInflater ;
@@ -363,6 +366,26 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     	mTabViewsContainer.addView(gridView) ;
     	mTabViews.add(gridView) ;
     	
+    	gridView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view, int position, long doNotUse) {
+				String syncVuid = ((CrmFileRecord)parent.getAdapter().getItem(position)).syncVuid ;
+				
+				FileViewImageDialog fragment = FileViewImageDialog.newInstance(syncVuid,true) ;
+                FragmentManager fm = getFragmentManager();
+                FragmentTransaction ft = fm.beginTransaction();
+                // if we have an old popup replace it
+                Fragment fOld = fm.findFragmentByTag(FileViewImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+                if (fOld != null && fOld.isAdded()) {
+                    ft.remove(fOld);
+                }
+                ft.add(fragment, FileViewImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+                ft.commit();
+				
+			}
+    		
+    	}) ;
     }
     
     
