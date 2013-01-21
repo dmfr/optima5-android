@@ -1,5 +1,7 @@
 package za.dams.paracrm;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +32,7 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.ImageView.ScaleType;
 
 public class CrmImageLoader {
     private static final String LOG_TAG = "CrmImageLoader";
@@ -85,6 +88,7 @@ public class CrmImageLoader {
     private Callback mCallback ;
     public interface Callback {
     	public void onImageLoaded( CrmUrl crmUrlRequested, ImageView imageView ) ;
+    	public void onImageLoadFailed( CrmUrl crmUrlRequested, ImageView imageView ) ;
     }
     public void setCallback( Callback callback ) {
     	mCallback = callback ;
@@ -170,6 +174,33 @@ public class CrmImageLoader {
         }
         return null;
     }
+    
+    private static String getFileCacheName( CrmUrl crmUrl ) {
+		StringBuilder sb = new StringBuilder() ;
+		sb.append(crmUrl.syncVuid) ;
+		if( crmUrl.thumbnail ) {
+			sb.append(".thumb") ;
+		}
+		String cacheFileName = sb.toString() ;
+		return cacheFileName ;
+    }
+    
+    Bitmap getFileCachedBitmap( CrmUrl crmUrl ) {
+    	try {
+    		byte[] data = CacheManager.retrieveData(mContext, getFileCacheName(crmUrl)) ;
+    		if( data == null ) {
+    			return null ;
+    		}
+            Bitmap decodedBitmap =  BitmapFactory.decodeByteArray(data, 0, data.length);
+            if( decodedBitmap==null ) {
+                Log.w(LOG_TAG, "Error while decoding cached bitmap from " + crmUrl.toString());
+            	return null ;
+            }
+            return decodedBitmap ;
+    	} catch( IOException e ) {
+    		return null ;
+    	}
+    }
 
     Bitmap downloadBitmap(CrmUrl crmUrl) {
         final int IO_BUFFER_SIZE = 4 * 1024;
@@ -192,7 +223,7 @@ public class CrmImageLoader {
             if (statusCode != HttpStatus.SC_OK) {
                 Log.w(LOG_TAG, "Error " + statusCode +
                         " while retrieving bitmap from " + crmUrl.toString());
-                return mBitmapError;
+                return null;
             }
 
             final HttpEntity entity = response.getEntity();
@@ -200,24 +231,35 @@ public class CrmImageLoader {
                 InputStream inputStream = null;
                 try {
                     inputStream = entity.getContent();
-                    
-                    /*
-    				BufferedReader reader = new BufferedReader(
-    						new InputStreamReader(inputStream));
-    				String line;
-    				Log.w(LOG_TAG,"Decoding ") ;
-    				while ((line = reader.readLine()) != null) {
-    					Log.w("TAGSSJK",line) ;
+                    BufferedInputStream bis = new BufferedInputStream(inputStream);
+                    ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+    				int bufferSize = 1024;
+    				byte[] buffer = new byte[bufferSize];
+    				int len = 0;
+    				try {
+    					while ((len = bis.read(buffer)) != -1) {
+    						byteBuffer.write(buffer, 0, len);
+    					}
+    				} catch (IOException e) {
+    					return null ;
     				}
-    				*/
     				
+    				byte[] data = byteBuffer.toByteArray() ;
+    				
+    				try {
+    					CacheManager.cacheData(mContext, data, getFileCacheName(crmUrl)) ;
+    				} catch( IOException e ) {
+    					
+    				}
+    				
+                    
                     // return BitmapFactory.decodeStream(inputStream);
                     // Bug on slow connections, fixed in future release.
-                    Bitmap decodedBitmap =  BitmapFactory.decodeStream(new FlushedInputStream(inputStream));
+                    Bitmap decodedBitmap =  BitmapFactory.decodeByteArray(data, 0, data.length);
                     if( decodedBitmap==null ) {
                         Log.w(LOG_TAG, "Error " + statusCode +
                                 " while decoding bitmap from " + crmUrl.toString());
-                    	return mBitmapError ;
+                    	return null ;
                     }
                     return decodedBitmap ;
                 } finally {
@@ -241,7 +283,7 @@ public class CrmImageLoader {
                 ((AndroidHttpClient) client).close();
             }
         }
-        return mBitmapError;
+        return null;
     }
 
     /*
@@ -288,10 +330,23 @@ public class CrmImageLoader {
          */
         @Override
         protected Bitmap doInBackground(CrmUrl... params) {
+        	Bitmap resultBitmap = null ;
         	
         	crmUrlRequested = params[0];
         	crmUrlDownload = crmUrlRequested.clone() ;
-            return downloadBitmap(crmUrlDownload);
+        	
+        	// Fichier en cache ?
+        	resultBitmap = getFileCachedBitmap(crmUrlDownload);
+        	if( resultBitmap != null ) {
+        		return resultBitmap ;
+        	}
+       	
+        	// Téléchargement
+        	resultBitmap = downloadBitmap(crmUrlDownload);
+        	if( resultBitmap != null ) {
+        		return resultBitmap ;
+        	}
+        	return null ;
         }
 
         /**
@@ -303,7 +358,9 @@ public class CrmImageLoader {
                 bitmap = null;
             }
 
-            addBitmapToCache(crmUrlDownload, bitmap);
+            if( bitmap!=null ) {
+            	addBitmapToCache(crmUrlDownload, bitmap);
+            }
 
             if (imageViewReference != null) {
                 ImageView imageView = imageViewReference.get();
@@ -311,10 +368,17 @@ public class CrmImageLoader {
                 // Change bitmap only if this process is still associated with it
                 // Or if we don't use any bitmap to task association (NO_DOWNLOADED_DRAWABLE mode)
                 if( this == bitmapDownloaderTask ) {
-                    imageView.setImageBitmap(bitmap);
+                	if( bitmap!=null ) {
+                		imageView.setImageBitmap(bitmap);
+                	} else {
+                		imageView.setScaleType(ScaleType.CENTER) ;
+                		imageView.setImageBitmap(mBitmapError);
+                	}
                 }
                 
-                if( mCallback!=null && crmUrlDownload.equals(crmUrlRequested) ) {
+                if( mCallback!=null && bitmap==null ) {
+                	mCallback.onImageLoadFailed( crmUrlRequested, imageView ) ;
+                } else if( mCallback!=null && crmUrlDownload.equals(crmUrlRequested) ) {
                 	mCallback.onImageLoaded( crmUrlRequested, imageView ) ;
                 }
             }

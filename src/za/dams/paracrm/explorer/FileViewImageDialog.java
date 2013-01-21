@@ -104,8 +104,6 @@ public class FileViewImageDialog extends DialogFragment implements CrmImageLoade
     	mImageView = (ImageView)v.findViewById(R.id.image_view) ;
     	mImageView.setVisibility(View.GONE) ;
     	
-    	Log.w("FileViewImageDialog","SyncVuid is "+getCrmSyncVuid()) ;
-    	
     	CrmUrl crmUrl = new CrmUrl() ;
     	crmUrl.syncVuid = getCrmSyncVuid() ;
     	crmUrl.thumbnail = false ;
@@ -125,6 +123,12 @@ public class FileViewImageDialog extends DialogFragment implements CrmImageLoade
 	public void onImageLoaded(CrmUrl crmUrlRequested, ImageView imageView) {
 		mProgressBar.setVisibility(View.GONE) ;
 		mImageView.setVisibility(View.VISIBLE) ;
+	}
+	@Override
+	public void onImageLoadFailed(CrmUrl crmUrlRequested, ImageView imageView) {
+		if( isDialog() ) {
+			FileViewImageDialog.this.dismiss();
+		}
 	}
 
 }
