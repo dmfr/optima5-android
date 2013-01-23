@@ -26,6 +26,7 @@ public class RefreshManager {
     private ArrayList<SyncPullRequest> mPendingPullRequests = new ArrayList<SyncPullRequest>() ;
     // Last refresh(s)
     private HashMap<String,Long> mFilesLastRefresh = new HashMap<String,Long>() ;
+    private HashMap<String,BibleHelper.BibleEntry> mFilesLastBibleCondition = new HashMap<String,BibleHelper.BibleEntry>() ;
 
     public interface RefreshListener {
     	public void onRefreshStart() ;
@@ -92,7 +93,7 @@ public class RefreshManager {
     	}
     	return false ;
     }
-    public boolean isFileStale( String fileCode ) {
+    public boolean isFileStale( String fileCode, BibleHelper.BibleEntry conditionBe ) {
     	if( !mFilesLastRefresh.containsKey(fileCode) ) {
     		return true ;
     	}
@@ -100,6 +101,15 @@ public class RefreshManager {
     	if( (mClock.getTime() - lastRefresh) > FILE_AUTO_REFRESH_INTERVAL ) {
     		return true ;
     	}
+    	
+    	// condition changée ?
+    	if( conditionBe != null && !conditionBe.equals(mFilesLastBibleCondition.get(fileCode)) ) {
+    		return true ;
+    	}
+    	if( conditionBe == null && mFilesLastBibleCondition.get(fileCode) != null ) {
+    		return true ;
+    	}
+    	
     	return false ;
     }
     private void notifyRefreshStart() {
@@ -133,6 +143,9 @@ public class RefreshManager {
     	if( fileCode == null ) {
     		return ;
     	}
+    	
+    	// Mise en cache de la "condition sur bible" (pour le slate)
+    	mFilesLastBibleCondition.put(fileCode, conditionBe) ;
     	
     	// Construction de la SyncPullRequest
     	SyncPullRequest spr = new SyncPullRequest();

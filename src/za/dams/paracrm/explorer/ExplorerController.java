@@ -3,6 +3,8 @@ package za.dams.paracrm.explorer;
 import java.util.LinkedList;
 import java.util.List;
 
+import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.R;
 
 import android.app.Activity;
@@ -475,6 +477,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
         return isFileListInstalled() ? getFileListFragment().getFileCode()
                 : null ;
     }
+    protected ExplorerContext getFileListExplorerContext() {
+        return isFileListInstalled() ? getFileListFragment().getExplorerContext() 
+                : null ;
+    }
     protected long getFileViewFilerecordId() {
         return isFileViewInstalled() ? getFileViewFragment().getFilerecordId()
                 : 0 ;
@@ -510,7 +516,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
             updateFileView(ft, filerecordId);
             mThreePane.showRightPane();
-        } else if (explorerContext.isSearch()) {
+        } else if (explorerContext.isFiltered()) {
             mThreePane.showRightPane();
             mThreePane.uncollapsePane();
         } else {
@@ -518,7 +524,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
         commitFragmentTransaction(ft);
 
-        if (explorerContext.isSearch()) {
+        if (explorerContext.isFiltered()) {
             // mActionBarController.enterSearchMode(explorerContext.getSearchParams().mFilter);
         }
     }
@@ -531,8 +537,17 @@ public class ExplorerController implements ExplorerLayout.Callback,
     	updateEmptyList(true);
     }
     public final void openFileList( String fileCode ) {
-    	final ExplorerContext newExplorerContext = ExplorerContext.forFile(fileCode, mExplorerContext.mSearchedBibleEntry) ;
+    	final ExplorerContext newExplorerContext = ExplorerContext.forFile(fileCode, null) ;
     	if( newExplorerContext.equals(mExplorerContext) ) {
+    		return ;
+    	}
+    	mExplorerContext = newExplorerContext;
+    	updateFileList(true);
+    }
+    public final void openFileList( String fileCode, BibleHelper.BibleEntry filterBe ) {
+    	final ExplorerContext newExplorerContext = ExplorerContext.forFile(fileCode, filterBe) ;
+    	if( newExplorerContext.equals(mExplorerContext) ) {
+    		Log.w(LOGTAG,"Is the same??") ;
     		return ;
     	}
     	mExplorerContext = newExplorerContext;
@@ -563,7 +578,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
 
         if ( true ) { // @DAMS : TODO : refresh everyTime ??
             removeDataListFragment(ft);
-            boolean enableHighlight = !mExplorerContext.isSearch();
+            boolean enableHighlight = true;
             ft.add(mThreePane.getLeftPaneId(),
                     DataListFragment.newInstance(enableHighlight,null));
         }
@@ -577,7 +592,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * Go back to a mailbox list view. If a message view is currently active, it will
      * be hidden.
      */
-    private void goBackToMailbox() {
+    private void goBackToList() {
         if (isFileViewInstalled()) {
             mThreePane.showLeftPane(); // Show mailbox list
         }
@@ -620,7 +635,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
             Log.d(LOGTAG, this + " updateFileList " + mExplorerContext);
         }
 
-        if (mExplorerContext.mFileCode != getFileListFileCode()) {
+        if ( !mExplorerContext.equals(getFileListExplorerContext()) ) {
             removeEmptyListFragment(ft);
             removeFileListFragment(ft);
             ft.add(mThreePane.getMiddlePaneId(), FileListFragment.newInstance(mExplorerContext));
@@ -698,6 +713,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
             if (mThreePane.showLeftPane()) {
                 return true;
             }
+            
+            if( mExplorerContext.isFiltered() ) {
+            	onSearchDiscard();
+            	return true ;
+            }
         } else {
             // If it's not the system back key, always attempt to uncollapse the left pane first.
             if (!isSystemBackKey && mThreePane.uncollapsePane()) {
@@ -711,7 +731,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
             if (mThreePane.showLeftPane()) {
                 return true;
             }
-        }
+            
+            if( mExplorerContext.isFiltered() ) {
+            	onSearchDiscard();
+            	return true ;
+            }
+       }
 
         /*
         if (isMailboxListInstalled() && getMailboxListFragment().navigateUp()) {
@@ -721,7 +746,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
         return false;
     }
 
+    
     public void onSearchStarted() {
+        // Show/hide the original search icon.
+        mActivity.invalidateOptionsMenu();
+    }
+    protected void onSearchExit() {
         // Show/hide the original search icon.
         mActivity.invalidateOptionsMenu();
     }
@@ -751,6 +781,14 @@ public class ExplorerController implements ExplorerLayout.Callback,
             mActionBarController.enterSearchMode(null);
         }
         */
+        boolean contextIsSearchable = false ;
+        if( mExplorerContext != null 
+        		&& (mExplorerContext.mMode==ExplorerContext.MODE_BIBLE || mExplorerContext.mMode==ExplorerContext.MODE_FILE) ) {
+        	contextIsSearchable = true ;
+        }
+        if( contextIsSearchable ) {
+        	mActionBarController.enterSearchMode();
+        }
     }
 
     /**
@@ -805,50 +843,25 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
 
     /**
-     * Kicks off a search query, if the UI is in a state where a search is possible.
+     * Kicks off a search query
      */
-    protected void onSearchSubmit(final String queryTerm) {
-    	/*
-        final long accountId = getUIAccountId();
-        if (!Account.isNormalAccount(accountId)) {
-            return; // Invalid account to search from.
-        }
-
-        Mailbox searchableMailbox = getSearchableMailbox();
-        if (searchableMailbox == null) {
-            return;
-        }
-        final long mailboxId = searchableMailbox.mId;
-
-        if (Email.DEBUG) {
-            Log.d(Logging.LOG_TAG,
-                    "Submitting search: [" + queryTerm + "] in mailboxId=" + mailboxId);
-        }
-
-        mActivity.startActivity(EmailActivity.createSearchIntent(
-                mActivity, accountId, mailboxId, queryTerm));
-
-
-        // TODO: this causes a slight flicker.
-        // A new instance of the activity will sit on top. When the user exits search and
-        // returns to this activity, the search box should not be open then.
-        mActionBarController.exitSearchMode();
-        */
+    protected void onSearchSubmit(final BibleHelper.BibleEntry queryBe) {
+    	switch( mExplorerContext.mMode ) {
+    	case ExplorerContext.MODE_FILE :
+    		//Log.w(LOGTAG,"Opening..."+queryBe.displayStr) ;
+    		openFileList(mExplorerContext.mFileCode,queryBe) ;
+    		break ;
+    	}
+    }
+    protected void onSearchDiscard() {
+    	switch( mExplorerContext.mMode ) {
+    	case ExplorerContext.MODE_FILE :
+    		//Log.w(LOGTAG,"Opening..."+queryBe.displayStr) ;
+    		openFileList(mExplorerContext.mFileCode) ;
+    		break ;
+    	}
     }
 
-    /**
-     * Handles exiting of search entry mode.
-     */
-    protected void onSearchExit() {
-    	/*
-        if ((mListContext != null) && mListContext.isSearch()) {
-            mActivity.finish();
-        } else {
-            // Re show the search icon.
-            mActivity.invalidateOptionsMenu();
-        }
-        */
-    }
 
     /**
      * Handles the {@link android.app.Activity#onCreateOptionsMenu} callback.
@@ -871,11 +884,18 @@ public class ExplorerController implements ExplorerLayout.Callback,
             item.setVisible(false);
             mRefreshListener.setRefreshIcon(null);
         }
-
-        boolean showSearchIcon = true ;
-        boolean showSettings = false ;
+        
+        boolean contextIsSearchable = false ;
+        if( mExplorerContext != null 
+        		&& (mExplorerContext.mMode==ExplorerContext.MODE_BIBLE || mExplorerContext.mMode==ExplorerContext.MODE_FILE) ) {
+        	contextIsSearchable = true ;
+        }
+        boolean showSearchIcon = (contextIsSearchable && !mActionBarController.isInSearchMode()) ;
         menu.findItem(R.id.search).setVisible(showSearchIcon);
+
+        boolean showSettings = false ;
         menu.findItem(R.id.settings).setVisible(showSettings);
+        
         return true;
     }
 
@@ -917,7 +937,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      */
     protected void onRefresh() {
     	// @DAMS : search / filter
-    	mRefreshManager.refreshFileList( getFileListFileCode(), mExplorerContext.mSearchedBibleEntry ) ;
+    	mRefreshManager.refreshFileList( getFileListFileCode(), mExplorerContext.mFilteredBibleEntry ) ;
     }
 
     /**
@@ -999,7 +1019,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         public boolean shouldShowUp() {
             final int visiblePanes = mThreePane.getVisiblePanes();
             final boolean leftPaneHidden = ((visiblePanes & ExplorerLayout.PANE_LEFT) == 0);
-            return leftPaneHidden ;
+            return leftPaneHidden || isInFilterMode() ;
         }
 
         @Override
@@ -1013,14 +1033,35 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
 
         @Override
-        public void onSearchSubmit(final String queryTerm) {
-        	ExplorerController.this.onSearchSubmit(queryTerm);
+        public void onSearchSubmit(final BibleHelper.BibleEntry queryBe) {
+        	ExplorerController.this.onSearchSubmit(queryBe);
         }
 
         @Override
         public void onSearchExit() {
         	ExplorerController.this.onSearchExit();
         }
+
+		@Override
+		public boolean isInFilterMode() {
+			if( mExplorerContext != null && mExplorerContext.mFilteredBibleEntry != null ) {
+				return true ;
+			}
+			return false;
+		}
+
+		@Override
+		public BibleEntry getFilteredBibleEntry() {
+			if( mExplorerContext != null ) {
+				return mExplorerContext.mFilteredBibleEntry ;
+			}
+			return null;
+		}
+
+		@Override
+		public ExplorerContext getCurrentExplorerContext() {
+			return mExplorerContext;
+		}
     }
 
 

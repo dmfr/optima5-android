@@ -20,4 +20,6 @@
     
     <dimen name="message_list_width">428dip</dimen>
     <dimen name="mailbox_list_width">304dip</dimen>
+    
+    <dimen name="search_view_text_min_width">374dip</dimen>
 </resources>

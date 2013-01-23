@@ -15,23 +15,74 @@ public class ExplorerContext implements Parcelable {
 	public final int mMode ;
 	public final String mBibleCode ;
 	public final String mFileCode ;
-	public final BibleHelper.BibleEntry mSearchedBibleEntry ;
+	public final BibleHelper.BibleEntry mFilteredBibleEntry ;
 	
 	private ExplorerContext( int mode, String bibleCode, String fileCode, BibleHelper.BibleEntry be ) {
 		mMode = mode ;
 		mBibleCode = bibleCode ;
 		mFileCode = fileCode ;
-		mSearchedBibleEntry = be ;
+		mFilteredBibleEntry = be ;
 	}
 	private ExplorerContext( Parcel in ) {
 		mMode = in.readInt() ;
 		mBibleCode = in.readString() ;
 		mFileCode = in.readString() ;
 		if( in.readByte() == 1 ) {
-			mSearchedBibleEntry = in.readParcelable(BibleHelper.BibleEntry.class.getClassLoader()) ;
+			mFilteredBibleEntry = in.readParcelable(BibleHelper.BibleEntry.class.getClassLoader()) ;
 		} else {
-			mSearchedBibleEntry = null ;
+			mFilteredBibleEntry = null ;
 		}
+	}
+	
+	public boolean equals( Object o ) {
+		if( o == null ) {
+			return false ;
+		}
+		ExplorerContext ec = (ExplorerContext)o ;
+		if( this.mMode != ec.mMode ) {
+			return false ;
+		}
+		if( this.mBibleCode == null && ec.mBibleCode != null ) {
+			return false ;
+		}
+		else if( this.mBibleCode != null && !this.mBibleCode.equals(ec.mBibleCode) ) {
+			return false ;
+		}
+		if( this.mFileCode == null && ec.mFileCode != null ) {
+			return false ;
+		}
+		else if( this.mFileCode != null && !this.mFileCode.equals(ec.mFileCode) ) {
+			return false ;
+		}
+		if( this.mFilteredBibleEntry == null && ec.mFilteredBibleEntry != null ) {
+			return false ;
+		}
+		else if( this.mFilteredBibleEntry != null && !this.mFilteredBibleEntry.equals(ec.mFilteredBibleEntry) ) {
+			return false ;
+		}
+		return true ;
+	}
+	public int hashCode() {
+		int result = 17 ;
+		
+		result = 31 * result + mMode ;
+		if( mBibleCode != null ) {
+			result = 31 * result + mBibleCode.hashCode() ;
+		} else {
+			result = 31 * result ;  
+		}
+		if( mFileCode != null ) {
+			result = 31 * result + mFileCode.hashCode() ;
+		} else {
+			result = 31 * result ;  
+		}
+		if( mFilteredBibleEntry != null ) {
+			result = 31 * result + mFilteredBibleEntry.hashCode() ;
+		} else {
+			result = 31 * result ;  
+		}
+		
+		return result ;
 	}
 
 	
@@ -58,8 +109,8 @@ public class ExplorerContext implements Parcelable {
 		return new ExplorerContext(MODE_QUERY,null,null,be) ;
 	}
 	
-	public boolean isSearch() {
-		if( mSearchedBibleEntry == null ) {
+	public boolean isFiltered() {
+		if( mFilteredBibleEntry == null ) {
 			return false ;
 		}
 		return true ;
@@ -73,9 +124,9 @@ public class ExplorerContext implements Parcelable {
 		dest.writeInt(mMode);
 		dest.writeString(mBibleCode);
 		dest.writeString(mFileCode);
-		dest.writeByte( (byte) ((mSearchedBibleEntry != null)? 1 : 0) ) ;
-		if( mSearchedBibleEntry != null ) {
-			dest.writeParcelable(mSearchedBibleEntry, 0) ;
+		dest.writeByte( (byte) ((mFilteredBibleEntry != null)? 1 : 0) ) ;
+		if( mFilteredBibleEntry != null ) {
+			dest.writeParcelable(mFilteredBibleEntry, 0) ;
 		}
 	}
 	public static Parcelable.Creator<ExplorerContext> CREATOR =

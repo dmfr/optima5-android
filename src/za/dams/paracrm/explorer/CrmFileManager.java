@@ -6,19 +6,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import za.dams.paracrm.BibleHelper;
-import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.BibleHelper.BibleEntry;
-import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
-import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.CrmFileTransaction.CrmFilePhoto;
-import za.dams.paracrm.CrmFileTransaction.FieldType;
-
+import za.dams.paracrm.DatabaseManager;
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 public class CrmFileManager {
 	
@@ -237,9 +231,24 @@ public class CrmFileManager {
     }
     
     
-    private BibleHelper.BibleEntry pullFilterBe ;
-    public void setPullFilter( BibleHelper.BibleEntry be ) {
-    	pullFilterBe = be ;
+    private HashMap<String,BibleHelper.BibleEntry> mFileBibleFilter = new HashMap<String,BibleHelper.BibleEntry>() ;
+    public void setPullFilter( String fileCode, BibleHelper.BibleEntry be ) {
+    	boolean resetFileVisibleLimit = false ;
+    	BibleHelper.BibleEntry currentBe = null;
+    	if( mFileBibleFilter.containsKey(fileCode) ) {
+    		currentBe = mFileBibleFilter.get(fileCode) ;
+    	}
+    	if( currentBe != null && be == null ) {
+    		resetFileVisibleLimit = true ;
+    	}
+    	if( be != null && !be.equals(currentBe) ) {
+    		resetFileVisibleLimit = true ;
+    	}
+    	if( resetFileVisibleLimit ) {
+    		resetFileVisibleLimit(fileCode);
+    	}
+    	
+    	mFileBibleFilter.put(fileCode,be) ;
     }
     public List<CrmFileRecord> filePullData( String fileCode ) {
     	return filePullData(fileCode,0,0) ;
@@ -264,7 +273,26 @@ public class CrmFileManager {
     		queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND filerecord_parent_id='%d' AND ( sync_is_deleted IS NULL OR sync_is_deleted<>'O' )",fileCode,filerecordParentId) ;
     	} else {
         	int limit = getFileVisibleLimit(fileCode) ;
-        	queryMaster = String.format("SELECT filerecord_id FROM store_file WHERE file_code='%s' AND ( sync_is_deleted IS NULL OR sync_is_deleted<>'O' ) ORDER BY sync_timestamp DESC LIMIT %d",fileCode,limit) ;
+        	
+        	BibleHelper.BibleEntry bibleFilter = null ;
+        	if( mFileBibleFilter.containsKey(fileCode) ) {
+        		bibleFilter = mFileBibleFilter.get(fileCode) ;
+        	}
+        	
+        	StringBuilder sb = new StringBuilder();
+        	sb.append("SELECT store_file.filerecord_id FROM store_file") ;
+        	if( bibleFilter != null ) {
+        		for( CrmFileFieldDesc fd : fileGetFileDescriptor(fileCode).fieldsDesc ) {
+        			if( fd.fieldType == FieldType.FIELD_BIBLE && fd.fieldLinkBible.equals(bibleFilter.bibleCode) ) {
+        				sb.append(" JOIN store_file_field ON store_file_field.filerecord_id=store_file.filerecord_id") ;
+        				sb.append(" AND store_file_field.filerecord_field_code='" + fd.fieldCode + "'") ;
+        				sb.append(" AND store_file_field.filerecord_field_value_link='" + bibleFilter.entryKey +"'") ;
+        				break ;
+        			}
+        		}
+        	}
+        	sb.append( String.format(" WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) ORDER BY store_file.sync_timestamp DESC LIMIT %d",fileCode,limit) ) ;
+        	queryMaster = sb.toString();
     	}
     	
 		HashMap<Long,HashMap<String,StoreFileFieldRecord>> dbRecordFields = new HashMap<Long,HashMap<String,StoreFileFieldRecord>>() ;

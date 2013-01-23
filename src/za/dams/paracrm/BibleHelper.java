@@ -136,6 +136,9 @@ public class BibleHelper {
     		return (BibleEntry)o;
     	}
     	public boolean equals( Object be ) {
+    		if( be == null ) {
+    			return false ;
+    		}
     		if( this.bibleCode.equals( ((BibleEntry)be).bibleCode )
     				&& this.entryKey.equals( ((BibleEntry)be).entryKey) ){
     			return true;

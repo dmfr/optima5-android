@@ -326,7 +326,7 @@ public class FileListFragment extends ListFragment {
      */
     public void onRefresh(boolean userRequest) {
         if (isRefreshable()) {
-            mRefreshManager.refreshFileList(getExplorerContext().mFileCode, getExplorerContext().mSearchedBibleEntry);
+            mRefreshManager.refreshFileList(getExplorerContext().mFileCode, getExplorerContext().mFilteredBibleEntry);
         }
     }
     /**
@@ -334,7 +334,7 @@ public class FileListFragment extends ListFragment {
      */
     private void onLoadMore() {
         if (isRefreshable()) {
-            mRefreshManager.loadMoreFileList(getExplorerContext().mFileCode, getExplorerContext().mSearchedBibleEntry);
+            mRefreshManager.loadMoreFileList(getExplorerContext().mFileCode, getExplorerContext().mFilteredBibleEntry);
             // Sans attendre, on peut forcer un reload de la liste (déjà en cache?)
             forceReload() ;
         }
@@ -345,7 +345,7 @@ public class FileListFragment extends ListFragment {
             // Not refreshable (special box such as drafts, or magic boxes)
             return;
         }
-        if (!mRefreshManager.isFileStale(getFileCode())) {
+        if (!mRefreshManager.isFileStale(getFileCode(),mExplorerContext.mFilteredBibleEntry)) {
             return;
         }
         onRefresh(false);
@@ -641,6 +641,11 @@ public class FileListFragment extends ListFragment {
 				mCfm.fileInitDescriptors() ;
 			}
 			
+			if( mExplorerContext.isFiltered() ) {
+				mCfm.setPullFilter(mExplorerContext.mFileCode, mExplorerContext.mFilteredBibleEntry) ;
+			} else {
+				mCfm.setPullFilter(mExplorerContext.mFileCode,null) ;
+			}
 			FileListFragmentLoaderResult data = new FileListFragmentLoaderResult() ;
 			data.fileDesc = mCfm.fileGetFileDescriptor(mExplorerContext.mFileCode) ;
 			data.records = mCfm.filePullData(mExplorerContext.mFileCode) ;
