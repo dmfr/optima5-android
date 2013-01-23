@@ -6,6 +6,7 @@ public final class Explorer {
 
 	static public final int DATALIST_LOADER_ID = 1;
 	static public final int FILELIST_LOADER_ID = 2;
+	static public final int QUERYLIST_LOADER_ID = 2;
 	
 	static public void clearContext() {
 		RefreshManager.clearInstance() ;

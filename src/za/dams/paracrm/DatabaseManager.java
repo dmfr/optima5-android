@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 18;
+    private final int DB_VERSION = 19;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -354,6 +354,26 @@ public class DatabaseManager {
                     + "PRIMARY KEY( calendar_id )"
                     + ");";
             db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_query" + " ("
+                    + "querysrc_id" + " INTEGER, "
+                    + "querysrc_index" + " INTEGER,"
+                    + "querysrc_type" + " VARCHAR(100),"
+                    + "querysrc_name" + " VARCHAR(100),"
+                    + "PRIMARY KEY( querysrc_id )"
+                    + ");";
+            db.execSQL(createTableQuery);
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_query_where" + " ("
+                    + "querysrc_id" + " INTEGER, "
+                    + "querysrc_targetfield_ssid" + " INTEGER,"
+                    + "field_type" + " VARCHAR(100),"
+                    + "field_linkbible" + " VARCHAR(100),"
+                    + "field_lib" + " VARCHAR(100),"
+                    + "PRIMARY KEY( querysrc_id,querysrc_targetfield_ssid )"
+                    + ");";
+            db.execSQL(createTableQuery);
     	}
 
     	@Override
@@ -560,8 +580,13 @@ public class DatabaseManager {
     	                   "define_bible_tree",
     	                   "define_file",
     	                   "define_file_entry",
+    	                   "input_calendar",
+    	                   "input_query",
+    	                   "input_query_where",
     	                   "input_scen",
     	                   "input_scen_page",
+    	                   "input_scen_pagepivot",
+    	                   "input_scen_pagepivot_copymap",
     	                   "input_scen_page_field",
     	                   "store_bible_entry",
     	                   "store_bible_entry_field",

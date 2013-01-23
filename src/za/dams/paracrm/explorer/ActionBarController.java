@@ -63,10 +63,6 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         /** @return the "UP" arrow should be shown. */
         public boolean shouldShowUp();
         
-        /**
-         * Retrieves the hint text to be shown for when a search entry is being made.
-         */
-        public String getSearchHint();
 
         /**
          * Called when the action bar initially shows the search entry field.

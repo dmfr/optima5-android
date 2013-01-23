@@ -20,7 +20,9 @@ import android.view.MenuItem;
 
 
 public class ExplorerController implements ExplorerLayout.Callback,
-		DataListFragment.Callback,FileListFragment.Callback, FileViewFragment.Callback  {
+		DataListFragment.Callback,
+		FileListFragment.Callback, FileViewFragment.Callback,
+		QueryListFragment.Callback, QueryLaunchFragment.Callback {
 
 	static final String LOGTAG = "Explorer/ExplorerController"; 
     static final boolean DEBUG_FRAGMENTS = false; // DO NOT SUBMIT WITH TRUE
@@ -52,9 +54,14 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * @see FragmentInstallable
      */
     private DataListFragment mDataListFragment;
+    
     private EmptyListFragment mEmptyListFragment;
+    
     private FileListFragment mFileListFragment;
     private FileViewFragment mFileViewFragment;
+    
+    private QueryListFragment mQueryListFragment;
+    private QueryLaunchFragment mQueryLaunchFragment;
 
     /**
      * To avoid double-deleting a fragment (which will cause a runtime exception),
@@ -243,6 +250,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
             installFileListFragment((FileListFragment) fragment);
         } else if (fragment instanceof FileViewFragment) {
             installFileViewFragment((FileViewFragment) fragment);
+        } else if (fragment instanceof QueryListFragment) {
+            installQueryListFragment((QueryListFragment) fragment);
+        } else if (fragment instanceof QueryLaunchFragment) {
+        	installQueryLaunchFragment((QueryLaunchFragment) fragment);
         } else {
             throw new IllegalArgumentException("Tried to install unknown fragment");
         }
@@ -282,7 +293,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
         getFileListFragment().setLayout(mThreePane);
     }
-
+    
     /** Install fragment */
     protected void installFileViewFragment(FileViewFragment fragment) {
         mFileViewFragment = fragment;
@@ -292,6 +303,34 @@ public class ExplorerController implements ExplorerLayout.Callback,
         
         if( isFileListInstalled() ) {
         	getFileListFragment().setSelectedFilerecord(fragment.getFilerecordId());
+        }
+    }
+    
+    
+    /** Install fragment */
+    protected void installQueryListFragment(QueryListFragment fragment) {
+    	mQueryListFragment = fragment;
+    	mQueryListFragment.setCallback(this);
+        refreshActionBar();
+        
+        if (isDataListInstalled()) {
+        	// @DAMS : TODO !
+        	DataListFragment.DataListEntry dle = new DataListFragment.DataListEntry() ;
+        	dle.dataType = DataListFragment.DataListEntry.DATA_QUERY ;
+            getDataListFragment().setHighlightedDataListEntry(dle);
+        }
+        getQueryListFragment().setLayout(mThreePane);
+    }
+    
+    /** Install fragment */
+    protected void installQueryLaunchFragment(QueryLaunchFragment fragment) {
+    	mQueryLaunchFragment = fragment;
+    	mQueryLaunchFragment.setCallback(this);
+
+        refreshActionBar();
+        
+        if( isQueryListInstalled() ) {
+        	getQueryListFragment().setSelectedQuerysrc(fragment.getQuerySrcId());
         }
     }
 
@@ -312,32 +351,48 @@ public class ExplorerController implements ExplorerLayout.Callback,
             uninstallFileListFragment();
         } else if (fragment == mFileViewFragment) {
             uninstallFileViewFragment();
+        } else if (fragment == mQueryListFragment) {
+            uninstallQueryListFragment();
+        } else if (fragment == mQueryLaunchFragment) {
+        	uninstallQueryLaunchFragment();
         } else {
             throw new IllegalArgumentException("Tried to uninstall unknown fragment");
         }
     }
 
-    /** Uninstall {@link MailboxListFragment} */
+    /** Uninstall {@link DataListFragment} */
     protected void uninstallDataListFragment() {
     	mDataListFragment.setCallback(null);
     	mDataListFragment = null;
     }
 
-    /** Uninstall {@link MessageListFragment} */
+    /** Uninstall {@link EmptyListFragment} */
     protected void uninstallEmptyListFragment() {
     	mEmptyListFragment = null;
     }
 
-    /** Uninstall {@link MessageListFragment} */
+    /** Uninstall {@link FileListFragment} */
     protected void uninstallFileListFragment() {
     	mFileListFragment.setCallback(null);
     	mFileListFragment = null;
     }
 
-    /** Uninstall {@link MessageViewFragment} */
+    /** Uninstall {@link FileViewFragment} */
     protected void uninstallFileViewFragment() {
     	mFileViewFragment.setCallback(null);
     	mFileViewFragment = null;
+    }
+
+    /** Uninstall {@link QueryListFragment} */
+    protected void uninstallQueryListFragment() {
+    	mQueryListFragment.setCallback(null);
+    	mQueryListFragment = null;
+    }
+
+    /** Uninstall {@link MessageViewFragment} */
+    protected void uninstallQueryLaunchFragment() {
+    	mQueryLaunchFragment.setCallback(null);
+    	mQueryLaunchFragment = null;
     }
 
     /**
@@ -392,7 +447,6 @@ public class ExplorerController implements ExplorerLayout.Callback,
         removeFragment(ft, mDataListFragment);
         return ft;
     }
-
     /**
      * Remove the fragment if it's installed.
      */
@@ -400,7 +454,6 @@ public class ExplorerController implements ExplorerLayout.Callback,
         removeFragment(ft, mEmptyListFragment);
         return ft;
     }
-
     /**
      * Remove the fragment if it's installed.
      */
@@ -408,7 +461,6 @@ public class ExplorerController implements ExplorerLayout.Callback,
         removeFragment(ft, mFileListFragment);
         return ft;
     }
-
     /**
      * Remove the fragment if it's installed.
      */
@@ -416,35 +468,63 @@ public class ExplorerController implements ExplorerLayout.Callback,
         removeFragment(ft, mFileViewFragment);
         return ft;
     }
+    /**
+     * Remove the fragment if it's installed.
+     */
+    protected FragmentTransaction removeQueryListFragment(FragmentTransaction ft) {
+        removeFragment(ft, mQueryListFragment);
+        return ft;
+    }
+    /**
+     * Remove the fragment if it's installed.
+     */
+    protected FragmentTransaction removeQueryLaunchFragment(FragmentTransaction ft) {
+        removeFragment(ft, mQueryLaunchFragment);
+        return ft;
+    }
+    
 
-    /** @return true if a {@link MailboxListFragment} is installed. */
+    /** @return true if a {@link mDataListFragment} is installed. */
     protected final boolean isDataListInstalled() {
         return mDataListFragment != null;
     }
-
-    /** @return true if a {@link MessageListFragment} is installed. */
+    /** @return true if a {@link mFileListFragment} is installed. */
     protected final boolean isFileListInstalled() {
         return mFileListFragment != null;
     }
-
-    /** @return true if a {@link MessageViewFragment} is installed. */
+    /** @return true if a {@link mFileViewFragment} is installed. */
     protected final boolean isFileViewInstalled() {
         return mFileViewFragment != null;
     }
-
-    /** @return the installed {@link MailboxListFragment} or null. */
+    /** @return true if a {@link mQueryListFragment} is installed. */
+    protected final boolean isQueryListInstalled() {
+        return mQueryListFragment != null;
+    }
+    /** @return true if a {@link mQueryLaunchFragment} is installed. */
+    protected final boolean isQueryLaunchInstalled() {
+        return mQueryLaunchFragment != null;
+    }
+    
+    
+    /** @return the installed {@link DataListFragment} or null. */
     protected final DataListFragment getDataListFragment() {
         return mDataListFragment;
     }
-
-    /** @return the installed {@link MessageListFragment} or null. */
+    /** @return the installed {@link FileListFragment} or null. */
     protected final FileListFragment getFileListFragment() {
         return mFileListFragment;
     }
-
-    /** @return the installed {@link MessageViewFragment} or null. */
+    /** @return the installed {@link FileViewFragment} or null. */
     protected final FileViewFragment getFileViewFragment() {
         return mFileViewFragment;
+    }
+    /** @return the installed {@link QueryListFragment} or null. */
+    protected final QueryListFragment getQueryListFragment() {
+        return mQueryListFragment;
+    }
+    /** @return the installed {@link QueryLaunchFragment} or null. */
+    protected final QueryLaunchFragment getQueryLaunchFragment() {
+        return mQueryLaunchFragment;
     }
 
     /**
@@ -485,6 +565,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
         return isFileViewInstalled() ? getFileViewFragment().getFilerecordId()
                 : 0 ;
     }
+    protected long getQueryLaunchQuerySrcId() {
+        return isQueryLaunchInstalled() ? getQueryLaunchFragment().getQuerySrcId()
+                : 0 ;
+    }
 
     /**
      * Opens a given list
@@ -492,7 +576,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * @param messageId if specified and not {@link Message#NO_MESSAGE}, will open the message
      *     in the message list.
      */
-    public final void open(final ExplorerContext explorerContext, final String bibleEntryKey, final long filerecordId ) {
+    public final void open(final ExplorerContext explorerContext, final String bibleEntryKey, final long filerecordId, final int querysrcId ) {
         if (explorerContext.equals(mExplorerContext)) {
             return;
         }
@@ -507,13 +591,18 @@ public class ExplorerController implements ExplorerLayout.Callback,
         // Fragment DataList
         updateDataList(ft, true);
         
-        if( explorerContext.mMode == ExplorerContext.MODE_FILE ) {
-        	updateFileList(ft, true);
+        if( explorerContext.mMode == ExplorerContext.MODE_QUERY ) {
+        	updateQueryList(ft, true);
+        } else if( explorerContext.mMode == ExplorerContext.MODE_FILE ) {
+            updateFileList(ft, true);
         } else {
         	updateEmptyList(ft, true);
         }
 
-        if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
+        if (querysrcId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
+            updateQueryLaunch(ft, querysrcId);
+            mThreePane.showRightPane();
+        } else if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
             updateFileView(ft, filerecordId);
             mThreePane.showRightPane();
         } else if (explorerContext.isFiltered()) {
@@ -528,14 +617,17 @@ public class ExplorerController implements ExplorerLayout.Callback,
             // mActionBarController.enterSearchMode(explorerContext.getSearchParams().mFilter);
         }
     }
+    
     public final void openEmptyList() {
     	final ExplorerContext newExplorerContext = ExplorerContext.forNone() ;
     	if( newExplorerContext.equals(mExplorerContext) ) {
     		return ;
     	}
     	mExplorerContext = newExplorerContext;
+    	updateDataList(true) ;
     	updateEmptyList(true);
     }
+    
     public final void openFileList( String fileCode ) {
     	final ExplorerContext newExplorerContext = ExplorerContext.forFile(fileCode, null) ;
     	if( newExplorerContext.equals(mExplorerContext) ) {
@@ -560,6 +652,21 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
     }
 
+    public final void openQueryList() {
+    	final ExplorerContext newExplorerContext = ExplorerContext.forQuery(null) ;
+    	if( newExplorerContext.equals(mExplorerContext) ) {
+    		return ;
+    	}
+    	mExplorerContext = newExplorerContext;
+    	updateQueryList(true);
+    	mThreePane.showRightPane();
+    }
+    public final void openQueryLaunch( int querysrcId ) {
+        if (getQueryLaunchQuerySrcId() != querysrcId) {
+            navigateToQuery(querysrcId);
+            mThreePane.showRightPane();
+        }
+    }
 
     /**
      * Loads the given account and optionally selects the given mailbox and message. If the
@@ -585,7 +692,18 @@ public class ExplorerController implements ExplorerLayout.Callback,
         if (clearDependentPane) {
             removeFileListFragment(ft);
             removeFileViewFragment(ft);
+            removeQueryListFragment(ft);
+            removeQueryLaunchFragment(ft);
         }
+    }
+    /**
+     * Shortcut to call {@link #updateDataList(FragmentTransaction, boolean)} and
+     * commit.
+     */
+    private void updateDataList(boolean clearDependentPane) {
+        FragmentTransaction ft = mFragmentManager.beginTransaction();
+        updateDataList(ft, clearDependentPane);
+        commitFragmentTransaction(ft);
     }
 
     /**
@@ -610,9 +728,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
 
         removeEmptyListFragment(ft);
         removeFileListFragment(ft);
+        removeQueryListFragment(ft);
         ft.add(mThreePane.getMiddlePaneId(), EmptyListFragment.newInstance());
         if (clearDependentPane) {
-            
+            removeFileViewFragment(ft);
+            removeQueryLaunchFragment(ft);
         }
     }
     /**
@@ -638,10 +758,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
         if ( !mExplorerContext.equals(getFileListExplorerContext()) ) {
             removeEmptyListFragment(ft);
             removeFileListFragment(ft);
+            removeQueryListFragment(ft);
             ft.add(mThreePane.getMiddlePaneId(), FileListFragment.newInstance(mExplorerContext));
         }
         if (clearDependentPane) {
             removeFileViewFragment(ft);
+            removeQueryLaunchFragment(ft);
         }
     }
 
@@ -673,6 +795,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
             return; // nothing to do.
         }
 
+        removeQueryLaunchFragment(ft);
         removeFileViewFragment(ft);
 
         ft.add(mThreePane.getRightPaneId(), FileViewFragment.newInstance(filerecordId));
@@ -696,6 +819,84 @@ public class ExplorerController implements ExplorerLayout.Callback,
             getFileListFragment().setSelectedFilerecord(-1);
         }
     }
+
+    
+    
+    /**
+     * Show the CrmQUERY query fragment
+     *
+     * @param ft {@link FragmentTransaction} to use.
+     */
+    private void updateQueryList(FragmentTransaction ft, boolean clearDependentPane) {
+        if (Explorer.DEBUG) {
+            Log.d(LOGTAG, this + " updateQueryList " + mExplorerContext);
+        }
+
+        if ( !isQueryListInstalled() ) {
+            removeEmptyListFragment(ft);
+            removeFileListFragment(ft);
+            removeQueryListFragment(ft);
+            ft.add(mThreePane.getMiddlePaneId(), QueryListFragment.newInstance());
+        }
+        if (clearDependentPane) {
+            removeFileViewFragment(ft);
+            removeQueryLaunchFragment(ft);
+        }
+    }
+
+    /**
+     * Shortcut to call {@link #updateFileList(FragmentTransaction, boolean)} and
+     * commit.
+     */
+    private void updateQueryList(boolean clearDependentPane) {
+        FragmentTransaction ft = mFragmentManager.beginTransaction();
+        updateQueryList(ft, clearDependentPane);
+        commitFragmentTransaction(ft);
+    }
+    
+    /**
+     * Show a message on the message view.
+     *
+     * @param ft {@link FragmentTransaction} to use.
+     * @param messageId ID of the mailbox to load. Must never be {@link Message#NO_MESSAGE}.
+     */
+    private void updateQueryLaunch(FragmentTransaction ft, int querysrcId) {
+        if (Explorer.DEBUG) {
+            Log.d(LOGTAG, this + " updateQueryLaunch querysrcId=" + querysrcId);
+        }
+        if (querysrcId == 0) {
+            throw new IllegalArgumentException();
+        }
+
+        if (querysrcId == getQueryLaunchQuerySrcId()) {
+            return; // nothing to do.
+        }
+
+        removeFileViewFragment(ft);
+        removeQueryLaunchFragment(ft);
+
+        ft.add(mThreePane.getRightPaneId(), QueryLaunchFragment.newInstance(querysrcId));
+    }
+
+    /**
+     * Shortcut to call {@link #updateQueryLaunch(FragmentTransaction, long)} and commit.
+     */
+    protected void navigateToQuery(int querysrcId) {
+        FragmentTransaction ft = mFragmentManager.beginTransaction();
+        updateQueryLaunch(ft, querysrcId);
+        commitFragmentTransaction(ft);
+    }
+
+    /**
+     * Remove the query view if shown.
+     */
+    private void unselectQuery() {
+        commitFragmentTransaction(removeQueryLaunchFragment(mFragmentManager.beginTransaction()));
+        if (isQueryListInstalled()) {
+            getQueryListFragment().setSelectedQuerysrc(-1);
+        }
+    }
+    
     
     
     /**
@@ -762,31 +963,15 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * is actually submitted.
      */
     public void onSearchRequested() {
-    	/*
-        long accountId = getActualAccountId();
-        boolean accountSearchable = false;
-        if (accountId > 0) {
-            Account account = Account.restoreAccountWithId(mActivity, accountId);
-            if (account != null) {
-                String protocol = account.getProtocol(mActivity);
-                accountSearchable = (account.mFlags & Account.FLAGS_SUPPORTS_SEARCH) != 0;
-            }
-        }
-
-        if (!accountSearchable) {
-            return;
-        }
-
-        if (isMessageListReady()) {
-            mActionBarController.enterSearchMode(null);
-        }
-        */
         boolean contextIsSearchable = false ;
         if( mExplorerContext != null 
         		&& (mExplorerContext.mMode==ExplorerContext.MODE_BIBLE || mExplorerContext.mMode==ExplorerContext.MODE_FILE) ) {
         	contextIsSearchable = true ;
         }
-        if( contextIsSearchable ) {
+        if( !contextIsSearchable ) {
+        	return ;
+        }
+        if( isFileListReady() ) {
         	mActionBarController.enterSearchMode();
         }
     }
@@ -814,33 +999,6 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
 
 
-    /**
-     * Retrieves the hint text to be shown for when a search entry is being made.
-     */
-    protected String getSearchHint() {
-    	return "Bible Filter..." ;
-    	/*
-        if (!isMessageListReady()) {
-            return "";
-        }
-        Account account = getMessageListFragment().getAccount();
-        Mailbox mailbox = getSearchableMailbox();
-
-        if (mailbox == null) {
-            return "";
-        }
-
-        if (shouldDoGlobalSearch(account, mailbox)) {
-            return mActivity.getString(R.string.search_hint);
-        }
-
-        // Regular mailbox, or IMAP - search within that mailbox.
-        String mailboxName = FolderProperties.getInstance(mActivity).getDisplayName(mailbox);
-        return String.format(
-                mActivity.getString(R.string.search_mailbox_hint),
-                mailboxName);
-        */
-    }
 
     /**
      * Kicks off a search query
@@ -967,28 +1125,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
         mActivity.invalidateOptionsMenu();
     }
 
-    // FileListFragment.Callback
-    /*
-    @Override
-    public void onFileDescNotFound(boolean isFirstLoad) {
-        // Something bad happened - the account or mailbox we were looking for was deleted.
-        // Just restart and let the entry flow find a good default view.
-        if (isFirstLoad) {
-            // Only show this if it's the first load (e.g. a shortcut) rather an a return to
-            // a mailbox (which might be in a just-deleted account)
-            Utility.showToast(mActivity, R.string.toast_mailbox_not_found);
-        }
-        long accountId = getUIAccountId();
-        if (accountId != Account.NO_ACCOUNT) {
-            mActivity.startActivity(Welcome.createOpenAccountInboxIntent(mActivity, accountId));
-        } else {
-            Welcome.actionStart(mActivity);
 
-        }
-        mActivity.finish();
-    }
-    */
-
+    
     // ExplorerLayoutCallback
     @Override
     public void onVisiblePanesChanged(int previousVisiblePanes) {
@@ -999,6 +1137,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
                 ((previousVisiblePanes & ExplorerLayout.PANE_RIGHT) != 0)) {
             // Message view just got hidden
             unselectMessage();
+            
+            if( mExplorerContext.mMode == ExplorerContext.MODE_QUERY ) {
+            	// En mode Queries, on ne veut pas de vue large
+            	openEmptyList() ;
+            }
         }
         // Disable CAB when the message list is not visible.
         // @DAMS : pas de Custom Action Bar
@@ -1007,6 +1150,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
             getFileListFragment().onHidden((visiblePanes & ExplorerLayout.PANE_MIDDLE) == 0);
         }
         */
+        
+        
+        
+        
+        
         refreshActionBar();
     }
     
@@ -1014,17 +1162,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
     
     private class ActionBarControllerCallback implements ActionBarController.Callback {
 
-
         @Override
         public boolean shouldShowUp() {
             final int visiblePanes = mThreePane.getVisiblePanes();
             final boolean leftPaneHidden = ((visiblePanes & ExplorerLayout.PANE_LEFT) == 0);
             return leftPaneHidden || isInFilterMode() ;
-        }
-
-        @Override
-        public String getSearchHint() {
-            return ExplorerController.this.getSearchHint();
         }
 
         @Override
@@ -1083,13 +1225,38 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	// DataListFragment$Callback
 	@Override
 	public void onQuerySelected() {
-		openEmptyList() ;
+		openQueryList() ;
 	}
 
 	// FileListFragment$Callback
 	@Override
 	public void onFilerecordOpen(long filerecordId) {
 		openFilerecord(filerecordId) ;
+	}
+
+	// QueryLaunchFragment$Callback
+	@Override
+	public void onQueryLaunchStart(int querysrcId) {
+		// TODO Auto-generated method stub
+		
+	}
+	// QueryLaunchFragment$Callback
+	@Override
+	public void onQueryResponseFailure(int querysrcId) {
+		// TODO Auto-generated method stub
+		
+	}
+	// QueryLaunchFragment$Callback
+	@Override
+	public void onQueryResponseSuccess(int querysrcId, int cacheResultJsonId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	// QueryListFragment$Callback
+	@Override
+	public void onQuerySelect(int querysrcId) {
+		openQueryLaunch(querysrcId) ;
 	}
 
 }
