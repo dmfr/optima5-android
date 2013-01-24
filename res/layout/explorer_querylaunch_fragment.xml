@@ -88,6 +88,14 @@
 		android:background="#FFFFFFFF"
 		android:id="@+id/explorer_querylaunch_wherefields">
 	    </TableLayout>
+	    <TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="No parameters for this query"
+		android:layout_gravity="center"
+		style="@android:style/TextAppearance.Medium"
+		android:id="@+id/explorer_querylaunch_nofields">
+	  </TextView>
       </LinearLayout>
       
     </LinearLayout>

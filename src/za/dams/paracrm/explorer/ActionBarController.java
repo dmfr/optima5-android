@@ -244,12 +244,17 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         	StringBuilder sb = new StringBuilder() ;
         	sb.append("Explorer") ;
         	switch( mCallback.getCurrentExplorerContext().mMode ) {
+        	case ExplorerContext.MODE_QUERY :
+        		sb.append(" : Queries") ;
+        		break ;
         	case ExplorerContext.MODE_BIBLE :
         		sb.append(" : ") ;
         		sb.append(mCallback.getCurrentExplorerContext().mBibleCode) ;
+        		break ;
         	case ExplorerContext.MODE_FILE :
         		sb.append(" : ") ;
         		sb.append(cfm.fileGetFileDescriptor(mCallback.getCurrentExplorerContext().mFileCode).fileName) ;
+        		break ;
         	}
         	String ligne1 = sb.toString() ;
         	String ligne2 = null ;

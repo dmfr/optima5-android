@@ -45,6 +45,7 @@ public class QueryLaunchFragment extends Fragment {
 	private View mMainView ;
 	private View mLoadingProgress;
 	private TableLayout mHeaderTable ;
+	private View mViewgroupEmpty ;
 	private ViewGroup mViewgroupTable ;
 	ArrayList<View> mCrmFieldViews ;
 	
@@ -113,6 +114,7 @@ public class QueryLaunchFragment extends Fragment {
         mHeaderTable = (TableLayout) view.findViewById(R.id.header_table) ;
 
         mViewgroupTable = (ViewGroup) view.findViewById(R.id.explorer_querylaunch_wherefields) ;
+        mViewgroupEmpty = (View) view.findViewById(R.id.explorer_querylaunch_nofields) ;
         mCrmFieldViews = new ArrayList<View>() ;
      
         return view ;
@@ -292,6 +294,10 @@ public class QueryLaunchFragment extends Fragment {
     		crmFieldsIndex++ ;
 
     		
+    	}
+    	if( mModel.querysrcConditions.size() == 0 ) {
+    		mViewgroupTable.setVisibility(View.GONE) ;
+    		mViewgroupEmpty.setVisibility(View.VISIBLE) ;
     	}
     	
     	showContent(true) ;
