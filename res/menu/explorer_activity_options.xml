@@ -26,6 +26,14 @@
         android:showAsAction="ifRoom"
     />
     <item
+        android:id="@+id/query_go"
+        android:orderInCategory="1500"
+        android:alphabeticShortcut="r"
+        android:title="Run Query"
+        android:icon="@drawable/ic_menu_send_holo_light"
+        android:showAsAction="ifRoom|withText"
+    />
+    <item
         android:id="@+id/refresh"
         android:orderInCategory="400"
         android:alphabeticShortcut="r"

@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 19;
+    private final int DB_VERSION = 20;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -372,6 +372,14 @@ public class DatabaseManager {
                     + "field_linkbible" + " VARCHAR(100),"
                     + "field_lib" + " VARCHAR(100),"
                     + "PRIMARY KEY( querysrc_id,querysrc_targetfield_ssid )"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "query_cache_json" + " ("
+                    + "json_result_id" + " INTEGER PRIMARY KEY, "
+                    + "json_blob" + " BLOB"
                     + ");";
             db.execSQL(createTableQuery);
     	}

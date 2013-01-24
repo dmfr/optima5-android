@@ -1050,6 +1050,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
         boolean showSearchIcon = (contextIsSearchable && !mActionBarController.isInSearchMode()) ;
         menu.findItem(R.id.search).setVisible(showSearchIcon);
+        
+        boolean showGoQuery = isQueryLaunchInstalled() && !getQueryLaunchFragment().isQueryRunning() ;
+        menu.findItem(R.id.query_go).setVisible(showGoQuery);
 
         boolean showSettings = false ;
         menu.findItem(R.id.settings).setVisible(showSettings);
@@ -1075,6 +1078,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
                 return onAccountSettings();
             case R.id.search:
                 onSearchRequested();
+                return true;
+            case R.id.query_go:
+                if( isQueryLaunchInstalled() ) {
+                	getQueryLaunchFragment().goQuery() ;
+                }
                 return true;
         }
         return false;
@@ -1237,18 +1245,17 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	// QueryLaunchFragment$Callback
 	@Override
 	public void onQueryLaunchStart(int querysrcId) {
-		// TODO Auto-generated method stub
-		
+		mActivity.invalidateOptionsMenu();
 	}
 	// QueryLaunchFragment$Callback
 	@Override
 	public void onQueryResponseFailure(int querysrcId) {
-		// TODO Auto-generated method stub
-		
+		mActivity.invalidateOptionsMenu();
 	}
 	// QueryLaunchFragment$Callback
 	@Override
 	public void onQueryResponseSuccess(int querysrcId, int cacheResultJsonId) {
+		mActivity.invalidateOptionsMenu();
 		// TODO Auto-generated method stub
 		
 	}

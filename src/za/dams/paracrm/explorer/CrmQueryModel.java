@@ -3,6 +3,8 @@ package za.dams.paracrm.explorer;
 import java.util.ArrayList;
 import java.util.Date;
 
+import android.text.format.Time;
+
 import za.dams.paracrm.BibleHelper;
 
 public class CrmQueryModel {
@@ -23,8 +25,8 @@ public class CrmQueryModel {
 		public String fieldName ;
 		
 		public boolean conditionIsSet ;
-		public Date conditionDateLt ;
-		public Date conditionDateGt ;
+		public Time conditionDateLt ;
+		public Time conditionDateGt ;
 		public BibleHelper.BibleEntry conditionBibleEntry ;
 	}
 	
