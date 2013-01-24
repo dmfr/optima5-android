@@ -5,12 +5,15 @@ import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.calendar.CalendarActivity;
+import za.dams.paracrm.ui.FileCaptureActivity;
 import za.dams.paracrm.R;
 
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -1258,6 +1261,14 @@ public class ExplorerController implements ExplorerLayout.Callback,
 		mActivity.invalidateOptionsMenu();
 		// TODO Auto-generated method stub
 		
+    	final Bundle bundle = new Bundle();
+    	bundle.putInt(QueryViewActivity.ARG_QUERYSRC_ID, querysrcId);
+    	bundle.putInt(QueryViewActivity.ARG_JSONRESULT_ID, cacheResultJsonId) ;
+		
+      	Intent intent = new Intent(mActivity, QueryViewActivity.class);
+      	intent.setClass(mActivity, QueryViewActivity.class);
+    	intent.putExtras(bundle);
+    	mActivity.startActivity(intent);
 	}
 
 	// QueryListFragment$Callback

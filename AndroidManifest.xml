@@ -72,6 +72,15 @@
             android:theme="@android:style/Theme.Holo.Light"
             android:windowSoftInputMode="adjustPan" >
         </activity>
+        <activity
+            android:name=".explorer.QueryViewActivity"
+            android:icon="@drawable/mainmenu_filemanager"
+            android:label="QueryViewer"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.Light"
+            android:windowSoftInputMode="adjustPan" >
+        </activity>
         
 		
 		<service
