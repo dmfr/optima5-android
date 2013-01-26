@@ -62,6 +62,12 @@ public class SyncServiceController {
     		requestPull(null);
     	}
     }
+    public boolean cancelPullIfPossible( SyncPullRequest pr ) {
+    	if( arrPullRequest.contains(pr) && arrPullRequest.remove(pr) ) {
+    		return true ;
+    	}
+    	return false ;
+    }
     public void requestPull( SyncPullRequest pr ) {
     	arrPullRequest.add(pr) ;
     	if( !isServiceRunning(mContext) && !serviceRunning ) {

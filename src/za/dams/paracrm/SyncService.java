@@ -5,11 +5,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,6 +16,7 @@ import java.util.Map;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
@@ -39,13 +36,13 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.provider.Settings.Secure;
-import android.util.Log;
 
 public class SyncService extends Service {
 	
@@ -154,6 +151,11 @@ public class SyncService extends Service {
 
         	UploadServiceHelper.launchUpload( SyncService.this.getApplicationContext() ) ;
         	SyncService.this.stopSelf() ;
+        }
+        
+        public SyncTask execute( SyncPullRequest spr ) {
+        	executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+        	return this ;
         }
 	}
 	
@@ -266,39 +268,52 @@ public class SyncService extends Service {
     	if( pr.limitResults != 0 ) {
     		postParams.put("limit", String.valueOf(pr.limitResults));
     	}
-    	String postString = HttpPostHelper.getPostString(postParams) ;
+    	
+        final HttpClient client = AndroidHttpClient.newInstance("Android");
+        final HttpPost postRequest = new HttpPost(getString(R.string.server_url));
+        client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
+        client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 10000);
+        try {
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+            for( Map.Entry<String,String> kv : postParams.entrySet() ) {
+            	nameValuePairs.add(new BasicNameValuePair(kv.getKey(), kv.getValue()));
+            }
+			postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+        	
+            HttpResponse response = client.execute(postRequest);
+            final int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode != HttpStatus.SC_OK) {
+                return false ;
+            }
 
-    	try {
-    		URL url = new URL(getString(R.string.server_url));
-    		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-    		httpURLConnection.setDoOutput(true);
-    		httpURLConnection.setRequestMethod("POST");
-    		httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-    		httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-    		try {
-    			PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-    			out.print(postString);
-    			out.close();
-
-    			InputStream is = new BufferedInputStream(httpURLConnection.getInputStream()); 
-    			int newPullTimestamp = syncDbFromPull( pr.fileCode, is ) ;
-    			afterPullTTLpurge(newPullTimestamp) ;
-    		}
-    		catch (IOException e) {
-
-    		}
-    		finally{
-    			httpURLConnection.disconnect() ;
-    		}
-    	} catch (MalformedURLException e) {
-    		// TODO Auto-generated catch block
-
-    	} catch (IOException e) {
-    		// TODO Auto-generated catch block
-
-    	}
-
-    	return true ;
+            final HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                InputStream inputStream = null;
+                try {
+                    inputStream = entity.getContent();
+                    BufferedInputStream bis = new BufferedInputStream(inputStream);
+        			int newPullTimestamp = syncDbFromPull( pr.fileCode, bis ) ;
+        			afterPullTTLpurge(newPullTimestamp) ;
+        			
+                } finally {
+                    if (inputStream != null) {
+                        inputStream.close();
+                    }
+                    entity.consumeContent();
+                }
+            }
+        } catch (IOException e) {
+        	postRequest.abort();
+        } catch (IllegalStateException e) {
+        	postRequest.abort();
+        } catch (Exception e) {
+        	postRequest.abort();
+        } finally {
+            if ((client instanceof AndroidHttpClient)) {
+                ((AndroidHttpClient) client).close();
+            }
+        }
+        return true ;
     }
     private HashMap<String,Integer> doPull_getLocalSyncHashmap( SyncPullRequest pr ) {
     	
@@ -496,20 +511,6 @@ public class SyncService extends Service {
 	
 	
 	
-	private int syncPullGetLastTimestamp( String fileCode ) {
-		DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
-		
-		int timestamp = 0 ;
-		
-		String query = String.format("SELECT max(sync_timestamp) FROM store_file WHERE file_code='%s'",fileCode) ;
-		Cursor cursor = mDb.rawQuery(query) ;
-		if( cursor.getCount() > 0 ) {
-			cursor.moveToNext() ;
-			timestamp = cursor.getInt(0) ;
-		}
-		cursor.close() ;
-		return timestamp ;
-	}
 	
 	
 	private int syncDbFromPull( String bibleCode , InputStream is ) {
@@ -687,7 +688,6 @@ public class SyncService extends Service {
     			cv = iter.next() ;
     			
     			int updateId = 0 ;
-    			int existingSyncTimestamp = -1 ;
 
     			if( cv.getAsString("sync_vuid").equals("") ) {
     				continue ;
@@ -696,7 +696,6 @@ public class SyncService extends Service {
     			Cursor cursor = mDb.rawQuery(String.format("SELECT filerecord_id , sync_timestamp FROM store_file WHERE sync_vuid='%s'",cv.getAsString("sync_vuid"))) ;
     			while( cursor.moveToNext() ) {
     				updateId = cursor.getInt(0) ;
-    				existingSyncTimestamp = cursor.getInt(1) ;
     			}
     			cursor.close();
     			
@@ -753,11 +752,6 @@ public class SyncService extends Service {
 	
 	
 	
-	private void syncPullResetLastTimestamp( String fileCode ) {
-        DatabaseManager mDb = DatabaseManager.getInstance(SyncService.this.getApplicationContext()) ;
-        
-        mDb.execSQL(String.format("UPDATE store_file SET sync_timestamp='0' WHERE file_code='%s'",fileCode)) ;
-	}
     
     private boolean afterPullTTLpurge( int newPullTimestamp )
     {

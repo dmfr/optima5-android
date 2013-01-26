@@ -9,10 +9,13 @@ import za.dams.paracrm.SyncServiceController;
 
 import android.content.Context;
 import android.os.Handler;
+import android.util.Log;
 
 public class RefreshManager {
+	private static final String TAG = "CalendarRefreshManager" ;
     private static final boolean LOG_ENABLED = false; // DONT SUBMIT WITH TRUE
     private static final long FILE_AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // in milliseconds
+    private static final int MAX_PENDING_REQUESTS = 3 ; // in milliseconds
     
     private static RefreshManager sInstance;
 
@@ -184,6 +187,19 @@ public class RefreshManager {
     	if( mPendingPullRequests.contains(spr) ) {
     		return ;
     	}
+    	// Tentative de purge de la queue ?
+    	boolean noneCanceled = false ;
+    	while( mPendingPullRequests.size() >= MAX_PENDING_REQUESTS && !noneCanceled ) {
+    		Log.w(TAG,"Stack overflow !") ;
+    		for( SyncPullRequest sprToCancel : mPendingPullRequests ) {
+    			if( mSyncServiceController.cancelPullIfPossible(sprToCancel) ) {
+    				Log.w(TAG,"Earliest pull request canceled.") ;
+    				mPendingPullRequests.remove(sprToCancel) ;
+    				break ;
+    			}
+    		}
+    		noneCanceled = true ;
+    	}    	
     	// Ajout dans la Queue des resultats
     	mPendingPullRequests.add(spr) ;
     	// Execution de PullRequest

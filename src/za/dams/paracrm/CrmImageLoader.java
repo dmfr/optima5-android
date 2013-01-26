@@ -121,7 +121,7 @@ public class CrmImageLoader {
             	DownloadedDrawable downloadedDrawable = new DownloadedDrawable(task);
             	imageView.setImageDrawable(downloadedDrawable);
             	imageView.setMinimumHeight(156);
-            	task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,crmUrl);
+            	task.execute(crmUrl);
             }
         } else {
             cancelPotentialDownload(crmUrl, imageView);

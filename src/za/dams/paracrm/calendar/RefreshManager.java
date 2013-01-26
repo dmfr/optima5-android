@@ -22,6 +22,9 @@ public class RefreshManager implements CalendarController.EventHandler {
     private static final boolean DEBUG = false; // DONT SUBMIT WITH TRUE
     private static final long AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // in milliseconds
     
+    private static final int DEFAULT_MAX_PENDING_REQUESTS = 3 ; // in milliseconds
+    private int mNbCalendars = 0 ;
+    
     private static RefreshManager sInstance;
 
     private final Context mContext;
@@ -274,6 +277,7 @@ public class RefreshManager implements CalendarController.EventHandler {
 			if( mGeneratedPullRequests.size() == 0 ) {
 				return ;
 			}
+			mNbCalendars = mGeneratedPullRequests.size() ;
 			for( SyncPullRequest spr : mGeneratedPullRequests ) {
 				executeSyncPullRequest(spr) ;
 			}
@@ -293,6 +297,19 @@ public class RefreshManager implements CalendarController.EventHandler {
     	if( mPendingPullRequests.contains(spr) ) {
     		return ;
     	}
+    	// Tentative de purge de la queue ?
+    	boolean noneCanceled = false ;
+    	while( (mPendingPullRequests.size() >= ((mNbCalendars>0)?(mNbCalendars*2):DEFAULT_MAX_PENDING_REQUESTS)) && !noneCanceled ) {
+    		Log.w(TAG,"Stack overflow !") ;
+    		for( SyncPullRequest sprToCancel : mPendingPullRequests ) {
+    			if( mSyncServiceController.cancelPullIfPossible(sprToCancel) ) {
+    				Log.w(TAG,"Earliest pull request canceled.") ;
+    				mPendingPullRequests.remove(sprToCancel) ;
+    				break ;
+    			}
+    		}
+    		noneCanceled = true ;
+    	}    	
     	// Ajout dans la Queue des resultats
     	mPendingPullRequests.add(spr) ;
     	// Execution de PullRequest
