@@ -154,7 +154,7 @@ public class SyncService extends Service {
         }
         
         public SyncTask execute( SyncPullRequest spr ) {
-        	executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+        	executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,spr) ;
         	return this ;
         }
 	}
