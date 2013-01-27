@@ -1,10 +1,6 @@
 package za.dams.paracrm.explorer;
 
-import java.util.ArrayList;
-
-import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
-import za.dams.paracrm.SyncBroadcastReceiver;
 import za.dams.paracrm.SyncPullRequest;
 import za.dams.paracrm.SyncServiceController;
 import android.app.Activity;
@@ -27,27 +23,6 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
     private final String ERROR_MESSAGE = "No internet connectivity. Remote queries/files not available" ;
     private ExplorerBanner mErrorBanner;
     
-    private class TestSync extends SyncServiceController.Result {
-    	public void onServiceEndCallback( int status, SyncPullRequest pr ) {
-    		if( pr != null ) {
-    			Log.w(LOGTAG,"Finished log "+pr.fileCode) ;
-    		} else {
-    			Log.w(LOGTAG,"Finished simple push") ;
-    		}
-    	}
-    }
-    private class TestRefresh implements RefreshManager.RefreshListener {
-    	public void onRefreshStart() {
-   			Log.w(LOGTAG,"Starting REFRESH ") ;
-    	}
-    	public void onRefreshFileChanged( String refreshedFileCode ) {
-    		if( refreshedFileCode != null ) {
-    			Log.w(LOGTAG,"Finished REFRESH "+refreshedFileCode) ;
-    		} else {
-    			Log.w(LOGTAG,"Finished simple push") ;
-    		}
-    	}
-    }
 
     private void initUIController() {
     	/*
@@ -225,99 +200,4 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
     		}
     	}
 	}
-	
-	
-	
-	// ************ DAMS : Dummy tests ***************
-	
-    private void myTest3() {
-    	BibleHelper bh = new BibleHelper(getApplicationContext()) ;
-    	BibleHelper.BibleEntry be2 = null ;
-    	for( BibleHelper.BibleEntry be : bh.queryBible("STORE", null, "CHELLES", 0) ) {
-    		be2 = be ;
-    	}
-    	if( be2 == null ) {
-    		return ;
-    	}
-    	Log.w(LOGTAG,"Dugged "+be2.entryKey+" == "+be2.displayStr) ;
-    	
-    	TestRefresh tr = new TestRefresh() ;
-    	
-    	RefreshManager rm = RefreshManager.getInstance(getApplicationContext()) ;
-    	rm.registerListener(tr) ;
-    	rm.refreshFileList("STORE_LOG", be2) ;
-    }
-    
-    
-    private void myTest2() {
-    	CrmFileManager fileManager = CrmFileManager.getInstance(getApplicationContext()) ;
-    	fileManager.fileInitDescriptors() ;
-    	
-    	for( CrmFileManager.CrmFileDesc cfd : fileManager.fileGetRootDescriptors() ) {
-    		Log.w(LOGTAG, cfd.fileCode+" / "+cfd.fileName) ;
-    		myTest2PrintFields(cfd) ;
-    		for( CrmFileManager.CrmFileDesc cfd2 : fileManager.fileGetChildDescriptors(cfd.fileCode) ) {
-    			Log.w(LOGTAG, cfd.fileCode+" > "+cfd2.fileCode+" / "+cfd2.fileName) ;
-    			myTest2PrintFields(cfd2) ;
-    		}
-    	}
-    	
-    }
-    private void myTest2PrintFields( CrmFileManager.CrmFileDesc cfd ) {
-    	for( CrmFileManager.CrmFileFieldDesc cffd : cfd.fieldsDesc ) {
-    		Log.w(LOGTAG,"    --> "+cffd.fieldCode+" = "+cffd.fieldName) ;
-    	}
-    }
-    private void myTest() {
-    	// Log.w(LOGTAG,"Activity created") ;
-    	
-    	TestSync ts = new TestSync() ;
-    	
-    	
-    	SyncServiceController ssc = SyncServiceController.getInstance(this) ;
-    	ssc.addResultCallback(ts) ;
-    	
-    	ssc.requestPush() ;
-    	
-    	SyncPullRequest pr ;
-    	SyncPullRequest pr1 ;
-    	SyncPullRequest pr2 ;
-    	
-    	pr1 = new SyncPullRequest() ;
-    	pr1.fileCode = "AGENDA_CS" ;
-    	pr2 = new SyncPullRequest() ;
-    	pr2.fileCode = "AGENDA_CS" ;
-    	ssc.requestPull(pr1) ;
-    	
-    	SyncPullRequest.SyncPullRequestFileCondition prfc1 = new SyncPullRequest.SyncPullRequestFileCondition() ;
-    	prfc1.fileFieldCode = "test" ;
-    	prfc1.conditionSign = "test2" ;
-    	prfc1.conditionValue = "test3" ;
-    	SyncPullRequest.SyncPullRequestFileCondition prfc2 = new SyncPullRequest.SyncPullRequestFileCondition() ;
-    	prfc2.fileFieldCode = "test" ;
-    	prfc2.conditionSign = "test9" ;
-    	prfc2.conditionValue = "test3" ;
-    	
-    	
-    	pr1 = new SyncPullRequest() ;
-    	pr1.fileCode = "STORE_LOG" ;
-    	pr1.fileConditions = new ArrayList<SyncPullRequest.SyncPullRequestFileCondition>() ;
-    	pr1.fileConditions.add(prfc1) ;
-    	pr1.limitResults = 50 ;
-    	pr1.supplyTimestamp = true ;
-    	pr2 = new SyncPullRequest() ;
-    	pr2.fileCode = "STORE_LOG" ;
-    	pr2.fileConditions = new ArrayList<SyncPullRequest.SyncPullRequestFileCondition>() ;
-    	pr2.fileConditions.add(prfc2) ;
-    	pr2.limitResults = 50 ;
-    	pr2.supplyTimestamp = true ;
-    	ssc.requestPull(pr2) ;
-    	
-    	if( pr1.equals(pr2) ) {
-    		Log.w(LOGTAG,"pr1 + pr2 are equals !!!") ;
-    	} else {
-    		Log.w(LOGTAG,"pr1 + pr2 are NOTTTTT equals !!!") ;
-    	}
-    }
-
 }
