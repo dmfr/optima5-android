@@ -119,6 +119,7 @@ public class CrmFileManager {
 	}
    
 	private boolean isInitialized = false ;
+	private List<String> mPublishedFileCodes = new ArrayList<String>() ;
 	private ArrayList<String> mRootFileCodes = new ArrayList<String>() ;
 	private HashMap<String,CrmFileDesc> mFileDescriptors = new HashMap<String,CrmFileDesc>() ;
 
@@ -131,11 +132,20 @@ public class CrmFileManager {
 		}
 		
 		DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
-		Cursor c = mDb.rawQuery("SELECT file_code FROM define_file WHERE file_parent_code IS NULL OR file_parent_code='' ORDER BY file_code") ;
+		Cursor c ;
+		
+		c = mDb.rawQuery("SELECT target_file_code FROM input_store_src WHERE target_file_code IS NOT NULL AND target_file_code<>''") ;
+		while( c.moveToNext() ) {
+			mPublishedFileCodes.add(c.getString(0)) ;
+		}
+		c.close() ;
+		
+		c = mDb.rawQuery("SELECT file_code FROM define_file WHERE file_parent_code IS NULL OR file_parent_code='' ORDER BY file_code") ;
 		while( c.moveToNext() ) {
 			fileLoadDescriptor(c.getString(0)) ;
 		}
 		c.close() ;
+		
 		isInitialized = true ;
 	}
 	public CrmFileDesc fileGetFileDescriptor( String fileCode ) {
@@ -149,6 +159,9 @@ public class CrmFileManager {
 	public ArrayList<CrmFileDesc> fileGetRootDescriptors() {
 		ArrayList<CrmFileDesc> tChildDescriptors = new ArrayList<CrmFileDesc>();
 		for( String rootFileCode : mRootFileCodes ) {
+			if( !mPublishedFileCodes.contains(rootFileCode) ) {
+				continue ;
+			}
 			CrmFileDesc cfd = fileGetFileDescriptor(rootFileCode) ;
 			tChildDescriptors.add(cfd) ;
 		}

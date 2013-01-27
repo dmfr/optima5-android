@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 21;
+    private final int DB_VERSION = 22;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -356,6 +356,24 @@ public class DatabaseManager {
             db.execSQL(createTableQuery);
             
     		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_explorer_cfg" + " ("
+                    + "explorercfg_id" + " INTEGER, "
+                    + "account_is_on" + " VARCHAR(1),"
+                    + "account_linkbible" + " VARCHAR(100),"
+                    + "PRIMARY KEY( explorercfg_id )"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_store_src" + " ("
+                    + "storesrc_id" + " INTEGER, "
+                    + "target_bible_code" + " VARCHAR(100),"
+                    + "target_file_code" + " VARCHAR(100),"
+                    + "PRIMARY KEY( storesrc_id )"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
                     + "input_query" + " ("
                     + "querysrc_id" + " INTEGER, "
                     + "querysrc_index" + " INTEGER,"
@@ -604,6 +622,7 @@ public class DatabaseManager {
     	                   "define_file",
     	                   "define_file_entry",
     	                   "input_calendar",
+    	                   "input_explorer_cfg",
     	                   "input_query",
     	                   "input_query_where",
     	                   "input_scen",
@@ -611,6 +630,7 @@ public class DatabaseManager {
     	                   "input_scen_pagepivot",
     	                   "input_scen_pagepivot_copymap",
     	                   "input_scen_page_field",
+    	                   "input_store_src",
     	                   "query_cache_json",
     	                   "querygrid_template",
     	                   "store_bible_entry",
