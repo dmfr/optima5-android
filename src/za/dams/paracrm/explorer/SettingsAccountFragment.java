@@ -92,8 +92,6 @@ public class SettingsAccountFragment extends ListFragment implements LoaderManag
             } else {
             	PrefsCrm.unsetExplorerAccount(getActivity());
             }
-        } else {
-        	PrefsCrm.unsetExplorerAccount(getActivity());
         }
         super.onPause();
     }
