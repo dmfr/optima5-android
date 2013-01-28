@@ -96,9 +96,17 @@ public class CrmQueryManager {
 	}
 	
 	
-	public static boolean validateModel( CrmQueryModel cqm ) {
+	public static boolean validateModel( Context c , CrmQueryModel cqm ) {
+		CrmExplorerConfig crmExplorerConfig = CrmExplorerConfig.getInstance(c) ;
 		for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcConditions ) {
-			if( !cqc.conditionIsSet ) {
+			
+			if( !cqc.conditionIsSet && cqc.fieldType == CrmQueryModel.FieldType.FIELD_BIBLE 
+					&& crmExplorerConfig.accountIsOn() && cqc.fieldLinkBible.equals(crmExplorerConfig.accountGetBibleCode()) ) {
+				// Cas particulier => champ bible non saisi + bible dédiée "Account"
+				//                 => on est en mode ADMIN
+				//                 => pas d'alerte, champ ignoré				
+			}
+			else if( !cqc.conditionIsSet ) {
 				return false ;
 			}
 		}

@@ -1,7 +1,9 @@
 package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
 import za.dams.paracrm.BibleHelper.BibleCode;
 import za.dams.paracrm.BibleHelper.BibleEntry;
@@ -61,12 +63,14 @@ public class QueryLaunchFragment extends Fragment {
      * Callback interface that owning activities must implement
      */
     public interface Callback {
+    	public BibleHelper.BibleEntry getExplorerConstraint() ;
     	public void onQueryLaunchStart( int querysrcId ) ;
     	public void onQueryResponseFailure( int querysrcId ) ;
     	public void onQueryResponseSuccess( int querysrcId , int cacheResultJsonId ) ;
     }
     private static class EmptyCallback implements Callback {
     	public static final Callback INSTANCE = new EmptyCallback();
+    	public BibleHelper.BibleEntry getExplorerConstraint() {return null;} ;
     	public void onQueryLaunchStart( int querysrcId ) {}
     	public void onQueryResponseFailure( int querysrcId ) {}
     	public void onQueryResponseSuccess( int querysrcId , int cacheResultJsonId ) {}
@@ -195,6 +199,20 @@ public class QueryLaunchFragment extends Fragment {
 	}
 	private synchronized void setModel( CrmQueryModel crmQueryModel ) {
 		mModel = crmQueryModel ;
+		
+		if( mCallback.getExplorerConstraint() != null ) {
+			BibleHelper.BibleEntry explorerBibleConstraint = mCallback.getExplorerConstraint() ;
+			// => Preset des bible Fields concernés par la condition
+			for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcConditions ) {
+				if( cqc.fieldType == CrmQueryModel.FieldType.FIELD_BIBLE 
+						&& cqc.fieldLinkBible.equals(explorerBibleConstraint.bibleCode) ) {
+					
+					// Recopie de BibleEntry :
+					cqc.conditionBibleEntry = explorerBibleConstraint.clone() ;
+					cqc.conditionIsSet = true ;
+				}
+			}
+		}
 	}
     private void setupFromModel() {
     	// ***** Header ***************
@@ -252,7 +270,11 @@ public class QueryLaunchFragment extends Fragment {
     		case FIELD_BIBLE :
     			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
     			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName) ;
-    			((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(cqc.fieldLinkBible),crmFieldsIndex));
+    			if( cqc.conditionIsSet ) {
+    				((Button)newView.findViewById(R.id.crm_button)).setText(cqc.conditionBibleEntry.displayStr);
+    			} else {
+    				((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(cqc.fieldLinkBible),crmFieldsIndex));
+    			}
     			mCrmFieldViews.add(newView) ;
     			mViewgroupTable.addView(newView) ;
     			break ;
@@ -405,8 +427,13 @@ public class QueryLaunchFragment extends Fragment {
         public void onClick(View v) {
         	FragmentTransaction ft = getFragmentManager().beginTransaction();
         	
+        	ArrayList<BibleHelper.BibleEntry> tConditions = null ;
+        	if( mCallback != null && mCallback.getExplorerConstraint() != null ) {
+        		tConditions = new ArrayList<BibleHelper.BibleEntry>() ;
+        		tConditions.add(mCallback.getExplorerConstraint()) ;
+        	}
         	
-            BiblePickerDialog bpd = new BiblePickerDialog(mContext, new BibleListener(v,mCrmFieldIndex), mBc,null);
+            BiblePickerDialog bpd = new BiblePickerDialog(mContext, new BibleListener(v,mCrmFieldIndex), mBc,tConditions);
             //bpd.setTargetFragment(this, 0);
             //bpd.setCanceledOnTouchOutside(true);
             bpd.show(ft, "dialog") ;
@@ -415,7 +442,7 @@ public class QueryLaunchFragment extends Fragment {
     
     
     public synchronized void goQuery() {
-    	if( !CrmQueryManager.validateModel(mModel) ) {
+    	if( !CrmQueryManager.validateModel(mContext,mModel) ) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
     		builder.setMessage("Please fill required parameters !")
     		.setCancelable(false)

@@ -3,6 +3,7 @@ package za.dams.paracrm.explorer;
 import java.util.ArrayList;
 import java.util.List;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
 import android.app.Activity;
 import android.app.Fragment;
@@ -53,10 +54,12 @@ public class QueryListFragment extends ListFragment {
      * Callback interface that owning activities must implement
      */
     public interface Callback {
+    	public BibleHelper.BibleEntry getExplorerConstraint() ;
     	public void onQuerySelect( int querysrcId ) ;
     }
     private static class EmptyCallback implements Callback {
     	public static final Callback INSTANCE = new EmptyCallback();
+    	public BibleHelper.BibleEntry getExplorerConstraint() {return null;} ;
     	public void onQuerySelect( int querysrcId ) {} ;
     }
     public void setCallback(Callback callback) {
