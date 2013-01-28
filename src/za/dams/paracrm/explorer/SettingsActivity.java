@@ -5,9 +5,9 @@ import java.util.List;
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
 import android.app.ActionBar;
+import android.content.Intent;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
-import android.preference.PreferenceActivity.Header;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -77,6 +77,16 @@ public class SettingsActivity extends PreferenceActivity {
         //inflater.inflate(R.menu.settings_title_bar, menu);
         getActionBar().setDisplayOptions(ActionBar.DISPLAY_HOME_AS_UP, ActionBar.DISPLAY_HOME_AS_UP);
         return true;
+    }
+    @Override
+    public void onBackPressed(){
+    	final Bundle bundle = new Bundle();
+    	bundle.putBoolean(Explorer.INTENT_EXIT_SETTINGS, true);
+        Intent launchIntent = new Intent(this, ExplorerActivity.class);
+        launchIntent.setAction(Intent.ACTION_DEFAULT);
+        launchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        launchIntent.putExtras(bundle) ;
+        this.startActivity(launchIntent);
     }
 
 }

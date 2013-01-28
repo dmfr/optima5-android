@@ -3,6 +3,7 @@ package za.dams.paracrm.explorer;
 import java.util.ArrayList;
 import java.util.List;
 
+import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.R;
 import android.app.Activity;
 import android.app.ListFragment;
@@ -57,6 +58,10 @@ public class FileListFragment extends ListFragment {
 
     private FileListFragmentAdapter mListAdapter;
     private boolean mIsFirstLoad;
+    
+    /** Last parameters used in Loader */
+    private String mLoaderFileCode ;
+    private List<BibleHelper.BibleEntry> mLoaderBibleConditions ;
 
     /** ID of the message to hightlight. */
     private long mSelectedFilerecordId = -1;
@@ -70,10 +75,12 @@ public class FileListFragment extends ListFragment {
      * Callback interface that owning activities must implement
      */
     public interface Callback {
+    	public BibleHelper.BibleEntry getExplorerConstraint() ;
     	public void onFilerecordOpen( long filerecordId ) ;
     }
     private static class EmptyCallback implements Callback {
     	public static final Callback INSTANCE = new EmptyCallback();
+    	public BibleHelper.BibleEntry getExplorerConstraint() {return null;} ;
     	public void onFilerecordOpen( long filerecordId ) {} ;
     }
     public void setCallback(Callback callback) {
@@ -106,6 +113,20 @@ public class FileListFragment extends ListFragment {
     public ExplorerContext getExplorerContext(){
     	initializeArgCache();
     	return mExplorerContext ;
+    }
+    
+    /**
+     * @return CRM list of bibleConditions
+     */
+    public List<BibleHelper.BibleEntry> getBibleConditions() {
+    	List<BibleHelper.BibleEntry> bibleConditions = new ArrayList<BibleHelper.BibleEntry>() ;
+    	if( mCallback != null && mCallback.getExplorerConstraint() != null ) {
+    		bibleConditions.add(mCallback.getExplorerConstraint()) ;
+    	}
+    	if( mExplorerContext.isFiltered() ) {
+    		bibleConditions.add(mExplorerContext.mFilteredBibleEntry) ;
+    	}
+    	return bibleConditions ;
     }
     
     /**
@@ -171,23 +192,21 @@ public class FileListFragment extends ListFragment {
         }
         super.onActivityCreated(savedInstanceState);
 
-        
         final ListView lv = getListView();
         lv.setItemsCanFocus(false);
         lv.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
         mListFooterView = getActivity().getLayoutInflater().inflate(
                 R.layout.explorer_filelist_item_footer, lv, false);
-        setEmptyText("No records for "+getExplorerContext().mFileCode);
+        setEmptyText("No records to display");
 
         if (savedInstanceState != null) {
             // Fragment doesn't have this method.  Call it manually.
             restoreInstanceState(savedInstanceState);
         }
 
-        startLoading();
-
         UiUtilities.installFragment(this);
+        startLoading();
     }
 
     @Override
@@ -206,6 +225,8 @@ public class FileListFragment extends ListFragment {
         super.onResume();
         mRefreshManager.registerListener(mRefreshListener);
         mResumed = true;
+        
+       	restartLoadingIfNeeded() ;
     }
 
     @Override
@@ -289,6 +310,16 @@ public class FileListFragment extends ListFragment {
     	final LoaderManager lm = getLoaderManager();
     	lm.initLoader(Explorer.FILELIST_LOADER_ID, null, new FileListLoaderCallbacks());
     }
+    public void restartLoadingIfNeeded() {
+    	if( getFileCode() == mLoaderFileCode && getBibleConditions().equals(mLoaderBibleConditions) ) {
+    		return ;
+    	}
+    	
+    	final LoaderManager lm = getLoaderManager();
+    	if( lm.getLoader(Explorer.FILELIST_LOADER_ID)!=null ) {
+    		lm.restartLoader(Explorer.FILELIST_LOADER_ID, null, new FileListLoaderCallbacks());
+    	}
+    }
     public void forceReload() {
     	final LoaderManager lm = getLoaderManager();
     	if( lm.getLoader(Explorer.FILELIST_LOADER_ID)!=null ) {
@@ -326,7 +357,7 @@ public class FileListFragment extends ListFragment {
      */
     public void onRefresh(boolean userRequest) {
         if (isRefreshable()) {
-            mRefreshManager.refreshFileList(getExplorerContext().mFileCode, getExplorerContext().mFilteredBibleEntry);
+            mRefreshManager.refreshFileList(getExplorerContext().mFileCode, getBibleConditions());
         }
     }
     /**
@@ -334,7 +365,7 @@ public class FileListFragment extends ListFragment {
      */
     private void onLoadMore() {
         if (isRefreshable()) {
-            mRefreshManager.loadMoreFileList(getExplorerContext().mFileCode, getExplorerContext().mFilteredBibleEntry);
+            mRefreshManager.loadMoreFileList(getExplorerContext().mFileCode, getBibleConditions());
             // Sans attendre, on peut forcer un reload de la liste (déjà en cache?)
             forceReload() ;
         }
@@ -345,7 +376,7 @@ public class FileListFragment extends ListFragment {
             // Not refreshable (special box such as drafts, or magic boxes)
             return;
         }
-        if (!mRefreshManager.isFileStale(getFileCode(),mExplorerContext.mFilteredBibleEntry)) {
+        if (!mRefreshManager.isFileStale(getFileCode(),getBibleConditions())) {
             return;
         }
         onRefresh(false);
@@ -463,9 +494,10 @@ public class FileListFragment extends ListFragment {
 		
 		@Override
 		public Loader<FileListFragmentLoaderResult> onCreateLoader(int arg0, Bundle arg1) {
-			// TODO Auto-generated method stub
 			mIsFirstLoad = true;
-			return new FileListFragmentLoader(getActivity(),mExplorerContext);
+			mLoaderFileCode = getFileCode() ;
+			mLoaderBibleConditions = getBibleConditions() ;
+			return new FileListFragmentLoader(getActivity(),mLoaderFileCode,mLoaderBibleConditions);
 		}
 
 		@Override
@@ -602,16 +634,18 @@ public class FileListFragment extends ListFragment {
 
 		Context mContext ;
 		
-		ExplorerContext mExplorerContext ;
+		String mFileCode ;
+		List<BibleHelper.BibleEntry> mBibleConditions ;
 		
 		FileListFragmentLoaderResult mData ;
 
-		public FileListFragmentLoader(Context context , ExplorerContext explorerContext) {
+		public FileListFragmentLoader(Context context , String fileCode,  List<BibleHelper.BibleEntry> bibleConditions) {
 			super(context);
 			mContext = context ;
 			
-			mExplorerContext = explorerContext ;
-		}
+			mFileCode = fileCode ;
+			mBibleConditions = bibleConditions ;
+		} 
 
 		@Override public void deliverResult(FileListFragmentLoaderResult data) {
 			mData = data ;
@@ -641,14 +675,10 @@ public class FileListFragment extends ListFragment {
 				mCfm.fileInitDescriptors() ;
 			}
 			
-			if( mExplorerContext.isFiltered() ) {
-				mCfm.setPullFilter(mExplorerContext.mFileCode, mExplorerContext.mFilteredBibleEntry) ;
-			} else {
-				mCfm.setPullFilter(mExplorerContext.mFileCode,null) ;
-			}
+			mCfm.setPullFilters(mFileCode,mBibleConditions) ;
 			FileListFragmentLoaderResult data = new FileListFragmentLoaderResult() ;
-			data.fileDesc = mCfm.fileGetFileDescriptor(mExplorerContext.mFileCode) ;
-			data.records = mCfm.filePullData(mExplorerContext.mFileCode) ;
+			data.fileDesc = mCfm.fileGetFileDescriptor(mFileCode) ;
+			data.records = mCfm.filePullData(mFileCode) ;
 			
 			
 			

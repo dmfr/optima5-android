@@ -244,24 +244,15 @@ public class CrmFileManager {
     }
     
     
-    private HashMap<String,BibleHelper.BibleEntry> mFileBibleFilter = new HashMap<String,BibleHelper.BibleEntry>() ;
-    public void setPullFilter( String fileCode, BibleHelper.BibleEntry be ) {
-    	boolean resetFileVisibleLimit = false ;
-    	BibleHelper.BibleEntry currentBe = null;
-    	if( mFileBibleFilter.containsKey(fileCode) ) {
-    		currentBe = mFileBibleFilter.get(fileCode) ;
+    private HashMap<String,List<BibleHelper.BibleEntry>> mFileBibleFilters = new HashMap<String,List<BibleHelper.BibleEntry>>() ;
+    public void setPullFilters( String fileCode, List<BibleHelper.BibleEntry> bibleConditions ) {
+    	if( bibleConditions == null ) {
+    		bibleConditions = new ArrayList<BibleHelper.BibleEntry>() ;
     	}
-    	if( currentBe != null && be == null ) {
-    		resetFileVisibleLimit = true ;
-    	}
-    	if( be != null && !be.equals(currentBe) ) {
-    		resetFileVisibleLimit = true ;
-    	}
-    	if( resetFileVisibleLimit ) {
+    	if( !bibleConditions.equals(mFileBibleFilters.get(fileCode)) ) {
     		resetFileVisibleLimit(fileCode);
     	}
-    	
-    	mFileBibleFilter.put(fileCode,be) ;
+    	mFileBibleFilters.put(fileCode,bibleConditions) ;
     }
     public List<CrmFileRecord> filePullData( String fileCode ) {
     	return filePullData(fileCode,0,0) ;
@@ -287,19 +278,23 @@ public class CrmFileManager {
     	} else {
         	int limit = getFileVisibleLimit(fileCode) ;
         	
-        	BibleHelper.BibleEntry bibleFilter = null ;
-        	if( mFileBibleFilter.containsKey(fileCode) ) {
-        		bibleFilter = mFileBibleFilter.get(fileCode) ;
+        	List<BibleHelper.BibleEntry> bibleFilters ;
+        	if( mFileBibleFilters.containsKey(fileCode) ) {
+        		bibleFilters = mFileBibleFilters.get(fileCode) ;
+        	} else {
+        		bibleFilters = new ArrayList<BibleHelper.BibleEntry>() ;
         	}
         	
         	StringBuilder sb = new StringBuilder();
         	sb.append("SELECT store_file.filerecord_id FROM store_file") ;
-        	if( bibleFilter != null ) {
+        	for( BibleHelper.BibleEntry bibleFilter : bibleFilters ) {
         		for( CrmFileFieldDesc fd : fileGetFileDescriptor(fileCode).fieldsDesc ) {
         			if( fd.fieldType == FieldType.FIELD_BIBLE && fd.fieldLinkBible.equals(bibleFilter.bibleCode) ) {
-        				sb.append(" JOIN store_file_field ON store_file_field.filerecord_id=store_file.filerecord_id") ;
-        				sb.append(" AND store_file_field.filerecord_field_code='" + fd.fieldCode + "'") ;
-        				sb.append(" AND store_file_field.filerecord_field_value_link='" + bibleFilter.entryKey +"'") ;
+        				String tableAlias = "sff_"+fd.fieldCode ;
+        				
+        				sb.append(" JOIN store_file_field "+tableAlias+" ON "+tableAlias+".filerecord_id=store_file.filerecord_id") ;
+        				sb.append(" AND "+tableAlias+".filerecord_field_code='" + fd.fieldCode + "'") ;
+        				sb.append(" AND "+tableAlias+".filerecord_field_value_link='" + bibleFilter.entryKey +"'") ;
         				break ;
         			}
         		}

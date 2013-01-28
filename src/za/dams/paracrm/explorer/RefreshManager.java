@@ -2,6 +2,7 @@ package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.SyncPullRequest;
@@ -29,7 +30,7 @@ public class RefreshManager {
     private ArrayList<SyncPullRequest> mPendingPullRequests = new ArrayList<SyncPullRequest>() ;
     // Last refresh(s)
     private HashMap<String,Long> mFilesLastRefresh = new HashMap<String,Long>() ;
-    private HashMap<String,BibleHelper.BibleEntry> mFilesLastBibleCondition = new HashMap<String,BibleHelper.BibleEntry>() ;
+    private HashMap<String,List<BibleHelper.BibleEntry>> mFilesLastBibleConditions = new HashMap<String,List<BibleHelper.BibleEntry>>() ;
 
     public interface RefreshListener {
     	public void onRefreshStart() ;
@@ -96,7 +97,7 @@ public class RefreshManager {
     	}
     	return false ;
     }
-    public boolean isFileStale( String fileCode, BibleHelper.BibleEntry conditionBe ) {
+    public boolean isFileStale( String fileCode, List<BibleHelper.BibleEntry> conditionsBe ) {
     	if( !mFilesLastRefresh.containsKey(fileCode) ) {
     		return true ;
     	}
@@ -106,10 +107,10 @@ public class RefreshManager {
     	}
     	
     	// condition changée ?
-    	if( conditionBe != null && !conditionBe.equals(mFilesLastBibleCondition.get(fileCode)) ) {
-    		return true ;
+    	if( conditionsBe == null ) {
+    		conditionsBe = new ArrayList<BibleHelper.BibleEntry>() ;
     	}
-    	if( conditionBe == null && mFilesLastBibleCondition.get(fileCode) != null ) {
+    	if( !conditionsBe.equals(mFilesLastBibleConditions.get(fileCode)) ) {
     		return true ;
     	}
     	
@@ -136,19 +137,19 @@ public class RefreshManager {
     }
     
     
-    public void refreshFileList( String fileCode, BibleHelper.BibleEntry conditionBe ) {
-    	refreshFileList( fileCode, false, conditionBe ) ;
+    public void refreshFileList( String fileCode, List<BibleHelper.BibleEntry> conditionsBe ) {
+    	refreshFileList( fileCode, false, conditionsBe ) ;
     }
-    public void loadMoreFileList( String fileCode, BibleHelper.BibleEntry conditionBe ) {
-    	refreshFileList( fileCode, true, conditionBe ) ;
+    public void loadMoreFileList( String fileCode, List<BibleHelper.BibleEntry> conditionsBe ) {
+    	refreshFileList( fileCode, true, conditionsBe ) ;
     }
-    public void refreshFileList( String fileCode, boolean loadMore, BibleHelper.BibleEntry conditionBe ) {
+    public void refreshFileList( String fileCode, boolean loadMore, List<BibleHelper.BibleEntry> conditionsBe ) {
     	if( fileCode == null ) {
     		return ;
     	}
     	
     	// Mise en cache de la "condition sur bible" (pour le slate)
-    	mFilesLastBibleCondition.put(fileCode, conditionBe) ;
+    	mFilesLastBibleConditions.put(fileCode, conditionsBe) ;
     	
     	// Construction de la SyncPullRequest
     	SyncPullRequest spr = new SyncPullRequest();
@@ -162,7 +163,10 @@ public class RefreshManager {
     	spr.limitResults = mCrmFileManager.getFileVisibleLimit(fileCode) ;
     	
     	// Gestion des conditions
-    	if( conditionBe != null ) {
+    	if( conditionsBe == null ) {
+    		conditionsBe = new ArrayList<BibleHelper.BibleEntry>() ;
+    	}
+    	for( BibleHelper.BibleEntry conditionBe : conditionsBe ) {
     		String bibleCode = conditionBe.bibleCode ;
     		String bibleEntryKey = conditionBe.entryKey ;
     		

@@ -7,8 +7,6 @@ import android.database.Cursor;
 public class CrmExplorerConfig {
 	private static CrmExplorerConfig sInstance;
 	
-	private final Context mContext;
-	
 	private final boolean mAccountIsOn ;
 	private final String mAccountBibleCode ;
 	
@@ -24,9 +22,7 @@ public class CrmExplorerConfig {
     	}
     }
 	private CrmExplorerConfig( Context context ) {
-		mContext = context.getApplicationContext() ;
-	
-		DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
+		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
 		Cursor c ;
 		
 		c = mDb.rawQuery("SELECT account_is_on, account_linkbible FROM input_explorer_cfg WHERE explorercfg_id='0'") ;

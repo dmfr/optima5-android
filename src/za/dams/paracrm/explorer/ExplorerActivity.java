@@ -5,6 +5,7 @@ import za.dams.paracrm.SyncPullRequest;
 import za.dams.paracrm.SyncServiceController;
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -65,7 +66,13 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
         }
         mUIController.onActivityCreated();
     }
-    
+    @Override
+    protected void onNewIntent(Intent intent) {
+    	// Reload des preferences si on sort de SettingsActivity
+    	if( intent.getBooleanExtra(Explorer.INTENT_EXIT_SETTINGS, false) == true && mUIController != null ) {
+    		mUIController.forceReloadSettings() ;
+    	}
+    }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {

@@ -1,5 +1,6 @@
 package za.dams.paracrm.explorer;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -71,6 +72,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      */
     private final List<Fragment> mRemovedFragments = new LinkedList<Fragment>();
     
+    protected BibleHelper.BibleEntry mExplorerBibleConstraint ;
     protected ExplorerContext mExplorerContext;
 
     
@@ -147,6 +149,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
         if (Explorer.DEBUG) {
             Log.d(LOGTAG, this + " onActivityViewReady");
         }
+        
+        // Load CrmPreferences
+        loadSettings() ;
 
         // Set up content
         mThreePane = (ExplorerLayout) mActivity.findViewById(R.id.three_pane);
@@ -233,6 +238,30 @@ public class ExplorerController implements ExplorerLayout.Callback,
         mActionBarController.onRestoreInstanceState(savedInstanceState);
         mExplorerContext = savedInstanceState.getParcelable(KEY_EXPLORER_CONTEXT);
     }
+    
+    
+    
+    /**
+     * Load CrmPreferences
+     * {@link FragmentInstallable#onInstallFragment}.
+     */
+    private void loadSettings() {
+    	// Prefs CRM : Bind to account
+    	mExplorerBibleConstraint = null ;
+    	CrmExplorerConfig crmExplorerConfig = CrmExplorerConfig.getInstance(mActivity) ;
+    	if( crmExplorerConfig.accountIsOn() ) {
+    		PrefsCrm.ExplorerAccount ea = PrefsCrm.getExplorerAccount(mActivity) ;
+    		if( ea != null && ea.bibleCode.equals(crmExplorerConfig.accountGetBibleCode())) {
+    			BibleHelper bh = new BibleHelper(mActivity) ;
+    			mExplorerBibleConstraint = bh.getBibleEntry(ea.bibleCode, ea.entryKey) ;
+    		}
+    	}
+    }
+    public void forceReloadSettings() {
+    	loadSettings() ;
+    }
+    
+    
 
 
     /**
@@ -556,6 +585,10 @@ public class ExplorerController implements ExplorerLayout.Callback,
      */
     protected String getFileListFileCode() {
         return isFileListInstalled() ? getFileListFragment().getFileCode()
+                : null ;
+    }
+    protected List<BibleHelper.BibleEntry> getFileListBibleConditions() {
+        return isFileListInstalled() ? getFileListFragment().getBibleConditions()
                 : null ;
     }
     protected ExplorerContext getFileListExplorerContext() {
@@ -1106,8 +1139,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * Performs "refesh".
      */
     protected void onRefresh() {
-    	// @DAMS : search / filter
-    	mRefreshManager.refreshFileList( getFileListFileCode(), mExplorerContext.mFilteredBibleEntry ) ;
+    	mRefreshManager.refreshFileList( getFileListFileCode(), getFileListBibleConditions() ) ;
     }
 
     /**
@@ -1276,6 +1308,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	@Override
 	public void onQuerySelect(int querysrcId) {
 		openQueryLaunch(querysrcId) ;
+	}
+
+	@Override
+	public BibleEntry getExplorerConstraint() {
+		return mExplorerBibleConstraint;
 	}
 
 }
