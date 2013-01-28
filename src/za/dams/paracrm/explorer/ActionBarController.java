@@ -272,8 +272,13 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         	} else {
         		mTitleLine1View.setText(ligne1) ;
         		mTitleLine1View.setVisibility(View.VISIBLE) ;
-        		mTitleLine2View.setText("") ;
-        		mTitleLine2View.setVisibility(View.GONE) ;
+        		if( mCallback.getExplorerConstraint() != null ) {
+        			mTitleLine2View.setText(mCallback.getExplorerConstraint().displayStr) ;
+        			mTitleLine2View.setVisibility(View.VISIBLE) ;
+        		} else {
+        			mTitleLine2View.setText("") ;
+        			mTitleLine2View.setVisibility(View.GONE) ;
+        		}
         		mActionBar.setIcon(R.drawable.mainmenu_filemanager) ;
         	}
        }
