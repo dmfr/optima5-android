@@ -1,13 +1,11 @@
 package za.dams.paracrm.explorer;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.R;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
@@ -1236,6 +1234,13 @@ public class ExplorerController implements ExplorerLayout.Callback,
 			return false;
 		}
 
+		@Override
+		public BibleEntry getExplorerConstraint() {
+			if( mExplorerBibleConstraint != null ) {
+				return mExplorerBibleConstraint ;
+			}
+			return null;
+		}
 		@Override
 		public BibleEntry getFilteredBibleEntry() {
 			if( mExplorerContext != null ) {

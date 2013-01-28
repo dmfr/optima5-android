@@ -10,7 +10,6 @@ import android.app.LoaderManager;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,6 +45,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
     private boolean mSearchIsReady ;
     private BibleHelper mSearchBibleHelper ;
     private List<String> mSearchedBibles ;
+    private ArrayList<BibleHelper.BibleEntry> mSearchForeignConditions ;
     private ArrayAdapter<BibleHelper.BibleEntry> mSearchAdapter ;
     
     
@@ -58,6 +58,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
     	public ExplorerContext getCurrentExplorerContext();
     	// CrmFilter : when a search is validated
     	public boolean isInFilterMode();
+    	public BibleHelper.BibleEntry getExplorerConstraint() ;
     	public BibleHelper.BibleEntry getFilteredBibleEntry();
     	
         /** @return the "UP" arrow should be shown. */
@@ -287,6 +288,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
     		mCrmFileManager = CrmFileManager.getInstance(mContext.getApplicationContext()) ;
     		mSearchIsReady = false ;
     		mSearchedBibles = new ArrayList<String>() ;
+    		mSearchForeignConditions = new ArrayList<BibleHelper.BibleEntry>() ;
     	}
 
 		@Override
@@ -297,8 +299,11 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
 			
 			mSearchBibleHelper = new BibleHelper(mContext) ;
 			
-			ExplorerContext explorerContext = explorerContexts[0] ;
+			if( mCallback.getExplorerConstraint() != null ) {
+				mSearchForeignConditions.add(mCallback.getExplorerConstraint()) ;
+			}
 			
+			ExplorerContext explorerContext = explorerContexts[0] ;			
 			switch( explorerContext.mMode ) {
 			case ExplorerContext.MODE_FILE :
 				mCrmFileManager.fileInitDescriptors() ;
@@ -317,7 +322,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
 		@Override
     	protected void onPostExecute(Boolean goSearch) {
 			mSearchIsReady = goSearch ;
-			mSearchAdapter = new SearchAdapter(mContext,mSearchBibleHelper,mSearchedBibles) ;
+			mSearchAdapter = new SearchAdapter(mContext,mSearchBibleHelper,mSearchedBibles,mSearchForeignConditions) ;
 			mSearchText.setAdapter(mSearchAdapter) ;
 			mSearchText.setOnItemClickListener(ActionBarController.this) ;
      	}
@@ -332,12 +337,14 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
     	
     	BibleHelper mBibleHelper ;
     	List<String> mSearchedBibles ;
+    	ArrayList<BibleHelper.BibleEntry> mSearchForeignConditions ;
     	
-		public SearchAdapter(Context context, BibleHelper bibleHelper, List<String> searchedBibles ) {
+		public SearchAdapter(Context context, BibleHelper bibleHelper, List<String> searchedBibles, ArrayList<BibleHelper.BibleEntry> searchForeignConditions ) {
 			super(context, R.layout.explorer_actionbar_search_dropdown);
 			mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 			mBibleHelper = bibleHelper ;
 			mSearchedBibles = searchedBibles ;
+			mSearchForeignConditions = searchForeignConditions ;
 		}
 		
 		@Override
@@ -347,11 +354,22 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
 	            protected FilterResults performFiltering(CharSequence constraint) {
 	                FilterResults filterResults = new FilterResults();
 	                if(constraint != null) {
-	                	
 	        			String typedText = constraint.toString() ;
 	        			ArrayList<BibleHelper.BibleEntry> data = new ArrayList<BibleHelper.BibleEntry>();
 	        			for( String bibleCode : mSearchedBibles ) {
-	        				data.addAll( mBibleHelper.queryBible(bibleCode, null, typedText, 10) ) ;
+	        				
+	        				// on ne cherche pas dans la bible "bibleCode" si elle fait partie des conditions !
+	        				boolean skipThisBible = false ;
+	        				for( BibleHelper.BibleEntry be : mSearchForeignConditions ) {
+	        					if( be.bibleCode.equals(bibleCode) ) {
+	        						skipThisBible = true ;
+	        					}
+	        				}
+	        				if( skipThisBible ) {
+	        					continue ;
+	        				}
+	        				
+	        				data.addAll( mBibleHelper.queryBible(bibleCode, mSearchForeignConditions, typedText, 10) ) ;
 	        			}
 	        			
 	                    // Now assign the values and count to the FilterResults object
