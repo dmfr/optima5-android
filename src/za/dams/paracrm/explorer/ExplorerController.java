@@ -5,8 +5,6 @@ import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
-import za.dams.paracrm.calendar.CalendarActivity;
-import za.dams.paracrm.ui.FileCaptureActivity;
 import za.dams.paracrm.R;
 
 import android.app.Activity;
@@ -1057,7 +1055,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         boolean showGoQuery = isQueryLaunchInstalled() && !getQueryLaunchFragment().isQueryRunning() ;
         menu.findItem(R.id.query_go).setVisible(showGoQuery);
 
-        boolean showSettings = false ;
+        boolean showSettings = true ;
         menu.findItem(R.id.settings).setVisible(showSettings);
         
         return true;
@@ -1078,7 +1076,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
                 onRefresh();
                 return true;
             case R.id.settings:
-                return onAccountSettings();
+                return onMenuSettings();
             case R.id.search:
                 onSearchRequested();
                 return true;
@@ -1094,8 +1092,11 @@ public class ExplorerController implements ExplorerLayout.Callback,
     /**
      * Handles the "Settings" option item.  Opens the settings activity.
      */
-    private boolean onAccountSettings() {
-        
+    private boolean onMenuSettings() {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setClass(mActivity, SettingsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        mActivity.startActivity(intent);
         return true;
     }
 

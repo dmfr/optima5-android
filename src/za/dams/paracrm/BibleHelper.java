@@ -180,6 +180,23 @@ public class BibleHelper {
 		};
     }
     
+    
+    
+    public static String getBibleLib( Context c, String strBibleCode ) {
+		DatabaseManager mDb = DatabaseManager.getInstance(c) ;
+		Cursor cursor = mDb.rawQuery(String.format("SELECT bible_lib FROM define_bible WHERE bible_code='%s'",strBibleCode)) ;
+    	if( cursor.getCount() != 1 ) {
+    		cursor.close() ;
+    		return null ;
+    	}
+    	cursor.moveToNext() ;
+    	String retValue = cursor.getString(0) ;
+    	cursor.close();
+    	return retValue ;
+    }
+    
+    
+    
     public BibleHelper(Context c) {
     	mDb = DatabaseManager.getInstance(c) ;
     	loadBiblesDefinition() ;
