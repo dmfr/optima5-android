@@ -466,14 +466,18 @@ public class FileListFragment extends ListFragment {
 
         final int count = lv.getCount();
         for (int i = 0; i < count; i++) {
-            if ( ((CrmFileManager.CrmFileRecord)lv.getItemAtPosition(i)).filerecordId != mSelectedFilerecordId) {
-                continue;
-            }
-            lv.setItemChecked(i, true);
-            if (ensureSelectionVisible) {
-                UiUtilities.listViewSmoothScrollToPosition(getActivity(), lv, i);
-            }
-            break;
+        	if( !(lv.getItemAtPosition(i) instanceof CrmFileManager.CrmFileRecord ) ) {
+        		// Footer or unknown record !
+        		continue ;
+        	}
+        	if ( ((CrmFileManager.CrmFileRecord)lv.getItemAtPosition(i)).filerecordId != mSelectedFilerecordId) {
+        		continue;
+        	}
+        	lv.setItemChecked(i, true);
+        	if (ensureSelectionVisible) {
+        		UiUtilities.listViewSmoothScrollToPosition(getActivity(), lv, i);
+        	}
+        	break;
         }
     }
     
