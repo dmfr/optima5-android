@@ -665,9 +665,9 @@ public class BibleHelper {
     	c = mDb.rawQuery("SELECT bible_code FROM define_bible") ;
     	BibleCode[] bibles = new BibleCode[c.getCount()] ; 
     	int a = 0 ;
-    	for( c.moveToPosition(-1) ; !c.isLast() ; a++ ) {
-    		c.moveToNext() ;
+    	while( c.moveToNext() ) {
     		bibles[a] = new BibleCode(c.getString(0)) ;
+    		a++;
     	}
     	c.close() ;
     	
