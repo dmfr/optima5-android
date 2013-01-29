@@ -36,6 +36,8 @@ public class DatabaseManager {
     	public int nbTables ;
     	public int nbRows ;
     	
+    	public boolean isDenied ;
+    	
     	public DatabaseUpgradeResult( boolean mSuccess, long mVersionTimestamp, int mNbTables, int mNbRows ) {
     		success = mSuccess ;
     		versionTimestamp = mVersionTimestamp ;
@@ -443,6 +445,7 @@ public class DatabaseManager {
     
     public DatabaseUpgradeResult upgradeReferentielStream( InputStream is ) {
     	long versionTimestamp = 0 ;
+    	boolean isDenied = false ;
     	
     	int nbRows = 0 ;
     	int nbRowsExpected = -1 ;
@@ -481,6 +484,11 @@ public class DatabaseManager {
 							nbRowsExpected = jsonObj.optInt("nb_rows",0) ;
 							nbTablesExpected = jsonObj.optInt("nb_tables",0) ;
 							isFirst = false ;
+							
+							if( jsonObj.has("denied") && jsonObj.getBoolean("denied") ) {
+								isDenied = true ;
+							}
+							
 							continue ;
 						}
 						else {
@@ -590,7 +598,11 @@ public class DatabaseManager {
 		}
     	
     	if( nbTables==nbTablesExpected && nbRowsExpected==nbRows ) {
-        	return new DatabaseUpgradeResult( true, versionTimestamp, nbTables , nbRows ) ;
+    		DatabaseUpgradeResult dur = new DatabaseUpgradeResult( true, versionTimestamp, nbTables , nbRows ) ;
+    		if( isDenied ) {
+    			dur.isDenied = true ;
+    		}
+        	return dur ;
     	}
     	else{
     		upgradeReferentielStream_purge() ;

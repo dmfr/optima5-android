@@ -717,6 +717,23 @@ public class MainMenuActivity extends Activity {
             
             // Destruction des sigletons
             Explorer.clearContext() ;
+            
+            // Non autorisé
+            if( dbUpResult.isDenied ) {
+            	String android_id = Secure.getString(getContentResolver(),Secure.ANDROID_ID);
+            	
+            	AlertDialog.Builder builder = new AlertDialog.Builder(MainMenuActivity.this);
+            	builder.setTitle("Authentication error")
+            	       .setMessage("This device is not authorized to connect.\nPlease contact support with ANDROID_ID="+android_id)
+            	       .setCancelable(false)
+            	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            	           public void onClick(DialogInterface dialog, int id) {
+            	                dialog.cancel();
+            	           }
+            	       });
+            	AlertDialog alert = builder.create();            
+            	alert.show();
+            }
         }
     }
 
