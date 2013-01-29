@@ -35,6 +35,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 
@@ -54,6 +55,11 @@ public class UploadService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		new UploadTask().execute() ;
     	return START_STICKY;
+	}
+	
+	
+	private String getDeviceAndroidId() {
+		return Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
 	}
 	
 	
@@ -125,6 +131,7 @@ public class UploadService extends Service {
 
 				ArrayList<NameValuePair> nameValuePairs = new  ArrayList<NameValuePair>();
 				StringBuilder builder = new StringBuilder();
+				nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", getDeviceAndroidId()));
 				nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
 				nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
 				nameValuePairs.add(new BasicNameValuePair("_action", "android_postBinary"));

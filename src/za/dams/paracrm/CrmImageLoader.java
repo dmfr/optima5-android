@@ -21,6 +21,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.HttpConnectionParams;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -30,6 +31,7 @@ import android.graphics.drawable.Drawable;
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
@@ -121,7 +123,7 @@ public class CrmImageLoader {
             	DownloadedDrawable downloadedDrawable = new DownloadedDrawable(task);
             	imageView.setImageDrawable(downloadedDrawable);
             	imageView.setMinimumHeight(156);
-            	task.execute(crmUrl);
+            	task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,crmUrl);
             }
         } else {
             cancelPotentialDownload(crmUrl, imageView);
@@ -204,13 +206,18 @@ public class CrmImageLoader {
 
     Bitmap downloadBitmap(CrmUrl crmUrl) {
         final int IO_BUFFER_SIZE = 4 * 1024;
+        
+        // Android ID
+        String android_id = Settings.Secure.getString(mContext.getContentResolver(),Settings.Secure.ANDROID_ID);
 
         // AndroidHttpClient is not allowed to be used from the main thread
         final HttpClient client = AndroidHttpClient.newInstance("Android");
         final HttpPost postRequest = new HttpPost(mContext.getString(R.string.server_url));
-
+        client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
+        client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 10000);
         try {
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+            nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", android_id));
             nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
             nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
             nameValuePairs.add(new BasicNameValuePair("_action", "android_imgPull"));

@@ -27,6 +27,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.http.AndroidHttpClient;
+import android.provider.Settings;
 import android.util.Log;
 
 public class CrmQueryManager {
@@ -140,6 +141,8 @@ public class CrmQueryManager {
 		
 		String jsonString = null ;
 		
+		// Android ID
+		final String android_id = Settings.Secure.getString(c.getContentResolver(),Settings.Secure.ANDROID_ID);
         // AndroidHttpClient is not allowed to be used from the main thread
         final HttpClient client = AndroidHttpClient.newInstance("Android");
         final HttpParams httpParameters = client.getParams() ;
@@ -149,6 +152,7 @@ public class CrmQueryManager {
 
         try {
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+            nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", android_id));
             nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
             nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
             nameValuePairs.add(new BasicNameValuePair("_action", "android_query_fetchResult"));

@@ -38,6 +38,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings.Secure;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -395,7 +396,10 @@ public class MainMenuActivity extends Activity {
 		}
     }
     private long asyncGetBibleTimestamp(){
+    	String android_id = Secure.getString(getContentResolver(),Secure.ANDROID_ID);
+    	
     	HashMap<String,String> postParams = new HashMap<String,String>() ;
+    	postParams.put("__ANDROID_ID",android_id);
     	postParams.put("_domain", "paramount");
     	postParams.put("_moduleName", "paracrm");
     	postParams.put("_action", "android_getDbImageTimestamp");
@@ -622,9 +626,11 @@ public class MainMenuActivity extends Activity {
     	}
     	
         protected DatabaseManager.DatabaseUpgradeResult doInBackground(Void... Params ) {
+        	String android_id = Secure.getString(getContentResolver(),Secure.ANDROID_ID);
             DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
             
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
+        	postParams.put("__ANDROID_ID", android_id);
         	postParams.put("__DBversionCode", String.valueOf(mDbManager.getDbVersion()));
         	postParams.put("_domain", "paramount");
         	postParams.put("_moduleName", "paracrm");

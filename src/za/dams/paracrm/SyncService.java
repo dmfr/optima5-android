@@ -42,7 +42,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
-import android.provider.Settings.Secure;
+import android.provider.Settings;
 
 public class SyncService extends Service {
 	
@@ -114,6 +114,11 @@ public class SyncService extends Service {
 	}
 	
 	
+	private String getDeviceAndroidId() {
+		return Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
+	}
+	
+	
 	private class SyncTask extends AsyncTask<SyncPullRequest, Integer, Boolean> {
     	protected void onPreExecute(){
     	}
@@ -169,10 +174,7 @@ public class SyncService extends Service {
     	Long tsLong = System.currentTimeMillis()/1000;
     	String ts = tsLong.toString();
     	
-    	String android_id = Secure.getString(SyncService.this.getApplicationContext().getContentResolver(),
-                Secure.ANDROID_ID);
-    	
-    	mDbManager.syncTagVuid(android_id,ts) ;
+    	mDbManager.syncTagVuid(getDeviceAndroidId(),ts) ;
     	
     	JSONObject jsonDump = new JSONObject() ;
     	try {
@@ -238,6 +240,7 @@ public class SyncService extends Service {
 
 
     	HashMap<String,String> postParams = new HashMap<String,String>() ;
+    	postParams.put("__ANDROID_ID", getDeviceAndroidId());
     	postParams.put("_domain", "paramount");
     	postParams.put("_moduleName", "paracrm");
     	postParams.put("_action", "android_syncPull");
@@ -426,6 +429,7 @@ public class SyncService extends Service {
     	HttpConnectionParams.setSoTimeout(httpParameters, 30000);
     	
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+		nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", getDeviceAndroidId()));
 		nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
 		nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
 		nameValuePairs.add(new BasicNameValuePair("_action", "android_syncPush"));

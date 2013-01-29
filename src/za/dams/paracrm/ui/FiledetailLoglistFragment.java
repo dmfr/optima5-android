@@ -28,6 +28,7 @@ import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
 import android.app.FragmentTransaction;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -249,7 +250,10 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         		//e.printStackTrace();
         	}
         	
+        	String android_id = Settings.Secure.getString(getActivity().getContentResolver(),Settings.Secure.ANDROID_ID);
+        	
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
+        	postParams.put("__ANDROID_ID", android_id);
         	postParams.put("_domain", "paramount");
         	postParams.put("_moduleName", "paracrm");
         	postParams.put("_action", "android_getFileGrid_data");
