@@ -10,11 +10,14 @@ import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SdcardManager;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebView;
@@ -28,6 +31,7 @@ public class QwebViewActivity extends Activity {
     private int querysrcId ;
     private int jsonresultId ;
     
+    private boolean mDone ;
     private ProgressBar mProgressBar ;
     private WebView mWebView ;
     
@@ -45,6 +49,7 @@ public class QwebViewActivity extends Activity {
 		
 		setContentView(R.layout.explorer_viewer_qweb);
 		
+		mDone = false ;
 		mProgressBar = (ProgressBar)this.findViewById(R.id.progressbar) ;
 		mWebView = (WebView)this.findViewById(R.id.webview) ;
 		
@@ -85,12 +90,21 @@ public class QwebViewActivity extends Activity {
         super.onDestroy() ;
 	}
 	@Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.explorer_viewer_options, menu);
+        return true;
+    }
+	@Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
                 // Comes from the action bar when the app icon on the left is pressed.
                 // It works like a back press, but it won't close the activity.
                 onBackPressed();
+                break ;
+            case R.id.savetosd:
+            	onSaveToSd() ;
+            	break ;
         }
         return false;
     }
@@ -102,7 +116,7 @@ public class QwebViewActivity extends Activity {
     
     private class LoadQweb extends AsyncTask<Void,Void,Void> {
         protected void onPreExecute() {
-            
+        	mDone = false ;
         }
         protected Void doInBackground(Void... arg0) {
         	mContentHtml = "" ;
@@ -152,7 +166,16 @@ public class QwebViewActivity extends Activity {
             mWebView.loadData(mContentHtml, "text/html", null);
             mProgressBar.setVisibility(View.GONE) ;
             mWebView.setVisibility(View.VISIBLE) ;
+            mDone = true ;
         }
     	
+    }
+    
+    private void onSaveToSd() {
+    	ActionBar ab = getActionBar() ;
+    	String title = ab.getTitle().toString() ;
+    	String timestamp = String.valueOf((int)(System.currentTimeMillis() / 1000)) ; 
+    	String queryName = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp+".html" ;
+    	SdcardManager.saveData(this, queryName, mContentHtml.getBytes(), true) ;
     }
 }
