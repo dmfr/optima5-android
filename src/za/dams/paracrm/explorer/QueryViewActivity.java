@@ -8,18 +8,22 @@ import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SdcardManager;
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
 import android.app.Activity;
 import android.app.FragmentTransaction;
+import android.app.ProgressDialog;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -385,12 +389,21 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 	}
 	
 	@Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.explorer_viewer_options, menu);
+        return true;
+    }
+	@Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
                 // Comes from the action bar when the app icon on the left is pressed.
                 // It works like a back press, but it won't close the activity.
                 onBackPressed();
+                break ;
+            case R.id.savetosd:
+            	onSaveToSd() ;
+            	break ;
         }
         return false;
     }
@@ -398,5 +411,63 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     public void onBackPressed() {
     	super.onBackPressed();
     }
+    
+    private void onSaveToSd() {
+    	new DownloadAgainTask().execute() ;
+    }
+    
+    
+    private ProgressDialog mDownloadProgress ;
+    private class DownloadAgainTask extends AsyncTask<Void,Void,Void> {
+    	String fileName ;
+    	byte[] data = null ;
+    	
+        protected void onPreExecute() {
+			mDownloadProgress = ProgressDialog.show(
+		    		QueryViewActivity.this,
+		    		"Downloading Query",
+		            "Please wait...",
+		            true);
+			
+	    	ActionBar ab = getActionBar() ;
+	    	String title = ab.getTitle().toString() ;
+	    	String timestamp = String.valueOf((int)(System.currentTimeMillis() / 1000)) ; 
+	    	fileName = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp+".xlsx" ;
+			return ;
+        }
+        protected Void doInBackground(Void... arg0) {
+        	CrmQueryModel lastFetchModel = CrmQueryManager.getLastFetchModel() ;
+        	Integer tmpJsonRecord = CrmQueryManager.fetchRemoteJson(QueryViewActivity.this, lastFetchModel, true) ;
+        	if( tmpJsonRecord == null ) {
+        		return null ;
+        	}
+    		
+        	DatabaseManager mDb = DatabaseManager.getInstance(QueryViewActivity.this) ;
+    		Cursor c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
+    		c.moveToNext() ;
+    		String jsonBlob = c.getString(0) ;
+    		c.close();
+    		
+    		try {
+    			JSONObject jsonObj = new JSONObject(jsonBlob) ;
+    			String xlsBase64 = jsonObj.getString("xlsx_base64") ;
+    			data = Base64.decode(xlsBase64, Base64.DEFAULT) ;
+    		}catch(JSONException e) {
+    			return null ;
+    		}
+    		
+        	return null ;
+        }
+        protected void onPostExecute(Void arg0) {
+        	if( isCancelled() ) {
+        		return ;
+        	}
+        	mDownloadProgress.dismiss() ;
+        	if( data == null ) {
+        		return ;
+        	}
+        	SdcardManager.saveData(QueryViewActivity.this, fileName, data, true) ;
+        }
+	}
     
 }

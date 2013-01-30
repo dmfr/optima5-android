@@ -113,7 +113,17 @@ public class CrmQueryManager {
 		}
 		return true ;
 	}
+	
+	private static CrmQueryModel sLastFetchModel = null ;
+	public static CrmQueryModel getLastFetchModel() {
+		return sLastFetchModel ;
+	}
 	public static Integer fetchRemoteJson( Context c , CrmQueryModel cqm ) {
+		return fetchRemoteJson(  c , cqm , false ) ;
+	}
+	public static Integer fetchRemoteJson( Context c , CrmQueryModel cqm , boolean getAsXls ) {
+		sLastFetchModel = cqm ;
+		
 		JSONArray jsonArrayWhere = new JSONArray() ;
 		try {
 			for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcConditions ) {
@@ -158,6 +168,9 @@ public class CrmQueryManager {
             nameValuePairs.add(new BasicNameValuePair("_action", "android_query_fetchResult"));
             nameValuePairs.add(new BasicNameValuePair("querysrc_id", String.valueOf(cqm.querysrcId)));
             nameValuePairs.add(new BasicNameValuePair("querysrc_where", jsonArrayWhere.toString()));
+            if( getAsXls ) {
+            	nameValuePairs.add(new BasicNameValuePair("xls_export", "true"));
+            }
 			postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
         	
             HttpResponse response = client.execute(postRequest);
