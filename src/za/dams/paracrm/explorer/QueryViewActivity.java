@@ -15,6 +15,7 @@ import android.app.FragmentTransaction;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -22,6 +23,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -60,11 +62,19 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     private int querysrcId ;
     private int jsonresultId ;
     
+    private ProgressBar mProgressBar ;
     private ViewGroup mTabViewsContainer;
     private ArrayList<Tab> mTabs ;
     private ArrayList<View> mTabViews ;
     
+    private LoadQueryTask mLoadTask ;
+    
+    private String mTitle ;
     private QueryGridTemplate mQgt ;
+    private int mNbTabs ;
+    private ArrayList<String> mTabTitles ;
+    private ArrayList<ArrayList<ColumnDesc>> mTabColumnsDesc ;
+    private ArrayList<ArrayList<ArrayList<String>>> mTabRowCells ;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -77,26 +87,56 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		
 		setContentView(R.layout.explorer_viewer);
 		
+		mProgressBar = (ProgressBar) findViewById(R.id.progressbar) ;
 		mTabViewsContainer = (ViewGroup) findViewById(R.id.content) ;
 		mTabs = new ArrayList<Tab>() ;
 		mTabViews = new ArrayList<View>() ;
 		
 		
-		
-		
 		final ActionBar ab = getActionBar();
-
-		// set defaults for logo & home up
 		ab.setDisplayHomeAsUpEnabled(true);
-		//ab.setDisplayUseLogoEnabled(useLogo);
 		
 		
+		mLoadTask = new LoadQueryTask() ;
+		mLoadTask.execute() ;
+	}
+	@Override
+	protected void onDestroy() {
+		if( mLoadTask != null && mLoadTask.getStatus() != AsyncTask.Status.FINISHED ) {
+			mLoadTask.cancel(true) ;
+		}
+		super.onDestroy();
+	}	
+	
+	private class LoadQueryTask extends AsyncTask<Void,Void,Void> {
+        protected void onPreExecute() {
+            
+        }
+        protected Void doInBackground(Void... arg0) {
+        	loadFromDb() ;
+        	return null ;
+        }
+        protected void onPostExecute(Void arg0) {
+        	if( this.isCancelled() ) {
+        		return ;
+        	}
+        	
+        	buildViews() ;
+        	
+        	ActionBar ab = getActionBar() ;
+    		ab.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+    		setCurrentTab(0) ;
+    		
+    		mProgressBar.setVisibility(View.GONE) ;
+        }
+	}
+	private void loadFromDb() {
 		DatabaseManager mDb = DatabaseManager.getInstance(this) ;
 		Cursor c ;
 		
 		c = mDb.rawQuery(String.format("SELECT querysrc_name FROM input_query WHERE querysrc_id='%d'",querysrcId));
 		c.moveToNext() ;
-		ab.setTitle(c.getString(0));
+		mTitle = c.getString(0) ;
 		c.close() ;
 		
 		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
@@ -120,6 +160,16 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		}
 		c.close();
 		
+		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
+		
+		loadFromJsonBlob(jsonBlob) ;
+	}
+	private void loadFromJsonBlob( String jsonBlob ) {
+		
+		mNbTabs = 0 ;
+		mTabTitles = new ArrayList<String>() ;
+		mTabColumnsDesc = new ArrayList<ArrayList<ColumnDesc>>() ;
+		mTabRowCells = new ArrayList<ArrayList<ArrayList<String>>>() ;
 		
 		try {
 			JSONObject jsonObj = new JSONObject(jsonBlob) ;
@@ -128,40 +178,24 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 			for (int i = 0; i < jsonTabs.length(); i++) {
 				
 				JSONObject jsonObjTab = jsonTabs.getJSONObject(i) ;
-				buildTab(jsonObjTab) ;
-				
-				Tab t = ab.newTab().setText(jsonObjTab.getString("tab_title")).setTabListener(this) ;
-				mTabs.add(t);
-				ab.addTab(t);
+				loadTabFromJson(jsonObjTab) ;
 			}
 			
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			// e.printStackTrace();
 		}
-
-		
-		
-		
-		
-		
-		
-		ab.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
-		setCurrentTab(0) ;
-		
-		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
 	}
 	
-	
-	
-	public void buildTab( JSONObject jsonObjTab ) {
-		
-		LayoutInflater mInflater = getLayoutInflater() ;
+	private void loadTabFromJson( JSONObject jsonObjTab ) {
 		
 		// column map
+		String tabTitle = "" ;
 		ArrayList<ColumnDesc> columnsDesc = new ArrayList<ColumnDesc>() ;
 		ArrayList<ArrayList<String>> dataGrid = new ArrayList<ArrayList<String>>();
 		try {
+			tabTitle = jsonObjTab.getString("tab_title") ;
+			
 			JSONArray jsonCols = jsonObjTab.getJSONArray("columns");
 			for(int i=0 ; i<jsonCols.length() ; i++) {
 				JSONObject jsonCol = jsonCols.getJSONObject(i) ;
@@ -207,89 +241,117 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 			e.printStackTrace();
 		}
 		
-		View scrollview = mInflater.inflate(R.layout.explorer_viewer_table, null) ;
-		TableLayout table = (TableLayout)scrollview.findViewById(R.id.table) ;
-    	TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
-    	for( ColumnDesc cd : columnsDesc ) {
-    		TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
-    		tv.setText(cd.text) ;
-    		if( cd.text_italic ) {
-    			tv.setTypeface(null, Typeface.BOLD) ;
-    		} else if( cd.text_bold ) {
-    			tv.setTypeface(null, Typeface.ITALIC) ;
-    		}
-    		tv.setGravity(Gravity.LEFT) ;
-    		tr.addView(tv) ;
-    	}
-		if( mQgt.template_is_on ) {
-			tr.setBackgroundColor(mQgt.colorhex_columns) ;
-		}
-    	table.addView(tr) ;
-		
-		// iteration sur la data
-    	int cnt=0 ;
-    	for( ArrayList<String> dataRow : dataGrid ) {
-    		View v = new View(this);
-            v.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, 1));
-            v.setBackgroundColor(Color.BLACK) ;
-            // v.setVisibility(View.VISIBLE) ;
-    		table.addView(v) ;
-    		
-    		cnt++ ;
-    		TableRow trData = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
-    		if( mQgt.template_is_on ) {
-    			trData.setBackgroundColor((cnt%2==0)?mQgt.colorhex_row:mQgt.colorhex_row_alt) ;
-    		}
-    		int i = -1 ;
-    		for( ColumnDesc cd : columnsDesc ) {
-    			i++ ;
-    			String s = dataRow.get(i) ;
-        		TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
-        		tv.setText(s) ;
-        		if( cd.is_bold ) {
-        			tv.setTypeface(null, Typeface.BOLD) ;
-        		}
-        		if( (cd.detachedColumn || cd.progressColumn) ) {
-        			if( mQgt.data_progress_is_bold ) {
-        				tv.setTypeface(null, Typeface.BOLD) ;
-        			}
-        		} else {
-        			if( mQgt.data_select_is_bold ) {
-        				tv.setTypeface(null, Typeface.BOLD) ;
-        			}
-        		}
-        		if( !cd.progressColumn && !cd.is_bold ) {
-        			tv.setGravity(Gravity.CENTER) ;
-        		} else {
-        			tv.setGravity(Gravity.LEFT) ;
-        		}
-        		
-        		if( cd.progressColumn && mQgt.template_is_on ) {
-        			try{
-        				if( Float.parseFloat(s) > 0 ) {
-        					tv.setTextColor(mQgt.color_green) ;
-        				}
-        				else if( Float.parseFloat(s) < 0 ) {
-        					tv.setTextColor(mQgt.color_red) ;
-        				}
-        				else if( Float.parseFloat(s) == 0 ) {
-        					tv.setText("=") ;
-        				}
-        			} catch( NumberFormatException e ) {
-        				
-        			}
-        		}
-        		
-        		trData.addView(tv) ;
-    		}
-    		table.addView(trData) ;
-    	}
-		
-		
-    	mTabViewsContainer.addView(scrollview) ;
-    	mTabViews.add(scrollview) ;
+		mNbTabs++ ;
+		mTabTitles.add(tabTitle) ;
+		mTabColumnsDesc.add(columnsDesc);
+		mTabRowCells.add(dataGrid) ;
 	}
 	
+	
+	
+	
+	private void buildViews() {
+		
+		ActionBar ab = getActionBar();
+		ab.setTitle(mTitle);
+		
+		LayoutInflater mInflater = getLayoutInflater() ;
+		
+		for( int tabIdx=0 ; tabIdx<mNbTabs ; tabIdx++ ) {
+			
+			String tabTitle = mTabTitles.get(tabIdx) ;
+			Tab t = ab.newTab().setText(tabTitle).setTabListener(this) ;
+			mTabs.add(t);
+			ab.addTab(t);
+			
+			
+			ArrayList<ColumnDesc> columnsDesc = mTabColumnsDesc.get(tabIdx) ;
+			ArrayList<ArrayList<String>> dataGrid = mTabRowCells.get(tabIdx) ;
+		
+			View scrollview = mInflater.inflate(R.layout.explorer_viewer_table, null) ;
+			TableLayout table = (TableLayout)scrollview.findViewById(R.id.table) ;
+			TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+			for( ColumnDesc cd : columnsDesc ) {
+				TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
+				tv.setText(cd.text) ;
+				if( cd.text_italic ) {
+					tv.setTypeface(null, Typeface.BOLD) ;
+				} else if( cd.text_bold ) {
+					tv.setTypeface(null, Typeface.ITALIC) ;
+				}
+				tv.setGravity(Gravity.LEFT) ;
+				tr.addView(tv) ;
+			}
+			if( mQgt.template_is_on ) {
+				tr.setBackgroundColor(mQgt.colorhex_columns) ;
+			}
+			table.addView(tr) ;
+
+			// iteration sur la data
+			int cnt=0 ;
+			for( ArrayList<String> dataRow : dataGrid ) {
+				View v = new View(this);
+				v.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, 1));
+				v.setBackgroundColor(Color.BLACK) ;
+				// v.setVisibility(View.VISIBLE) ;
+				table.addView(v) ;
+
+				cnt++ ;
+				TableRow trData = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+				if( mQgt.template_is_on ) {
+					trData.setBackgroundColor((cnt%2==0)?mQgt.colorhex_row:mQgt.colorhex_row_alt) ;
+				}
+				int i = -1 ;
+				for( ColumnDesc cd : columnsDesc ) {
+					i++ ;
+					String s = dataRow.get(i) ;
+					TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
+					tv.setText(s) ;
+					if( cd.is_bold ) {
+						tv.setTypeface(null, Typeface.BOLD) ;
+					}
+					if( (cd.detachedColumn || cd.progressColumn) ) {
+						if( mQgt.data_progress_is_bold ) {
+							tv.setTypeface(null, Typeface.BOLD) ;
+						}
+					} else {
+						if( mQgt.data_select_is_bold ) {
+							tv.setTypeface(null, Typeface.BOLD) ;
+						}
+					}
+					if( !cd.progressColumn && !cd.is_bold ) {
+						tv.setGravity(Gravity.CENTER) ;
+					} else {
+						tv.setGravity(Gravity.LEFT) ;
+					}
+
+					if( cd.progressColumn && mQgt.template_is_on ) {
+						try{
+							if( Float.parseFloat(s) > 0 ) {
+								tv.setTextColor(mQgt.color_green) ;
+							}
+							else if( Float.parseFloat(s) < 0 ) {
+								tv.setTextColor(mQgt.color_red) ;
+							}
+							else if( Float.parseFloat(s) == 0 ) {
+								tv.setText("=") ;
+							}
+						} catch( NumberFormatException e ) {
+
+						}
+					}
+
+					trData.addView(tv) ;
+				}
+				table.addView(trData) ;
+			}
+
+
+			mTabViewsContainer.addView(scrollview) ;
+			mTabViews.add(scrollview) ;
+
+		}
+	}
 	
     private void setCurrentTab(int tabIdx) {
         int idx = -1 ;

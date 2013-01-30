@@ -142,6 +142,7 @@ public class QwebViewActivity extends Activity {
     		}
     		
     		
+    		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
     		
         	
         	return null ;
