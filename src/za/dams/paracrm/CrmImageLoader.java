@@ -187,6 +187,13 @@ public class CrmImageLoader {
 		return cacheFileName ;
     }
     
+    public byte[] getFileCachedBytes( CrmUrl crmUrl ) {
+    	try {
+			return CacheManager.retrieveData(mContext, getFileCacheName(crmUrl)) ;
+		} catch (IOException e) {
+			return null ;
+		}
+    }
     Bitmap getFileCachedBitmap( CrmUrl crmUrl ) {
     	try {
     		byte[] data = CacheManager.retrieveData(mContext, getFileCacheName(crmUrl)) ;
