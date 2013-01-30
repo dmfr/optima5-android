@@ -137,6 +137,7 @@ public class MainMenuActivity extends Activity {
         mContext = getApplicationContext();
         
         
+        updateBackground() ;
         
  
         mAdapter = new MainMenuAdapter(this) ;
@@ -288,6 +289,19 @@ public class MainMenuActivity extends Activity {
     	*/
     	
     	super.onPause() ;
+    }
+    private void updateBackground() {
+    	View background = findViewById(R.id.background) ;
+    	if( background == null ) {
+    		return ;
+    	}
+    	
+    	SharedPreferences settings = getPreferences(MODE_PRIVATE);
+    	if( settings.getBoolean("appEnabled", false) ) {
+    		background.setVisibility(View.VISIBLE) ;
+    	} else {
+    		background.setVisibility(View.GONE) ;
+    	}
     }
 
     private void asyncSanityCheck(){
@@ -551,6 +565,7 @@ public class MainMenuActivity extends Activity {
 	            	SharedPreferences settings = getPreferences(MODE_PRIVATE);
 	                SharedPreferences.Editor editor = settings.edit();
 	                editor.putLong("bibleTimestamp", dbUpResult.versionTimestamp);
+	                editor.putBoolean("appEnabled", false);
 	                editor.commit();
 	            }
 	            else {
@@ -704,6 +719,7 @@ public class MainMenuActivity extends Activity {
             	SharedPreferences settings = getPreferences(MODE_PRIVATE);
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putLong("bibleTimestamp", dbUpResult.versionTimestamp);
+                editor.putBoolean("appEnabled", !dbUpResult.isDenied);
                 editor.commit() ;
                 
                 statusStr = dbUpResult.nbTables+ " tables / " + dbUpResult.nbRows + " rows" ;
@@ -714,6 +730,7 @@ public class MainMenuActivity extends Activity {
             }
             Toast.makeText(mContext, toastMsg, Toast.LENGTH_LONG).show();
             mAdapter.notifyDataSetChanged();
+            updateBackground() ;
             
             // Destruction des sigletons
             Explorer.clearContext() ;
@@ -729,6 +746,8 @@ public class MainMenuActivity extends Activity {
             	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
             	           public void onClick(DialogInterface dialog, int id) {
             	                dialog.cancel();
+            	                MainMenuActivity.this.finish() ;
+            	                return ;
             	           }
             	       });
             	AlertDialog alert = builder.create();            
@@ -871,6 +890,7 @@ public class MainMenuActivity extends Activity {
 	                mProgressDialog.dismiss();
 	            }
 	            mAdapter.notifyDataSetChanged();
+	            updateBackground() ;
 	            break;
 	        default: // should never happen
 	            break;
