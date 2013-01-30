@@ -97,6 +97,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		c = mDb.rawQuery(String.format("SELECT querysrc_name FROM input_query WHERE querysrc_id='%d'",querysrcId));
 		c.moveToNext() ;
 		ab.setTitle(c.getString(0));
+		c.close() ;
 		
 		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
 		c.moveToNext() ;

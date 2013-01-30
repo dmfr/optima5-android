@@ -1299,14 +1299,28 @@ public class ExplorerController implements ExplorerLayout.Callback,
 		mActivity.invalidateOptionsMenu();
 		// TODO Auto-generated method stub
 		
+		// Type de la query ?
+		CrmQueryModel cqm = CrmQueryManager.model_get( mActivity, querysrcId ) ;
+		
     	final Bundle bundle = new Bundle();
     	bundle.putInt(QueryViewActivity.ARG_QUERYSRC_ID, querysrcId);
     	bundle.putInt(QueryViewActivity.ARG_JSONRESULT_ID, cacheResultJsonId) ;
 		
-      	Intent intent = new Intent(mActivity, QueryViewActivity.class);
-      	intent.setClass(mActivity, QueryViewActivity.class);
-    	intent.putExtras(bundle);
-    	mActivity.startActivity(intent);
+    	Intent intent ;
+    	switch( cqm.querysrcType ) {
+    	case QWEB:
+          	intent = new Intent(mActivity, QwebViewActivity.class);
+          	intent.setClass(mActivity, QwebViewActivity.class);
+        	intent.putExtras(bundle);
+        	mActivity.startActivity(intent);
+        	break ;
+    	default :
+          	intent = new Intent(mActivity, QueryViewActivity.class);
+          	intent.setClass(mActivity, QueryViewActivity.class);
+        	intent.putExtras(bundle);
+        	mActivity.startActivity(intent);
+        	break ;
+    	}
 	}
 
 	// QueryListFragment$Callback
