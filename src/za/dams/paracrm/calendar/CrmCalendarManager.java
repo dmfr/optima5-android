@@ -39,12 +39,14 @@ public class CrmCalendarManager {
 		public int mCrmInputId ;
 		public String mCrmAgendaId ;
 		public String mCrmAgendaLib ;
+		public boolean mIsReadonly ;
 		public CrmCalendarInput(){
 		}
-		public CrmCalendarInput( int crmInputId, String crmAgendaId, String crmAgendaLib ) {
+		public CrmCalendarInput( int crmInputId, String crmAgendaId, String crmAgendaLib, boolean isReadonly ) {
 			mCrmInputId = crmInputId ;
 			mCrmAgendaId = crmAgendaId ;
 			mCrmAgendaLib = crmAgendaLib ;
+			mIsReadonly = isReadonly ;
 		}
 	}
 	public enum CalendarDuration {
@@ -82,12 +84,12 @@ public class CrmCalendarManager {
 		ArrayList<CrmCalendarInput> mInputs = new ArrayList<CrmCalendarInput>();
 		
 		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
-		Cursor tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib" +
+		Cursor tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib, input.is_readonly " +
 				" FROM input_calendar input , define_file def " +
 				" WHERE input.target_filecode=def.file_code" +
 				" ORDER BY target_filecode ASC") ;
 		while( tCursor.moveToNext() ) {
-			mInputs.add( new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ) ) ;
+			mInputs.add( new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) , tCursor.getString(3).equals("O") ) ) ;
 		}
 		tCursor.close() ;
 		
@@ -99,13 +101,13 @@ public class CrmCalendarManager {
 		CrmCalendarInput crmCalendarInput = null ;
 		
 		Cursor tCursor ;
-		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib" +
+		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib, input.is_readonly " +
 				" FROM input_calendar input , define_file def " +
 				" WHERE input.target_filecode=def.file_code" +
 				" ORDER BY target_filecode ASC") ;
 		while( tCursor.moveToNext() ) {
 			if( tCursor.getString(1).equals(fileCode) ) {
-				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ) ;
+				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) , tCursor.getString(3).equals("O") ) ;
 				break ;
 			}
 		}
@@ -128,13 +130,13 @@ public class CrmCalendarManager {
 		
 		CrmCalendarInput crmCalendarInput = null ;
 		
-		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib" +
+		tCursor = mDb.rawQuery("SELECT input.calendar_id, def.file_code , def.file_lib , input.is_readonly" +
 				" FROM input_calendar input , define_file def " +
 				" WHERE input.target_filecode=def.file_code" +
 				" ORDER BY target_filecode ASC") ;
 		while( tCursor.moveToNext() ) {
 			if( tCursor.getString(1).equals(fileCode) ) {
-				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ) ;
+				crmCalendarInput = new CrmCalendarInput( tCursor.getInt(0), tCursor.getString(1) , tCursor.getString(2) ,  tCursor.getString(3).equals("O") ) ;
 				break ;
 			}
 		}

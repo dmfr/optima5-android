@@ -41,7 +41,11 @@
         android:alphabeticShortcut="n"
         android:title="New Event"
         android:icon="@drawable/ic_menu_add_event_holo_light"
-        android:showAsAction="never" />
+        android:showAsAction="never">
+	<menu>
+	  <item android:id="@+id/action_create_event_placeholder" android:title="Placeholder"></item>
+	</menu>
+    </item>
     <item
         android:id="@+id/action_search"
         android:alphabeticShortcut="f"

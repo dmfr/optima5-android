@@ -185,6 +185,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
     private String mLongPressTitle;
     // ParaCRM :
     private List<CrmCalendarManager.CrmCalendarInput> mCrmCalendars ;
+    private int mCrmUniqueWritableCalendarIdx ; 
 
     protected static StringBuilder mStringBuilder = new StringBuilder(50);
     // TODO recreate formatter when locale changes
@@ -740,6 +741,21 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         
         // ParaCRM : newEventCalendarMaps
         mCrmCalendars = CrmCalendarManager.inputsList(context) ;
+        mCrmUniqueWritableCalendarIdx = -1 ;
+        int calendarIdx = -1 ;
+        for( CrmCalendarManager.CrmCalendarInput cci : mCrmCalendars ) {
+        	calendarIdx++ ;
+        	if( cci.mIsReadonly ) {
+        		continue ;
+        	}
+        	if( mCrmUniqueWritableCalendarIdx == -1 ) {
+        		mCrmUniqueWritableCalendarIdx = calendarIdx ;
+        		continue ;
+        	} else {
+        		mCrmUniqueWritableCalendarIdx = -1 ;
+        		break ;
+        	}
+        }
         
 
         init(context);
@@ -1371,7 +1387,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             // If we selected a specific event, switch to EventInfo view.
             if (trackBallSelection) {
                 if (selectedEvent == null) {
-                	if( mCrmCalendars.size() != 1 ) {
+                	if( mCrmUniqueWritableCalendarIdx == -1 ) {
                 		performLongClick() ;
                 	} else {
                 		// Switch to CREATE EVENT
@@ -1381,7 +1397,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 		if (mSelectionAllday) {
                 			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
                 		}
-                		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+                		int crmInputId = mCrmCalendars.get(mCrmUniqueWritableCalendarIdx).mCrmInputId ;
                 		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
                 				startMillis, endMillis, -1, -1, extraLong, -1);
                 	}
@@ -1412,7 +1428,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             // If we selected a free slot, then create an event.
             // If we selected an event, then go to the EventInfo view.
             if (selectedEvent == null) {
-            	if( mCrmCalendars.size() != 1 ) {
+            	if( mCrmUniqueWritableCalendarIdx == -1 ) {
             		performLongClick() ;
             	} else {
             		// Switch to the CREATE EVENT
@@ -1422,7 +1438,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
             		if (mSelectionAllday) {
             			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
             		}
-            		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+            		int crmInputId = mCrmCalendars.get(mCrmUniqueWritableCalendarIdx).mCrmInputId ;
             		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
             				startMillis, endMillis, -1, -1, extraLong, -1);
             	}
@@ -3811,7 +3827,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         if (pressedSelected) {
             // If the tap is on an already selected hour slot, then create a new
             // event
-        	if( mCrmCalendars.size() != 1 ) {
+        	if( mCrmUniqueWritableCalendarIdx == -1 ) {
         		performLongClick() ;
         	} else {
         		long extraLong = 0;
@@ -3819,7 +3835,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         			extraLong = CalendarController.EXTRA_CREATE_ALL_DAY;
         		}
         		mSelectionMode = SELECTION_SELECTED;
-        		int crmInputId = mCrmCalendars.get(0).mCrmInputId ;
+        		int crmInputId = mCrmCalendars.get(mCrmUniqueWritableCalendarIdx).mCrmInputId ;
         		mController.sendEventRelatedEventWithExtra(this, EventType.CREATE_EVENT, crmInputId,
         				getSelectedTimeInMillis(), 0, (int) ev.getRawX(), (int) ev.getRawY(),
         				extraLong, -1);
@@ -4310,6 +4326,10 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
         int idx=-1 ;
         for( CrmCalendarManager.CrmCalendarInput cci : mCrmCalendars ) {
         	idx++ ;
+        	if( cci.mIsReadonly ) {
+        		continue ;
+        	}
+        	
             item = menu.add(0, MENU_EVENT_CREATE_MULTI + idx, 0, "New event : "+cci.mCrmAgendaLib);
             item.setOnMenuItemClickListener(mContextMenuHandler);
             item.setIcon(android.R.drawable.ic_menu_add);

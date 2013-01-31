@@ -76,6 +76,8 @@ public class CalendarActivity extends Activity implements EventHandler,
     private static final long CONTROLS_ANIMATE_DURATION = 400;
     private static int CONTROLS_ANIMATE_WIDTH = 280;
     private static float mScale = 0;
+    // CRM
+    private static int SUBMENU_CREATE_OFFSET = 20 ;
 
     // Indices of buttons for the drop down menu (tabs replacement)
     // Must match the strings in the array buttons_list in arrays.xml and the
@@ -552,7 +554,7 @@ public class CalendarActivity extends Activity implements EventHandler,
         super.onResume();
         
         // ***** DAMS : launch sync ******
-        Log.w(TAG,"Attempt to launch sync") ;
+        //Log.w(TAG,"Attempt to launch sync") ;
         mRefreshManager.refreshCalendars(false);
 
         
@@ -782,13 +784,26 @@ public class CalendarActivity extends Activity implements EventHandler,
         
         
         // ParaCRM, get AgendaId / AgendaInfos and unmask "Accounts" button
-        if( CrmCalendarManager.inputsList( getApplicationContext() ).size() > 0 ) {
+        List<CrmCalendarManager.CrmCalendarInput> calendarInputs = CrmCalendarManager.inputsList( getApplicationContext() ) ;
+        if( calendarInputs.size() > 0 ) {
         	MenuItem mAccountsMenuItem = menu.findItem(R.id.action_subscriptions);
         	if( mAccountsMenuItem != null ) {
         		mAccountsMenuItem.setVisible(true);
         		mAccountsMenuItem.setEnabled(true);
         	}
         }
+        int idx = 0 ;
+        Menu subm = menu.findItem(R.id.action_create_event).getSubMenu(); // get my MenuItem with placeholder submenu
+        subm.clear(); // delete place holder
+        for( CrmCalendarManager.CrmCalendarInput cci : calendarInputs ) {
+        	if( cci.mIsReadonly ) {
+        		continue ;
+        	}
+        	idx++ ;
+        	subm.add(0, SUBMENU_CREATE_OFFSET+cci.mCrmInputId, idx, cci.mCrmAgendaLib); // id is idx+ my constant
+        }
+        
+        
         
         return true;
     }
@@ -819,6 +834,8 @@ public class CalendarActivity extends Activity implements EventHandler,
                 extras |= CalendarController.EXTRA_GOTO_TODAY;
                 break;
             case R.id.action_create_event:
+            	return true ;
+            	/*
                 t = new Time();
                 t.set(mController.getTime());
                 if (t.minute > 30) {
@@ -830,6 +847,7 @@ public class CalendarActivity extends Activity implements EventHandler,
                 mController.sendEventRelatedEvent(
                         this, EventType.CREATE_EVENT, -1, t.toMillis(true), 0, 0, 0, -1);
                 return true;
+                */
             case R.id.action_select_visible_calendars:
                 mController.sendEvent(this, EventType.LAUNCH_SELECT_VISIBLE_CALENDARS, null, null,
                         0, 0);
@@ -853,6 +871,20 @@ public class CalendarActivity extends Activity implements EventHandler,
             case R.id.action_search:
                 return false;
             default:
+            	if( item.getItemId() >= SUBMENU_CREATE_OFFSET ) {
+            		int calendarId = item.getItemId() - SUBMENU_CREATE_OFFSET ;
+                    t = new Time();
+                    t.set(mController.getTime());
+                    if (t.minute > 30) {
+                        t.hour++;
+                        t.minute = 0;
+                    } else if (t.minute > 0 && t.minute < 30) {
+                        t.minute = 30;
+                    }
+                    mController.sendEventRelatedEvent(
+                            this, EventType.CREATE_EVENT, calendarId, t.toMillis(true), 0, 0, 0, -1);
+                    return true;
+            	}
                 return false;
         }
         mController.sendEvent(this, EventType.GO_TO, t, null, t, -1, viewType, extras, null, null);

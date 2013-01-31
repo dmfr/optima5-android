@@ -432,10 +432,12 @@ public class EventInfoFragment extends DialogFragment
     }
     private void updateCalendar( View view ){
     	int crmFileId = mModel.mCrmFileId ;
-    	int crmInputId = CrmCalendarManager.queryInputFromEvent(mContext, crmFileId).mCrmInputId ;
+    	CrmCalendarManager.CrmCalendarInput cci = CrmCalendarManager.queryInputFromEvent(mContext, crmFileId);
+    	int crmInputId = cci.mCrmInputId ;
     	boolean hideButtons = 
-    			mModel.isDone 
-    			&& CrmCalendarManager.scenSetdoneIsLocked(mContext, crmInputId) ;
+    			( mModel.isDone 
+    			&& CrmCalendarManager.scenSetdoneIsLocked(mContext, crmInputId) )
+    			|| cci.mIsReadonly ;
     	
     	if( hideButtons ) {
     		Button b ;
