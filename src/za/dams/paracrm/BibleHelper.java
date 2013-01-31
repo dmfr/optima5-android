@@ -552,6 +552,7 @@ public class BibleHelper {
     	if( searchStr != null ) {
 	    	// ***** Process du search *******
     		for( String subStr : searchStr.split(" ") ) {
+    			subStr = subStr.replace("'","''"); 
     			sbEnt.append(String.format(" AND entry_key IN (" +
     					"select entry_key FROM store_bible_entry_field " +
     					"WHERE bible_code='%s' " +
