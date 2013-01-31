@@ -17,6 +17,8 @@ import android.app.DatePickerDialog.OnDateSetListener;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.format.DateUtils;
@@ -53,6 +55,8 @@ public class QueryLaunchFragment extends Fragment {
 	
 	// Crm Query Model
 	private CrmQueryModel mModel;
+	private static final int CONDITION_WHERE = 0 ;
+	private static final int CONDITION_PROGRESS = 1 ;
 	private static final int DATE_FROM = 0 ;
 	private static final int DATE_TO = 1 ;
 	
@@ -203,7 +207,7 @@ public class QueryLaunchFragment extends Fragment {
 		if( mCallback.getExplorerConstraint() != null ) {
 			BibleHelper.BibleEntry explorerBibleConstraint = mCallback.getExplorerConstraint() ;
 			// => Preset des bible Fields concernés par la condition
-			for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcConditions ) {
+			for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcWhereConditions ) {
 				if( cqc.fieldType == CrmQueryModel.FieldType.FIELD_BIBLE 
 						&& cqc.fieldLinkBible.equals(explorerBibleConstraint.bibleCode) ) {
 					
@@ -260,80 +264,117 @@ public class QueryLaunchFragment extends Fragment {
     	// création des CrmFields
     	LayoutInflater inflater = mInflater ;
     	View newView ;
-    	int crmFieldsIndex = -1 ;
-    	for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcConditions ) {
-        	
-    		crmFieldsIndex++ ;
+    	
+    	int crmFieldType ;
+    	int crmFieldIndex ;
+    	if( mModel.querysrcWhereConditions.size() > 0 ) {
+    		// Ajout d'une vue HEADER
+    		newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setText("Where? / Query Conditions") ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setTextColor(Color.parseColor("#666666")) ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setTypeface(null,Typeface.ITALIC) ;
+    		((Button)newView.findViewById(R.id.crm_button)).setVisibility(View.GONE) ;
+			mCrmFieldViews.add(newView) ;
+			mViewgroupTable.addView(newView) ;
     		
-
-    		switch( cqc.fieldType ) {
-    		case FIELD_BIBLE :
-    			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
-    			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName) ;
-    			if( cqc.conditionIsSet ) {
-    				((Button)newView.findViewById(R.id.crm_button)).setText(cqc.conditionBibleEntry.displayStr);
-    			} else {
-    				((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(cqc.fieldLinkBible),crmFieldsIndex));
-    			}
-    			mCrmFieldViews.add(newView) ;
-    			mViewgroupTable.addView(newView) ;
-    			break ;
-
-    		case FIELD_DATE :
-    			Time currentTime ;
-    			
-    			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
-    			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName + " / From") ;
-    			currentTime = cqc.conditionDateGt ;
-    			if( currentTime == null ) {
-    				currentTime = new Time();
-    				currentTime.setToNow() ;
-    			}
-    			((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new DateClickListener(currentTime,crmFieldsIndex,DATE_FROM));
-    			mCrmFieldViews.add(newView) ;
-    			mViewgroupTable.addView(newView) ;
-    			
-    			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
-    			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName + " / To") ;
-    			currentTime = cqc.conditionDateLt ;
-    			if( currentTime == null ) {
-    				currentTime = new Time();
-    				currentTime.setToNow() ;
-    			}
-    			((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new DateClickListener(currentTime,crmFieldsIndex,DATE_TO));
-    			mCrmFieldViews.add(newView) ;
-    			mViewgroupTable.addView(newView) ;
-    			break ;
-
-
-    		default:
-    			newView = new View(mContext);
-    			newView.setVisibility(View.GONE) ;
-    			mCrmFieldViews.add(newView) ;
-    			mViewgroupTable.addView(newView) ;
-    			break ;
+    		crmFieldType = CONDITION_WHERE ;
+    		crmFieldIndex = -1 ;
+    		for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcWhereConditions ) {
+    			crmFieldIndex++ ;
+    			setupCrmField(crmFieldType,crmFieldIndex,cqc) ;
     		}
-    		crmFieldsIndex++ ;
-
-    		
     	}
-    	if( mModel.querysrcConditions.size() == 0 ) {
+    	if( mModel.querysrcProgressConditions.size() > 0 ) {
+    		// Ajout d'une vue HEADER
+    		newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setText("Progress StepPoints") ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setTextColor(Color.parseColor("#666666")) ;
+    		((TextView)newView.findViewById(R.id.crm_label)).setTypeface(null,Typeface.ITALIC) ;
+    		((Button)newView.findViewById(R.id.crm_button)).setVisibility(View.GONE) ;
+			mCrmFieldViews.add(newView) ;
+			mViewgroupTable.addView(newView) ;
+    		
+    		crmFieldType = CONDITION_PROGRESS ;
+    		crmFieldIndex = -1 ;
+    		for( CrmQueryModel.CrmQueryCondition cqc : mModel.querysrcProgressConditions ) {
+    			crmFieldIndex++ ;
+    			setupCrmField(crmFieldType,crmFieldIndex,cqc) ;
+    		}
+    	}
+    	
+    	if( mModel.querysrcWhereConditions.size() == 0 && mModel.querysrcProgressConditions.size() == 0 ) {
     		mViewgroupTable.setVisibility(View.GONE) ;
     		mViewgroupEmpty.setVisibility(View.VISIBLE) ;
     	}
     	
     	showContent(true) ;
     }
+    private void setupCrmField( int crmFieldType , int crmFieldIndex, CrmQueryModel.CrmQueryCondition cqc ) {
+    	LayoutInflater inflater = mInflater ;
+    	View newView ;
+    	
+		switch( cqc.fieldType ) {
+		case FIELD_BIBLE :
+			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
+			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName) ;
+			if( cqc.conditionIsSet ) {
+				((Button)newView.findViewById(R.id.crm_button)).setText(cqc.conditionBibleEntry.displayStr);
+			} else {
+				((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(cqc.fieldLinkBible),crmFieldType,crmFieldIndex));
+			}
+			mCrmFieldViews.add(newView) ;
+			mViewgroupTable.addView(newView) ;
+			break ;
+
+		case FIELD_DATE :
+			Time currentTime ;
+			
+			if( crmFieldType != CONDITION_PROGRESS ) {
+				newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
+				((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName + " / From") ;
+				currentTime = cqc.conditionDateGt ;
+				if( currentTime == null ) {
+					currentTime = new Time();
+					currentTime.setToNow() ;
+				}
+				((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new DateClickListener(currentTime,crmFieldType,crmFieldIndex,DATE_FROM));
+				mCrmFieldViews.add(newView) ;
+				mViewgroupTable.addView(newView) ;
+			}
+			
+			newView = inflater.inflate(R.layout.explorer_querylaunch_table_row,null) ;
+			((TextView)newView.findViewById(R.id.crm_label)).setText(cqc.fieldName + " / To") ;
+			currentTime = cqc.conditionDateLt ;
+			if( currentTime == null ) {
+				currentTime = new Time();
+				currentTime.setToNow() ;
+			}
+			((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new DateClickListener(currentTime,crmFieldType,crmFieldIndex,DATE_TO));
+			mCrmFieldViews.add(newView) ;
+			mViewgroupTable.addView(newView) ;
+			break ;
+
+
+		default:
+			newView = new View(mContext);
+			newView.setVisibility(View.GONE) ;
+			mCrmFieldViews.add(newView) ;
+			mViewgroupTable.addView(newView) ;
+			break ;
+		}
+    }
 
     
     
     private class DateListener implements OnDateSetListener {
         View mView;
+        int mCrmFieldType ;
         int mCrmFieldIndex ;
         int mFromOrTo ;
 
-        public DateListener(View view, int crmFieldIndex, int fromOrTo) {
+        public DateListener(View view, int crmFieldType, int crmFieldIndex, int fromOrTo) {
             mView = view;
+            mCrmFieldType = crmFieldType ;
             mCrmFieldIndex = crmFieldIndex ;
             mFromOrTo = fromOrTo ;
         }
@@ -347,20 +388,41 @@ public class QueryLaunchFragment extends Fragment {
         	timeToSet.monthDay = monthDay ;
         	timeToSet.normalize(true) ;
         	
-        	switch( mFromOrTo ) {
-        	case DATE_FROM :
-        		mModel.querysrcConditions.get(mCrmFieldIndex).conditionDateGt = timeToSet ;
+        	switch( mCrmFieldType ) {
+        	case CONDITION_WHERE:
+            	switch( mFromOrTo ) {
+            	case DATE_FROM :
+            		mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionDateGt = timeToSet ;
+            		break ;
+            	case DATE_TO :
+            		mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionDateLt = timeToSet ;
+            		break ;
+            	default :
+            		return ;
+            	}
+            	if( mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionDateGt != null 
+            			&& mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionDateLt != null ) {
+            		
+            		mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionIsSet = true ;
+            	}
         		break ;
-        	case DATE_TO :
-        		mModel.querysrcConditions.get(mCrmFieldIndex).conditionDateLt = timeToSet ;
+        	case CONDITION_PROGRESS:
+            	switch( mFromOrTo ) {
+            	case DATE_FROM :
+            		mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionDateGt = timeToSet ;
+            		break ;
+            	case DATE_TO :
+            		mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionDateLt = timeToSet ;
+            		break ;
+            	default :
+            		return ;
+            	}
+            	if( mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionDateGt != null 
+            			|| mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionDateLt != null ) {
+            		
+            		mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionIsSet = true ;
+            	}
         		break ;
-        	default :
-        		return ;
-        	}
-        	if( mModel.querysrcConditions.get(mCrmFieldIndex).conditionDateGt != null 
-        			&& mModel.querysrcConditions.get(mCrmFieldIndex).conditionDateLt != null ) {
-        		
-        		mModel.querysrcConditions.get(mCrmFieldIndex).conditionIsSet = true ;
         	}
         	
         	
@@ -374,18 +436,20 @@ public class QueryLaunchFragment extends Fragment {
 	
     private class DateClickListener implements View.OnClickListener {
         private Time mTime;
+        int mCrmFieldType ;
         int mCrmFieldIndex ;
         int mFromOrTo ;
 
-        public DateClickListener(Time time, int crmFieldIndex, int fromOrTo) {
+        public DateClickListener(Time time, int crmFieldType, int crmFieldIndex, int fromOrTo) {
             mTime = time;
+            mCrmFieldType = crmFieldType ;
             mCrmFieldIndex = crmFieldIndex ;
             mFromOrTo = fromOrTo ;
         }
 
         public void onClick(View v) {
             DatePickerDialog dpd = new DatePickerDialog(
-                    getActivity(), new DateListener(v,mCrmFieldIndex,mFromOrTo), mTime.year, mTime.month, mTime.monthDay);
+                    getActivity(), new DateListener(v,mCrmFieldType,mCrmFieldIndex,mFromOrTo), mTime.year, mTime.month, mTime.monthDay);
             dpd.setCanceledOnTouchOutside(true);
             dpd.show();
         }
@@ -393,34 +457,56 @@ public class QueryLaunchFragment extends Fragment {
     
     private class BibleListener implements OnBibleSetListener {
         View mView;
+        int mCrmFieldType ;
         int mCrmFieldIndex ;
 
-        public BibleListener(View view, int crmFieldIndex) {
+        public BibleListener(View view, int crmFieldType, int crmFieldIndex) {
+        	mCrmFieldType = crmFieldType ;
         	mCrmFieldIndex = crmFieldIndex ;
             mView = view;
         }
 
         @Override
         public void onBibleSet(BibleEntry be) {
-            if( be != null ) {
-            	((Button)mView).setText(be.displayStr) ;
-            	mModel.querysrcConditions.get(mCrmFieldIndex).conditionIsSet = true ;
-            	mModel.querysrcConditions.get(mCrmFieldIndex).conditionBibleEntry = be ;
-            }
-            else{
-            	((Button)mView).setText("") ;
-            	mModel.querysrcConditions.get(mCrmFieldIndex).conditionIsSet = false ;
-            	mModel.querysrcConditions.get(mCrmFieldIndex).conditionBibleEntry = null ;
-            }
+        	switch( mCrmFieldType ) {
+        	case CONDITION_WHERE :
+                if( be != null ) {
+                	((Button)mView).setText(be.displayStr) ;
+                	mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionIsSet = true ;
+                	mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionBibleEntry = be ;
+                }
+                else{
+                	((Button)mView).setText("") ;
+                	mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionIsSet = false ;
+                	mModel.querysrcWhereConditions.get(mCrmFieldIndex).conditionBibleEntry = null ;
+                }
+        		
+        		break ;
+        	case CONDITION_PROGRESS :
+                if( be != null ) {
+                	((Button)mView).setText(be.displayStr) ;
+                	mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionIsSet = true ;
+                	mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionBibleEntry = be ;
+                }
+                else{
+                	((Button)mView).setText("") ;
+                	mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionIsSet = false ;
+                	mModel.querysrcProgressConditions.get(mCrmFieldIndex).conditionBibleEntry = null ;
+                }
+        		
+        		break ;
+        	}
         }
     }
 	
     private class BibleClickListener implements View.OnClickListener {
     	BibleCode mBc ;
+    	int mCrmFieldType ;
     	int mCrmFieldIndex ;
     	
-        public BibleClickListener( BibleCode bc, int crmFieldIndex ) {
+        public BibleClickListener( BibleCode bc, int crmFieldType, int crmFieldIndex ) {
         	mBc = bc ;
+        	mCrmFieldType = crmFieldType ;
         	mCrmFieldIndex = crmFieldIndex ;
         }
 
@@ -433,7 +519,7 @@ public class QueryLaunchFragment extends Fragment {
         		tConditions.add(mCallback.getExplorerConstraint()) ;
         	}
         	
-            BiblePickerDialog bpd = new BiblePickerDialog(mContext, new BibleListener(v,mCrmFieldIndex), mBc,tConditions);
+            BiblePickerDialog bpd = new BiblePickerDialog(mContext, new BibleListener(v,mCrmFieldType,mCrmFieldIndex), mBc,tConditions);
             //bpd.setTargetFragment(this, 0);
             //bpd.setCanceledOnTouchOutside(true);
             bpd.show(ft, "dialog") ;

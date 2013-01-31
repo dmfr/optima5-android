@@ -90,7 +90,27 @@ public class CrmQueryManager {
 			cqc.fieldName = c.getString(3);
 			cqc.conditionIsSet=false ;
 			
-			crmQueryModel.querysrcConditions.add(cqc) ;
+			crmQueryModel.querysrcWhereConditions.add(cqc) ;
+		}
+		c.close() ;
+		
+		c = mDb.rawQuery(String.format("SELECT querysrc_targetfield_ssid, field_type, field_linkbible, field_lib FROM input_query_progress WHERE querysrc_id='%s' ORDER BY querysrc_targetfield_ssid",querysrcId));
+		while( c.moveToNext() ) {
+			CrmQueryModel.CrmQueryCondition cqc = new CrmQueryModel.CrmQueryCondition() ;
+			cqc.querysrcTargetFieldSsid = c.getInt(0) ;
+			String fieldType = c.getString(1) ;
+			if( fieldType.equals("date") ) {
+				cqc.fieldType = CrmQueryModel.FieldType.FIELD_DATE ;
+			} else if( fieldType.equals("link") ) {
+				cqc.fieldType = CrmQueryModel.FieldType.FIELD_BIBLE ;
+			} else {
+				continue ;
+			}
+			cqc.fieldLinkBible = c.getString(2) ;
+			cqc.fieldName = c.getString(3);
+			cqc.conditionIsSet=false ;
+			
+			crmQueryModel.querysrcProgressConditions.add(cqc) ;
 		}
 		c.close() ;
 		return crmQueryModel ;
@@ -99,7 +119,7 @@ public class CrmQueryManager {
 	
 	public static boolean validateModel( Context c , CrmQueryModel cqm ) {
 		CrmExplorerConfig crmExplorerConfig = CrmExplorerConfig.getInstance(c) ;
-		for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcConditions ) {
+		for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcWhereConditions ) {
 			
 			if( !cqc.conditionIsSet && cqc.fieldType == CrmQueryModel.FieldType.FIELD_BIBLE 
 					&& crmExplorerConfig.accountIsOn() && cqc.fieldLinkBible.equals(crmExplorerConfig.accountGetBibleCode()) ) {
@@ -125,10 +145,11 @@ public class CrmQueryManager {
 		sLastFetchModel = cqm ;
 		
 		JSONArray jsonArrayWhere = new JSONArray() ;
+		JSONArray jsonArrayProgress = new JSONArray() ;
 		try {
-			for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcConditions ) {
+			for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcWhereConditions ) {
 				if( !cqc.conditionIsSet ) {
-					return null ;
+					continue ;
 				}
 				JSONObject jsonCondition = new JSONObject() ;
 				jsonCondition.put( "querysrc_targetfield_ssid" , cqc.querysrcTargetFieldSsid ) ;
@@ -145,8 +166,31 @@ public class CrmQueryManager {
 				}
 				jsonArrayWhere.put(jsonCondition) ;
 			}
+			for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcProgressConditions ) {
+				if( !cqc.conditionIsSet ) {
+					continue ;
+				}
+				JSONObject jsonCondition = new JSONObject() ;
+				jsonCondition.put( "querysrc_targetfield_ssid" , cqc.querysrcTargetFieldSsid ) ;
+				switch( cqc.fieldType ) {
+				case FIELD_DATE :
+					if( cqc.conditionDateGt != null ) {
+						jsonCondition.put( "condition_date_gt" , cqc.conditionDateGt.format("%Y-%m-%d") ) ;
+					}
+					if( cqc.conditionDateLt != null ) {
+						jsonCondition.put( "condition_date_lt" , cqc.conditionDateLt.format("%Y-%m-%d") ) ;
+					}
+					break ;
+				case FIELD_BIBLE :
+					jsonCondition.put("condition_bible_entries",cqc.conditionBibleEntry.entryKey) ;
+					break ;
+				default :
+					return null ;
+				}
+				jsonArrayProgress.put(jsonCondition) ;
+			}
 		} catch( JSONException e ) {
-			
+			e.printStackTrace();
 		}
 		
 		String jsonString = null ;
@@ -168,6 +212,7 @@ public class CrmQueryManager {
             nameValuePairs.add(new BasicNameValuePair("_action", "android_query_fetchResult"));
             nameValuePairs.add(new BasicNameValuePair("querysrc_id", String.valueOf(cqm.querysrcId)));
             nameValuePairs.add(new BasicNameValuePair("querysrc_where", jsonArrayWhere.toString()));
+            nameValuePairs.add(new BasicNameValuePair("querysrc_progress", jsonArrayProgress.toString()));
             if( getAsXls ) {
             	nameValuePairs.add(new BasicNameValuePair("xls_export", "true"));
             }

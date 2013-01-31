@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 22;
+    private final int DB_VERSION = 23;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -394,6 +394,16 @@ public class DatabaseManager {
                     + "PRIMARY KEY( querysrc_id,querysrc_targetfield_ssid )"
                     + ");";
             db.execSQL(createTableQuery);
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_query_progress" + " ("
+                    + "querysrc_id" + " INTEGER, "
+                    + "querysrc_targetfield_ssid" + " INTEGER,"
+                    + "field_type" + " VARCHAR(100),"
+                    + "field_linkbible" + " VARCHAR(100),"
+                    + "field_lib" + " VARCHAR(100),"
+                    + "PRIMARY KEY( querysrc_id,querysrc_targetfield_ssid )"
+                    + ");";
+            db.execSQL(createTableQuery);
             
             
     		createTableQuery = "CREATE TABLE IF NOT EXISTS "
@@ -637,6 +647,7 @@ public class DatabaseManager {
     	                   "input_explorer_cfg",
     	                   "input_query",
     	                   "input_query_where",
+    	                   "input_query_progress",
     	                   "input_scen",
     	                   "input_scen_page",
     	                   "input_scen_pagepivot",

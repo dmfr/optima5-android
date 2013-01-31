@@ -38,5 +38,6 @@ public class CrmQueryModel {
 	
 	public String querysrcName ;
 
-	public ArrayList<CrmQueryCondition> querysrcConditions = new ArrayList<CrmQueryCondition>() ;
+	public ArrayList<CrmQueryCondition> querysrcWhereConditions = new ArrayList<CrmQueryCondition>() ;
+	public ArrayList<CrmQueryCondition> querysrcProgressConditions = new ArrayList<CrmQueryCondition>() ;
 }
