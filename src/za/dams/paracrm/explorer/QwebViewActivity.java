@@ -20,6 +20,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.ProgressBar;
 
@@ -163,7 +164,9 @@ public class QwebViewActivity extends Activity {
         }
     	
         protected void onPostExecute(Void arg0) {
-            mWebView.loadData(mContentHtml, "text/html", null);
+        	WebSettings settings = mWebView.getSettings();
+        	settings.setDefaultTextEncodingName("utf-8");
+            mWebView.loadDataWithBaseURL(null, mContentHtml, "text/html","UTF-8", null);
             mProgressBar.setVisibility(View.GONE) ;
             mWebView.setVisibility(View.VISIBLE) ;
             mDone = true ;
