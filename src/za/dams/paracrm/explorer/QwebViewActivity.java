@@ -115,11 +115,11 @@ public class QwebViewActivity extends Activity {
     }
     
     
-    private class LoadQweb extends AsyncTask<Void,Void,Void> {
+    private class LoadQweb extends AsyncTask<Void,Void,Boolean> {
         protected void onPreExecute() {
         	mDone = false ;
         }
-        protected Void doInBackground(Void... arg0) {
+        protected Boolean doInBackground(Void... arg0) {
         	mContentHtml = "" ;
         	//mImgMap = new HashMap<String,String>() ;
         	
@@ -127,6 +127,9 @@ public class QwebViewActivity extends Activity {
     		Cursor c ;
     		
     		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
+    		if( c.getCount() != 1 ) {
+    			return false ;
+    		}
     		c.moveToNext() ;
     		String jsonBlob = c.getString(0) ;
     		c.close();
@@ -160,10 +163,15 @@ public class QwebViewActivity extends Activity {
     		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
     		
         	
-        	return null ;
+        	return true ;
         }
     	
-        protected void onPostExecute(Void arg0) {
+        protected void onPostExecute(Boolean isDone) {
+        	if( !isDone ) {
+        		QwebViewActivity.this.finish() ;
+        		return ;
+        	}
+        	
         	WebSettings settings = mWebView.getSettings();
         	settings.setDefaultTextEncodingName("utf-8");
             mWebView.loadDataWithBaseURL(null, mContentHtml, "text/html","UTF-8", null);

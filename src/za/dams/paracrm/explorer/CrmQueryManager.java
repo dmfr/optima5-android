@@ -23,6 +23,7 @@ import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SyncService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -33,6 +34,7 @@ import android.util.Log;
 public class CrmQueryManager {
 	private static final String LOG_TAG = "CrmQueryManager" ;
 	
+	private static final int QUERY_TTL_PURGE = 2 * 24 * 60 * 60 ; // 2 days in seconds
 	
 	public static List<CrmQueryModel> model_getAll( Context context ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
@@ -142,6 +144,8 @@ public class CrmQueryManager {
 		return fetchRemoteJson(  c , cqm , false ) ;
 	}
 	public static Integer fetchRemoteJson( Context c , CrmQueryModel cqm , boolean getAsXls ) {
+		int pullTimestamp = (int)(System.currentTimeMillis() / 1000) ;
+		
 		sLastFetchModel = cqm ;
 		
 		JSONArray jsonArrayWhere = new JSONArray() ;
@@ -291,10 +295,32 @@ public class CrmQueryManager {
         DatabaseManager mDb = DatabaseManager.getInstance(c) ;
         ContentValues cv = new ContentValues() ;
         cv.put("json_blob", jsonString) ;
+        cv.put("pull_timestamp", pullTimestamp) ;
         int jsonResultId = (int)mDb.insert("query_cache_json", cv);
         
+        afterPullTTLpurge(c,pullTimestamp) ;
         
 		return jsonResultId ;
 	}
+	
+    static private boolean afterPullTTLpurge( Context context , int newPullTimestamp )
+    {
+    	int deadLine = (newPullTimestamp - QUERY_TTL_PURGE) ;
+    	boolean doIt = false ;
+    	
+    	DatabaseManager mDb = DatabaseManager.getInstance(context) ;
+    	Cursor c = mDb.rawQuery(String.format("SELECT count(*) FROM query_cache_json WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
+    	while( c.moveToNext() ) {
+    		doIt = (c.getInt(0)>0) ? true : false ;
+    		break ;
+    	}
+    	c.close() ;
+    	
+    	if( doIt ) {
+    		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
+    	}
+    	
+    	return true ;
+    }
 
 }

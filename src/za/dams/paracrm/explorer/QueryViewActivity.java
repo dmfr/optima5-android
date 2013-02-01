@@ -112,16 +112,19 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		super.onDestroy();
 	}	
 	
-	private class LoadQueryTask extends AsyncTask<Void,Void,Void> {
+	private class LoadQueryTask extends AsyncTask<Void,Void,Boolean> {
         protected void onPreExecute() {
             
         }
-        protected Void doInBackground(Void... arg0) {
-        	loadFromDb() ;
-        	return null ;
+        protected Boolean doInBackground(Void... arg0) {
+        	return loadFromDb() ;
         }
-        protected void onPostExecute(Void arg0) {
+        protected void onPostExecute(Boolean isDone) {
         	if( this.isCancelled() ) {
+        		return ;
+        	}
+        	if( !isDone ) {
+        		QueryViewActivity.this.finish() ;
         		return ;
         	}
         	
@@ -134,7 +137,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     		mProgressBar.setVisibility(View.GONE) ;
         }
 	}
-	private void loadFromDb() {
+	private boolean loadFromDb() {
 		DatabaseManager mDb = DatabaseManager.getInstance(this) ;
 		Cursor c ;
 		
@@ -144,6 +147,10 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		c.close() ;
 		
 		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
+		if( c.getCount() != 1 ) {
+			c.close() ;
+			return false ;
+		}
 		c.moveToNext() ;
 		String jsonBlob = c.getString(0) ;
 		c.close();
@@ -167,6 +174,8 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
 		
 		loadFromJsonBlob(jsonBlob) ;
+		
+		return true ;
 	}
 	private void loadFromJsonBlob( String jsonBlob ) {
 		
@@ -447,6 +456,8 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     		c.moveToNext() ;
     		String jsonBlob = c.getString(0) ;
     		c.close();
+    		
+    		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
     		
     		try {
     			JSONObject jsonObj = new JSONObject(jsonBlob) ;
