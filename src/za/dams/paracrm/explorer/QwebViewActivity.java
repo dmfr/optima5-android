@@ -128,6 +128,7 @@ public class QwebViewActivity extends Activity {
     		
     		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
     		if( c.getCount() != 1 ) {
+    			c.close();
     			return false ;
     		}
     		c.moveToNext() ;
