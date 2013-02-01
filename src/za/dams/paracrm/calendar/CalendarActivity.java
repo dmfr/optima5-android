@@ -823,6 +823,9 @@ public class CalendarActivity extends Activity implements EventHandler,
         long extras = CalendarController.EXTRA_GOTO_TIME;
 
         switch (item.getItemId()) {
+        	case android.R.id.home :
+        		return true ;
+        
             case R.id.action_refresh:
             	mRefreshManager.refreshCalendars(true) ;
                 // mController.refreshCalendars();

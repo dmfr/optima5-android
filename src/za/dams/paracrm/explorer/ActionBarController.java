@@ -268,7 +268,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         		mTitleLine1View.setVisibility(View.VISIBLE) ;
         		mTitleLine2View.setText(ligne1) ;
         		mTitleLine2View.setVisibility(View.VISIBLE) ;
-        		mActionBar.setIcon(R.drawable.mainmenu_filemanager_red) ;
+        		//mActionBar.setIcon(R.drawable.mainmenu_filemanager_red) ;
         	} else {
         		mTitleLine1View.setText(ligne1) ;
         		mTitleLine1View.setVisibility(View.VISIBLE) ;
@@ -279,7 +279,7 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         			mTitleLine2View.setText("") ;
         			mTitleLine2View.setVisibility(View.GONE) ;
         		}
-        		mActionBar.setIcon(R.drawable.mainmenu_filemanager) ;
+        		//mActionBar.setIcon(R.drawable.mainmenu_filemanager) ;
         	}
        }
     }
