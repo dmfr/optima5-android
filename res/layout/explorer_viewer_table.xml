@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="match_parent"
-	android:layout_height="match_parent"
-	android:visibility="gone">
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="match_parent"
-	android:layout_height="match_parent">
-<TableLayout
+<!--
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:id="@+id/table"
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
-	android:layout_marginBottom="16dp"
-	android:layout_marginTop="16dp"
+	android:paddingBottom="16dp"
+	android:paddingTop="16dp"
         >
 </TableLayout>
-</ScrollView></HorizontalScrollView>
+-->
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/table" />
