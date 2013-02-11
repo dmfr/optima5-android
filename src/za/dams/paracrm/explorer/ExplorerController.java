@@ -631,7 +631,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         	updateEmptyList(ft, true);
         }
 
-        if (querysrcId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
+        if (querysrcId != 0 && explorerContext.mMode == ExplorerContext.MODE_QUERY ) {
             updateQueryLaunch(ft, querysrcId);
             mThreePane.showRightPane();
         } else if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {

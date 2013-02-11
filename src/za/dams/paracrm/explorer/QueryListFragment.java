@@ -340,8 +340,8 @@ public class QueryListFragment extends ListFragment {
                 setListAdapter(mListAdapter);
             }
             
-            // This is the query list, open the first query.
-            if ( mIsFirstLoad && data.records.size() > 0 ) {
+            // This is the query list, open the first query on the very first focus.
+            if ( mSavedListState == null && mIsFirstLoad && data.records.size() > 0 ) {
                 
             	mCallback.onQuerySelect(data.records.get(0).querysrcId);
             }
