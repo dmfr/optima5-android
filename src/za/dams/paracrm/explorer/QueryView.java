@@ -34,6 +34,7 @@ public class QueryView extends View {
 	private static final boolean DEBUG = false ;
 	
 	private Context mContext ;
+	private LayoutInflater mInflater ;
 	private ViewSwitcher mViewSwitcher ;
     private GestureDetector mGestureDetector;
 	private TabGridGetter mTabGridGetter ;
@@ -41,8 +42,9 @@ public class QueryView extends View {
 	private QueryViewActivity.QueryGridTemplate mQgt ;
 	
 	private BuildTableTask mBuildTableTask ;
-	private View mChildView ;
-	private boolean mChildViewInstalled ;
+	private View mTableLabelsView ;
+	private View mTableDataView ;
+	private boolean mTableViewsInstalled ;
 	
 	private int mTabIdx = -1 ;
 	private int mOffset = -1 ;
@@ -86,6 +88,8 @@ public class QueryView extends View {
 		mNumRows = numRows ;
 		mQgt = mTabGridGetter.getQueryGridTemplate() ;
 		
+		mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE) ;
+		
         mGestureDetector = new GestureDetector(context, new QueryViewGestureListener());
         
         mScroller = new OverScroller(context);
@@ -103,7 +107,7 @@ public class QueryView extends View {
 		
 		if( mTabIdx==tabIdx && mOffset==offset ) {
 			// The same: do nothing but fake install event
-			mChildViewInstalled = true ;
+			mTableViewsInstalled = true ;
 			invalidate() ;
 			return ;
 		}
@@ -130,11 +134,78 @@ public class QueryView extends View {
 	public void manualDestroy() {
 		mTabIdx = -1 ;
 		mOffset = -1 ;		
-		mChildView = null ;
+		mTableLabelsView = null ;
+		mTableDataView = null ;
 	}
-	private View buildTableView() {
-		LayoutInflater mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE) ;
+	
+	
+	private void initTableView( ViewGroup tableView ) {
+		// ****** Préparation de la childView pour un View.draw() direct *********
+		// - measure : dimensions de la table interne
+		// - layout : positionnement des child (pas important car aucun child n'est absolu (tableRows , tableCells)
+		// http://stackoverflow.com/questions/4960753/android-problems-converting-viewgroup-with-children-into-bitmap
 		
+		tableView.setLayoutParams(new ViewGroup.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
+
+		tableView.measure(MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().width, MeasureSpec.EXACTLY),
+		        MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().height, MeasureSpec.EXACTLY));
+		
+  		tableView.layout(0, 0, tableView.getMeasuredWidth(), tableView.getMeasuredHeight());
+		
+		// Log.w(TAG,"TableView created :") ;
+		// Log.w(TAG,"MeasureWidth: "+tableView.getMeasuredWidth()+" MeasuredHeight:"+tableView.getMeasuredHeight()) ;
+	}
+	private View getTableCell( ColumnDesc cd ) {
+		TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
+		tv.setText(cd.text) ;
+		if( cd.text_italic ) {
+			tv.setTypeface(null, Typeface.BOLD) ;
+		} else if( cd.text_bold ) {
+			tv.setTypeface(null, Typeface.ITALIC) ;
+		}
+		tv.setGravity(Gravity.LEFT) ;
+		return tv ;
+	}
+	private View getTableCell( ColumnDesc cd, String dataStr ) {
+		TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
+		tv.setText(dataStr) ;
+		if( cd.is_bold ) {
+			tv.setTypeface(null, Typeface.BOLD) ;
+		}
+		if( (cd.detachedColumn || cd.progressColumn) ) {
+			if( mQgt.data_progress_is_bold ) {
+				tv.setTypeface(null, Typeface.BOLD) ;
+			}
+		} else {
+			if( mQgt.data_select_is_bold ) {
+				tv.setTypeface(null, Typeface.BOLD) ;
+			}
+		}
+		if( !cd.progressColumn && !cd.is_bold ) {
+			tv.setGravity(Gravity.CENTER) ;
+		} else {
+			tv.setGravity(Gravity.LEFT) ;
+		}
+
+		if( cd.progressColumn && mQgt.template_is_on ) {
+			try{
+				if( Float.parseFloat(dataStr) > 0 ) {
+					tv.setTextColor(mQgt.color_green) ;
+				}
+				else if( Float.parseFloat(dataStr) < 0 ) {
+					tv.setTextColor(mQgt.color_red) ;
+				}
+				else if( Float.parseFloat(dataStr) == 0 ) {
+					tv.setText("=") ;
+				}
+			} catch( NumberFormatException e ) {
+
+			}
+		}
+		return tv ;
+	}
+	private View buildTableLabelsView() {
 		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(mTabIdx) ;
 		List<List<String>> dataGrid = mTabGridGetter.getTabRows(mTabIdx, mOffset, mNumRows) ;
 	
@@ -143,15 +214,10 @@ public class QueryView extends View {
 		TableLayout table = (TableLayout)tableView.findViewById(R.id.table) ;
 		TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
 		for( ColumnDesc cd : columnsDesc ) {
-			TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
-			tv.setText(cd.text) ;
-			if( cd.text_italic ) {
-				tv.setTypeface(null, Typeface.BOLD) ;
-			} else if( cd.text_bold ) {
-				tv.setTypeface(null, Typeface.ITALIC) ;
+			if( !cd.is_bold ) {
+				continue ;
 			}
-			tv.setGravity(Gravity.LEFT) ;
-			tr.addView(tv) ;
+			tr.addView(getTableCell(cd)) ;
 		}
 		if( mQgt.template_is_on ) {
 			tr.setBackgroundColor(mQgt.colorhex_columns) ;
@@ -175,79 +241,84 @@ public class QueryView extends View {
 			int i = -1 ;
 			for( ColumnDesc cd : columnsDesc ) {
 				i++ ;
+				if( !cd.is_bold ) {
+					continue ;
+				}
 				String s = dataRow.get(i) ;
-				TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
-				tv.setText(s) ;
-				if( cd.is_bold ) {
-					tv.setTypeface(null, Typeface.BOLD) ;
-				}
-				if( (cd.detachedColumn || cd.progressColumn) ) {
-					if( mQgt.data_progress_is_bold ) {
-						tv.setTypeface(null, Typeface.BOLD) ;
-					}
-				} else {
-					if( mQgt.data_select_is_bold ) {
-						tv.setTypeface(null, Typeface.BOLD) ;
-					}
-				}
-				if( !cd.progressColumn && !cd.is_bold ) {
-					tv.setGravity(Gravity.CENTER) ;
-				} else {
-					tv.setGravity(Gravity.LEFT) ;
-				}
-
-				if( cd.progressColumn && mQgt.template_is_on ) {
-					try{
-						if( Float.parseFloat(s) > 0 ) {
-							tv.setTextColor(mQgt.color_green) ;
-						}
-						else if( Float.parseFloat(s) < 0 ) {
-							tv.setTextColor(mQgt.color_red) ;
-						}
-						else if( Float.parseFloat(s) == 0 ) {
-							tv.setText("=") ;
-						}
-					} catch( NumberFormatException e ) {
-
-					}
-				}
-
-				trData.addView(tv) ;
+				trData.addView(getTableCell(cd,s)) ;
 			}
 			table.addView(trData) ;
 		}
 		
+		initTableView(tableView) ;
+  		return tableView ;
+	}
+	private View buildTableDataView() {
+		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(mTabIdx) ;
+		List<List<String>> dataGrid = mTabGridGetter.getTabRows(mTabIdx, mOffset, mNumRows) ;
+	
+		ViewGroup tableView = (ViewGroup)mInflater.inflate(R.layout.explorer_viewer_table, null) ;
 		
-		// ****** Préparation de la childView pour un View.draw() direct *********
-		// - measure : dimensions de la table interne
-		// - layout : positionnement des child (pas important car aucun child n'est absolu (tableRows , tableCells)
-		// http://stackoverflow.com/questions/4960753/android-problems-converting-viewgroup-with-children-into-bitmap
-		
-		tableView.setLayoutParams(new ViewGroup.LayoutParams(
-                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
+		TableLayout table = (TableLayout)tableView.findViewById(R.id.table) ;
+		TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+		for( ColumnDesc cd : columnsDesc ) {
+			if( cd.is_bold ) {
+				continue ;
+			}
+			
+			tr.addView(getTableCell(cd)) ;
+		}
+		if( mQgt.template_is_on ) {
+			tr.setBackgroundColor(mQgt.colorhex_columns) ;
+		}
+		table.addView(tr) ;
 
-		tableView.measure(MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().width, MeasureSpec.EXACTLY),
-		        MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().height, MeasureSpec.EXACTLY));
+		// iteration sur la data
+		int cnt=0 ;
+		for( List<String> dataRow : dataGrid ) {
+			View v = new View(mContext);
+			v.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, 1));
+			v.setBackgroundColor(Color.BLACK) ;
+			// v.setVisibility(View.VISIBLE) ;
+			table.addView(v) ;
+
+			cnt++ ;
+			TableRow trData = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+			if( mQgt.template_is_on ) {
+				trData.setBackgroundColor((cnt%2==0)?mQgt.colorhex_row:mQgt.colorhex_row_alt) ;
+			}
+			int i = -1 ;
+			for( ColumnDesc cd : columnsDesc ) {
+				i++ ;
+				if( cd.is_bold ) {
+					continue ;
+				}
+				String s = dataRow.get(i) ;
+				trData.addView(getTableCell(cd,s)) ;
+			}
+			table.addView(trData) ;
+		}
 		
-  		tableView.layout(0, 0, tableView.getMeasuredWidth(), tableView.getMeasuredHeight());
-		
-		// Log.w(TAG,"TableView created :") ;
-		// Log.w(TAG,"MeasureWidth: "+tableView.getMeasuredWidth()+" MeasuredHeight:"+tableView.getMeasuredHeight()) ;
+		initTableView(tableView) ;
   		return tableView ;
 	}
 	
 	
+	
 	private class BuildTableTask extends AsyncTask<Void,Void,Void> {
-		View tableView = null ;
+		View tableLabelsView = null ;
+		View tableDataView = null ;
 
 		@Override
 		protected void onPreExecute() {
-			mChildView = null ;
+			mTableLabelsView = null ;
+			mTableDataView = null ;
 			invalidate() ;
 		}
 		@Override
 		protected Void doInBackground(Void... arg0) {
-			tableView = buildTableView() ;
+			tableLabelsView = buildTableLabelsView() ;
+			tableDataView = buildTableDataView() ;
 			return null;
 		}
 		@Override
@@ -255,20 +326,21 @@ public class QueryView extends View {
 			if( this.isCancelled() ) {
 				return ;
 			}
-			mChildView = tableView ;
+			mTableLabelsView = tableLabelsView ;
+			mTableDataView = tableDataView ;
 			
-			int tWidthAvailableForDataView = mThisViewWidth ;
+			int tWidthAvailableForDataView = mThisViewWidth - tableLabelsView.getMeasuredWidth() ;
 			// If (data)child view bigger than space avail for it
 			//  => calculate max offset
-			if( mChildView.getMeasuredWidth() > tWidthAvailableForDataView ) {
-				mMaxViewStartX = mChildView.getMeasuredWidth() - tWidthAvailableForDataView ;
+			if( mTableDataView.getMeasuredWidth() > tWidthAvailableForDataView ) {
+				mMaxViewStartX = mTableDataView.getMeasuredWidth() - tWidthAvailableForDataView ;
 			} else {
 				mMaxViewStartX = 0 ;
 			}
 			
 			
 			invalidate() ;
-			mChildViewInstalled = true ;
+			mTableViewsInstalled = true ;
 		}
 	}
 	
@@ -293,7 +365,7 @@ public class QueryView extends View {
 	
     @Override
     protected void onDraw(Canvas canvas) {
-    	if( mChildView == null ) {
+    	if( mTableLabelsView == null || mTableDataView == null ) {
     		return ;
     	}
     	if( mViewStartX > mMaxViewStartX ) {
@@ -303,21 +375,40 @@ public class QueryView extends View {
     	
     	canvas.save() ;
     	
-        float xTranslate = -mViewStartX;
-        // offset canvas by the current drag and header position
-        canvas.translate(xTranslate, -mViewStartY);
-        // clip to the data area
+        
+        // offset canvas by the current vertical drag (paging) position
+        canvas.translate(0, -mViewStartY);
+        // clip to the static area
         Rect dest = mDestRect;
-        int mDataStartX = 0 ; //@DAMS toAdd
         dest.top = 0;
         dest.bottom = mThisViewHeight ;
-        dest.left = (int) (mDataStartX - xTranslate);
-        dest.right = (int) (mThisViewWidth - xTranslate);
+        dest.left = 0;
+        dest.right = Math.min(mThisViewWidth, mTableLabelsView.getMeasuredWidth());
         canvas.save();
-        canvas.clipRect(dest);
-        
+        canvas.clipRect(dest);        
         // Draw the movable part of the view
-        mChildView.draw(canvas) ;
+        mTableLabelsView.draw(canvas) ;
+        // restore to having no clip
+    	canvas.restore() ;
+        
+        
+        
+        
+        
+        // movable table part
+        int tLabelsWidth = Math.min(mThisViewWidth, mTableLabelsView.getMeasuredWidth()) ; //@DAMS toAdd
+        float xTranslate = -mViewStartX + tLabelsWidth;
+        canvas.translate(xTranslate, 0);
+        // clip to the data area
+        Rect destMoveable = mDestRect;
+        destMoveable.top = 0;
+        destMoveable.bottom = mThisViewHeight ;
+        destMoveable.left = (int) (tLabelsWidth - xTranslate);
+        destMoveable.right = (int) (mThisViewWidth - xTranslate);
+        canvas.save();
+        canvas.clipRect(destMoveable);        
+        // Draw the movable part of the view
+        mTableDataView.draw(canvas) ;
         // restore to having no clip
     	canvas.restore() ;
     	
@@ -349,10 +440,10 @@ public class QueryView extends View {
             canvas.translate(-xTranslate, mViewStartY);
         }
 
-    	if( mChildViewInstalled && mCallback != null ) {
+    	if( mTableViewsInstalled && mCallback != null ) {
     		mCallback.onChildViewInstalled() ;
     	}
-    	mChildViewInstalled = false ;
+    	mTableViewsInstalled = false ;
     }
     @Override
     protected void onSizeChanged(int width, int height, int oldw, int oldh) {
@@ -580,7 +671,6 @@ public class QueryView extends View {
         mHandler.removeCallbacks(mContinueScroll);
     }
     private void doScroll(MotionEvent e1, MotionEvent e2, float deltaX, float deltaY) {
-        cancelAnimation();
         if (mStartingScroll) {
             mInitialScrollX = 0;
             mInitialScrollY = 0;
@@ -664,22 +754,7 @@ public class QueryView extends View {
         invalidate();
     }
 
-    private void cancelAnimation() {
-        Animation in = mViewSwitcher.getInAnimation();
-        if (in != null) {
-            // cancel() doesn't terminate cleanly.
-            in.scaleCurrentDuration(0);
-        }
-        Animation out = mViewSwitcher.getOutAnimation();
-        if (out != null) {
-            // cancel() doesn't terminate cleanly.
-            out.scaleCurrentDuration(0);
-        }
-    }
-
     private void doFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        cancelAnimation();
-
         if ((mTouchMode & TOUCH_MODE_VSCROLL) != 0) {
             // Vertical fling.
             // initNextView(deltaX);
