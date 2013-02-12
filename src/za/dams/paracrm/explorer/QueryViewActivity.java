@@ -2,6 +2,7 @@ package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.Inflater;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -17,19 +18,27 @@ import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.View.MeasureSpec;
 import android.view.ViewGroup.LayoutParams;
+import android.view.Window;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ProgressBar;
+import android.widget.TableRow;
+import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
-public class QueryViewActivity extends Activity implements ActionBar.TabListener, ViewSwitcher.ViewFactory {
+public class QueryViewActivity extends Activity implements ActionBar.TabListener, ViewSwitcher.ViewFactory, QueryView.Callback {
 	
 	public static class QueryGridTemplate {
 		boolean template_is_on ;
@@ -69,6 +78,9 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     
     private int querysrcId ;
     private int jsonresultId ;
+    
+    private static final String DUMMY_STRING = "DUMMY STRING" ;
+    private int mCalculatedPageSize = 0 ;
     
     private List<Tab> mTabs ;
     private ProgressBar mProgressBar ;
@@ -113,7 +125,6 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		final ActionBar ab = getActionBar();
 		ab.setDisplayHomeAsUpEnabled(true);
 		
-		
 		mLoadTask = new LoadQueryTask() ;
 		mLoadTask.execute() ;
 	}
@@ -123,7 +134,31 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 			mLoadTask.cancel(true) ;
 		}
 		super.onDestroy();
-	}	
+	}
+	
+	
+	private void initPaging() {
+		mCalculatedPageSize = 0 ;
+		View tActivityView = findViewById(android.R.id.content);
+		LayoutInflater tInflater = getLayoutInflater() ;
+		
+		int tViewHeight = tActivityView.getHeight() ;
+		
+		TableRow tTableRowModel = (TableRow)tInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+		TextView tTableCellModel = (TextView)tInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
+		tTableCellModel.setText(DUMMY_STRING);
+		tTableRowModel.addView(tTableCellModel) ;
+		
+		tTableRowModel.setLayoutParams(new ViewGroup.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
+		tTableRowModel.measure(MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().width, MeasureSpec.EXACTLY),
+		        MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().height, MeasureSpec.EXACTLY));
+		int tRowHeight = tTableRowModel.getMeasuredHeight() + 1 ; // tableRow + horizontal ruler
+		
+		//Log.w("QueryViewActivity","Page height="+tViewHeight+"   Row height="+tRowHeight) ;
+		mCalculatedPageSize = (int) Math.floor( (tViewHeight-tRowHeight) / tRowHeight );
+	}
+	
 	
 	private class LoadQueryTask extends AsyncTask<Void,Void,Boolean> {
         protected void onPreExecute() {
@@ -155,6 +190,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
         	// Initialisation du ViewSwitcher / ViewSwitcher.Factory 
         	mProgressBar.setVisibility(View.GONE) ;
         	mViewSwitcher.setVisibility(View.VISIBLE);
+        	initPaging() ;
         	mViewSwitcher.setFactory(QueryViewActivity.this) ;
         	
         	
@@ -311,8 +347,13 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     }
     */
 	private void initFirstTab() {
+    	mCurrentTabIdx = 0 ;
+    	mCurrentRowOffset = 0 ;
+    	
 		QueryView view = (QueryView) mViewSwitcher.getCurrentView();
-		view.setTabAndOffset(0, 0) ;
+		view.setCallback(this) ;
+    	mProgressBar.setVisibility(View.VISIBLE) ;
+		view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
 	}
     private void setCurrentTab(int tabIdx) {
     	if( tabIdx == mCurrentTabIdx ) {
@@ -328,10 +369,12 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
             mViewSwitcher.setOutAnimation(mOutAnimationBackward);
         }
 
-        QueryView view = (QueryView) mViewSwitcher.getNextView();
-    	
     	mCurrentTabIdx = tabIdx ;
     	mCurrentRowOffset = 0 ; // @DAMS : à voir?
+    	
+        QueryView view = (QueryView) mViewSwitcher.getNextView();
+    	view.setCallback(this) ;
+    	mProgressBar.setVisibility(View.VISIBLE) ;
     	view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
     	mViewSwitcher.showNext();
     	
@@ -339,7 +382,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     	// => dégrade l'esthétique car on scroll sur du vide
     	// => pas fiable car la suivante à déja commencé son Draw
     	// => pas utile car l'autre vue est par défaut invisible (hors scroll) et sera réinitialisée avant tout scroll/switchTab
-    	((QueryView)mViewSwitcher.getNextView()).manualDestroy() ;
+    	//((QueryView)mViewSwitcher.getNextView()).manualDestroy() ;
     }
 	
 	
@@ -475,12 +518,17 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     }
 	@Override
 	public View makeView() {
-		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,25) ;
+		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,mCalculatedPageSize) ;
 		queryView.setLayoutParams(new ViewSwitcher.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		queryView.setId(VIEW_ID) ;
-		queryView.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
 		return queryView;
+	}
+	
+	
+	@Override
+	public void onChildViewInstalled() {
+		mProgressBar.setVisibility(View.GONE) ;
 	}
     
 }
