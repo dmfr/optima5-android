@@ -30,7 +30,7 @@ import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
 public class QueryView extends View {
-	private static final String TAG="Explorer/QueryView" ;
+	private String TAG="Explorer/QueryView" ;
 	private static final boolean DEBUG = false ;
 	
 	private Context mContext ;
@@ -45,9 +45,20 @@ public class QueryView extends View {
 	private View mTableLabelsView ;
 	private View mTableDataView ;
 	private boolean mTableViewsInstalled ;
+	private boolean mTableViewsDoNotify ;
+	
+	private boolean mPreloadRunning = false ;
+	private PreloadAdjacentPagesTask mPreloadAdjacentPagesTask ;
+	private int mPreloadTabIdx = -1 ;
+	private int mPreloadAdjacentPageIdx = -1 ;
+	private View mCachePreviousTableLabelsView ;
+	private View mCachePreviousTableDataView ;
+	private View mCacheForwardTableLabelsView ;
+	private View mCacheForwardTableDataView ;
+	
 	
 	private int mTabIdx = -1 ;
-	private int mOffset = -1 ;
+	private int mPageIdx = -1 ;
 	private boolean mOffsetIsFirst ;
 	private boolean mOffsetIsLast ;
 	public boolean stopDrawing = false ;
@@ -78,8 +89,16 @@ public class QueryView extends View {
             mHandler = getHandler();
         }
     }
+    
+    
+    protected QueryView getViewSwitcherAlternateView() {
+    	if( (QueryView)mViewSwitcher.getCurrentView() == this ) {
+    		return (QueryView)mViewSwitcher.getNextView() ;
+    	} else {
+    		return (QueryView)mViewSwitcher.getCurrentView() ;
+    	}
+    }
 
-	
 	public QueryView(Context context, ViewSwitcher viewSwitcher, TabGridGetter tabGridGetter, int numRows) {
 		super(context) ;
 		mContext = context ;
@@ -100,40 +119,77 @@ public class QueryView extends View {
     private void init(Context context) {
     	setWillNotDraw(false) ;
     }
-	public void setTabAndOffset( int tabIdx, int offset ) {
+    public void preloadAdjacentForTabAndPage( int tabIdx, int pageIdx ) {
+		// Dernier recours => chargement à la volée
+		if( mPreloadAdjacentPagesTask != null && mPreloadAdjacentPagesTask.getStatus() != AsyncTask.Status.FINISHED ) {
+			if( tabIdx==mPreloadTabIdx && mPreloadAdjacentPageIdx==pageIdx ) {
+				//déja en cours > rien à faire
+				return ;
+			}
+			mPreloadAdjacentPagesTask.cancel(true) ;
+		}
+		mPreloadTabIdx = tabIdx ;
+		mPreloadAdjacentPageIdx = pageIdx ;
+		mPreloadAdjacentPagesTask = new PreloadAdjacentPagesTask();
+		mPreloadAdjacentPagesTask.execute();
+    }
+	public void setTabAndOffset( int tabIdx, int pageIdx ) {
 		// When setting parameters for a child view, set view offsets to zero 
 		mViewStartX = 0 ;
 		mViewStartY = 0 ;
 		
-		if( mTabIdx==tabIdx && mOffset==offset ) {
+		if( mTabIdx==tabIdx && mPageIdx==pageIdx && mTableViewsInstalled ) {
 			// The same: do nothing but fake install event
-			mTableViewsInstalled = true ;
+			mTableViewsDoNotify = true ;
 			invalidate() ;
 			return ;
 		}
 		
 		mTabIdx = tabIdx ;
-		mOffset = offset ;
-		if( offset + mNumRows >= mTabGridGetter.getTabCount(tabIdx) ) {
+		mPageIdx = pageIdx ;
+		mTableViewsInstalled = false ;
+		
+		if( mPageIdx >= Math.ceil( mTabGridGetter.getTabCount(tabIdx) / mNumRows ) ) {
 			mOffsetIsLast = true ;
 		} else {
 			mOffsetIsLast = false ;
 		}
-		if( offset == 0 ) {
+		if( mPageIdx == 0 ) {
 			mOffsetIsFirst = true ;
 		} else {
 			mOffsetIsFirst = false ;
 		}
 		
-		if( mBuildTableTask != null && mBuildTableTask.getStatus() != AsyncTask.Status.FINISHED ) {
-			mBuildTableTask.cancel(true) ;
+		// Présence dans le preload ??
+		int preloadDirection = pageIdx - mPreloadAdjacentPageIdx ;
+		//Log.w(TAG,"Current preload is tab="+mPreloadTabIdx+" pageMed="+mPreloadAdjacentPageIdx) ;
+		if( tabIdx==mPreloadTabIdx && Math.abs(preloadDirection) == 1 ) {
+			if( mPreloadRunning ) {
+				// Sera installé à la fin du preload
+				//Log.w(TAG,"Preload late !!") ;
+			} else {
+				// Installation manuelle
+				if( preloadDirection == -1 ) {
+					installTableViewsOnUI( mCachePreviousTableLabelsView , mCachePreviousTableDataView ) ;
+				} else if( preloadDirection == 1 ) {
+					installTableViewsOnUI( mCacheForwardTableLabelsView , mCacheForwardTableDataView ) ;
+				}
+			}
+		} else {
+			// Dernier recours => chargement à la volée
+			if( mBuildTableTask != null && mBuildTableTask.getStatus() != AsyncTask.Status.FINISHED ) {
+				mBuildTableTask.cancel(true) ;
+			}
+			mBuildTableTask = new BuildTableTask() ;
+			mBuildTableTask.execute() ;
 		}
-		mBuildTableTask = new BuildTableTask() ;
-		mBuildTableTask.execute() ;
+		
+		// Preload en cascade de la page suivante (l'autre vue)
+		getViewSwitcherAlternateView().preloadAdjacentForTabAndPage( mTabIdx, mPageIdx ) ;
 	}
 	public void manualDestroy() {
 		mTabIdx = -1 ;
-		mOffset = -1 ;		
+		mPageIdx = -1 ;		
 		mTableLabelsView = null ;
 		mTableDataView = null ;
 	}
@@ -205,9 +261,9 @@ public class QueryView extends View {
 		}
 		return tv ;
 	}
-	private View buildTableLabelsView() {
-		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(mTabIdx) ;
-		List<List<String>> dataGrid = mTabGridGetter.getTabRows(mTabIdx, mOffset, mNumRows) ;
+	private View buildTableLabelsView( int tabIdx, int pageIdx ) {
+		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(tabIdx) ;
+		List<List<String>> dataGrid = mTabGridGetter.getTabRows(tabIdx, pageIdx*mNumRows, mNumRows) ;
 	
 		ViewGroup tableView = (ViewGroup)mInflater.inflate(R.layout.explorer_viewer_table, null) ;
 		
@@ -253,9 +309,9 @@ public class QueryView extends View {
 		initTableView(tableView) ;
   		return tableView ;
 	}
-	private View buildTableDataView() {
-		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(mTabIdx) ;
-		List<List<String>> dataGrid = mTabGridGetter.getTabRows(mTabIdx, mOffset, mNumRows) ;
+	private View buildTableDataView( int tabIdx, int pageIdx ) {
+		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(tabIdx) ;
+		List<List<String>> dataGrid = mTabGridGetter.getTabRows(tabIdx, pageIdx*mNumRows, mNumRows) ;
 	
 		ViewGroup tableView = (ViewGroup)mInflater.inflate(R.layout.explorer_viewer_table, null) ;
 		
@@ -305,6 +361,72 @@ public class QueryView extends View {
 	
 	
 	
+	private class PreloadAdjacentPagesTask extends AsyncTask<Void,Void,Void> {
+		@Override
+		protected void onPreExecute() {
+			mPreloadRunning = true ;
+		}
+
+		@Override
+		protected Void doInBackground(Void... arg0) {
+			// num pages ?
+			int tCountPages = (int)Math.ceil( mTabGridGetter.getTabCount(mPreloadTabIdx) / mNumRows ) ;
+			if( mPreloadAdjacentPageIdx < tCountPages ) {
+				// FORWARD !
+				int targetPageForward = mPreloadAdjacentPageIdx + 1 ;
+				if( mTabIdx == mPreloadTabIdx && mPageIdx == targetPageForward && mTableViewsInstalled ) {
+					// recup de la page active
+					//Log.w(TAG,"Preload recup tab="+mPreloadTabIdx+" page="+targetPageForward) ;
+					mCacheForwardTableLabelsView = mTableLabelsView ;
+					mCacheForwardTableDataView = mTableDataView ;
+				} else {
+					//Log.w(TAG,"Preload build tab="+mPreloadTabIdx+" page="+targetPageForward) ;
+					mCacheForwardTableLabelsView = buildTableLabelsView( mPreloadTabIdx , targetPageForward );
+					mCacheForwardTableDataView = buildTableDataView( mPreloadTabIdx , targetPageForward );
+				}
+				
+				
+			}
+			if( mPreloadAdjacentPageIdx > 0 ) {
+				// PREVIOUS !
+				int targetPagePrevious = mPreloadAdjacentPageIdx - 1 ;
+				if( mTabIdx == mPreloadTabIdx && mPageIdx == targetPagePrevious && mTableViewsInstalled ) {
+					// recup de la page active
+					//Log.w(TAG,"Recup tab="+mPreloadTabIdx+" page="+targetPagePrevious) ;
+					mCachePreviousTableLabelsView = mTableLabelsView ;
+					mCachePreviousTableDataView = mTableDataView ;
+				} else {
+					//Log.w(TAG,"Preload build tab="+mPreloadTabIdx+" page="+targetPagePrevious) ;
+					mCachePreviousTableLabelsView = buildTableLabelsView( mPreloadTabIdx , targetPagePrevious );
+					mCachePreviousTableDataView = buildTableDataView( mPreloadTabIdx , targetPagePrevious );
+				}
+			}
+			
+			return null;
+		}
+		@Override
+		protected void onPostExecute(Void arg0) {
+			if( this.isCancelled() ) {
+				mPreloadRunning = false ;
+				return ;
+			}
+			
+			// Rattrapage de l'affichage demandé à la fin du preload ?
+			if( !mTableViewsInstalled && mTabIdx == mPreloadTabIdx && mPageIdx >= 0 ) {
+				int preloadDirection = mPageIdx - mPreloadAdjacentPageIdx ;
+				if( Math.abs(preloadDirection) == 1 ) {
+					//Log.w(TAG,"End of preload : installing to catch up early request") ;
+					if( preloadDirection == -1 ) {
+						installTableViewsOnUI( mCachePreviousTableLabelsView , mCachePreviousTableDataView ) ;
+					} else if( preloadDirection == 1 ) {
+						installTableViewsOnUI( mCacheForwardTableLabelsView , mCacheForwardTableDataView ) ;
+					}
+				}
+			}
+			
+			mPreloadRunning = false ;
+		}
+	}
 	private class BuildTableTask extends AsyncTask<Void,Void,Void> {
 		View tableLabelsView = null ;
 		View tableDataView = null ;
@@ -317,8 +439,8 @@ public class QueryView extends View {
 		}
 		@Override
 		protected Void doInBackground(Void... arg0) {
-			tableLabelsView = buildTableLabelsView() ;
-			tableDataView = buildTableDataView() ;
+			tableLabelsView = buildTableLabelsView(mTabIdx,mPageIdx) ;
+			tableDataView = buildTableDataView(mTabIdx,mPageIdx) ;
 			return null;
 		}
 		@Override
@@ -326,22 +448,30 @@ public class QueryView extends View {
 			if( this.isCancelled() ) {
 				return ;
 			}
-			mTableLabelsView = tableLabelsView ;
-			mTableDataView = tableDataView ;
-			
-			int tWidthAvailableForDataView = mThisViewWidth - tableLabelsView.getMeasuredWidth() ;
-			// If (data)child view bigger than space avail for it
-			//  => calculate max offset
-			if( mTableDataView.getMeasuredWidth() > tWidthAvailableForDataView ) {
-				mMaxViewStartX = mTableDataView.getMeasuredWidth() - tWidthAvailableForDataView ;
-			} else {
-				mMaxViewStartX = 0 ;
-			}
-			
-			
-			invalidate() ;
-			mTableViewsInstalled = true ;
+			installTableViewsOnUI( tableLabelsView, tableDataView ) ;
 		}
+	}
+	private void installTableViewsOnUI( View tableLabelsView, View tableDataView ) {
+		if( tableLabelsView == null || tableDataView == null ) {
+			return ;
+		}
+		
+		mTableLabelsView = tableLabelsView ;
+		mTableDataView = tableDataView ;
+		
+		int tWidthAvailableForDataView = mThisViewWidth - tableLabelsView.getMeasuredWidth() ;
+		// If (data)child view bigger than space avail for it
+		//  => calculate max offset
+		if( mTableDataView.getMeasuredWidth() > tWidthAvailableForDataView ) {
+			mMaxViewStartX = mTableDataView.getMeasuredWidth() - tWidthAvailableForDataView ;
+		} else {
+			mMaxViewStartX = 0 ;
+		}
+		
+		
+		mTableViewsInstalled = true ;
+		mTableViewsDoNotify = true ;
+		invalidate() ;
 	}
 	
 	
@@ -351,13 +481,12 @@ public class QueryView extends View {
 		
 		view.layout(getLeft(), getTop(), getRight(), getBottom());
 		
-		int offsetShift ;
+		//int pageShift ;
 		if( (mOffsetIsFirst && pageShift < 0) || (mOffsetIsLast && pageShift > 0) ) {
-			offsetShift = 0 ;
-		} else {
-			offsetShift = pageShift * mNumRows ;
+			pageShift = 0 ;
 		}
-		view.setTabAndOffset(mTabIdx, mOffset+offsetShift) ;
+		view.setTabAndOffset(mTabIdx, mPageIdx+pageShift) ;
+		//this.preloadAdjacentForTabAndPage( mTabIdx, mPageIdx+pageShift ) ;
 		view.mViewStartX = mViewStartX ;
 	}
 	
@@ -365,7 +494,7 @@ public class QueryView extends View {
 	
     @Override
     protected void onDraw(Canvas canvas) {
-    	if( mTableLabelsView == null || mTableDataView == null ) {
+    	if( !mTableViewsInstalled ) {
     		return ;
     	}
     	if( mViewStartX > mMaxViewStartX ) {
@@ -440,10 +569,12 @@ public class QueryView extends View {
             canvas.translate(-xTranslate, mViewStartY);
         }
 
-    	if( mTableViewsInstalled && mCallback != null ) {
-    		mCallback.onChildViewInstalled() ;
-    	}
-    	mTableViewsInstalled = false ;
+    	if( mTableViewsInstalled && mTableViewsDoNotify && mCallback != null ) {
+    		if( mCallback != null ) {
+    			mCallback.onChildViewInstalled() ;
+    		}
+    		mTableViewsDoNotify = false ;
+    	}   	
     }
     @Override
     protected void onSizeChanged(int width, int height, int oldw, int oldh) {
