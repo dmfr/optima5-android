@@ -95,7 +95,15 @@
             android:windowSoftInputMode="adjustPan" >
         </activity>
         
-		
+        <activity
+            android:name=".explorer.xpressfile.XpressfileActivity"
+            android:icon="@drawable/mainmenu_xpressfile"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.Light">
+        </activity>
+        
+        		
 		<service
             android:name=".UploadService"
             android:enabled="true" />

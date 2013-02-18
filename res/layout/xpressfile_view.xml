@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/xpressfile_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:layout_marginTop="0dip"
+    android:background="#DDDDDD">
+    <ScrollView
+      android:layout_gravity="center_horizontal"
+      android:background="#FFFFFFFF"
+      android:layout_height="match_parent"
+      android:layout_width="@dimen/edit_event_view_width"
+      android:paddingLeft="@dimen/edit_event_view_padding_left"
+      android:paddingRight="@dimen/edit_event_view_padding_right">
+    <TableLayout
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:paddingBottom="30dip"
+	android:stretchColumns="1"
+	android:shrinkColumns="1"
+	android:id="@+id/xpressfile_filefields">
+	  
+	<TableRow
+	    xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:gravity="center_vertical"
+	    android:id="@+id/primarykey_row">
+	    <TextView
+		android:id="@+id/primarykey_label"
+		android:text=""
+		android:paddingRight="10dp"
+		style="@android:style/TextAppearance.Medium" />
+	    <LinearLayout
+		android:orientation="horizontal"
+		android:animateLayoutChanges="false">
+		<Button
+		    android:id="@+id/primarykey_button"
+		    android:layout_width="0px"
+		    android:layout_height="wrap_content"
+		    android:layout_weight="1"
+		    style="@style/TextAppearance.EditEvent_SpinnerButton" />
+	    </LinearLayout>
+	</TableRow>
+	  
+	<TableLayout
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
+	    android:paddingLeft="24dip"
+	    android:paddingRight="24dip"
+	    android:stretchColumns="2"
+	    android:shrinkColumns="0"
+	    android:background="#FFFFFFFF"
+	    android:id="@+id/xpressfile_primarykey_biblefields">
+	</TableLayout>
+	  
+	  
+    </TableLayout>
+    </ScrollView>
+</FrameLayout>

@@ -21,6 +21,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import za.dams.paracrm.explorer.Explorer;
+import za.dams.paracrm.explorer.xpressfile.Xpressfile;
+import za.dams.paracrm.explorer.xpressfile.XpressfileActivity;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -156,6 +158,11 @@ public class MainMenuActivity extends Activity {
             	
             	final Bundle bundle = new Bundle();
             	bundle.putInt("crmId", mModule.crmId);
+            	
+            	if( mModule.classObject == XpressfileActivity.class ) {
+            		bundle.putInt(XpressfileActivity.BUNDLE_KEY_MODE, XpressfileActivity.MODE_XPRESSFILE);
+            		bundle.putInt(XpressfileActivity.BUNDLE_KEY_XPRESSFILE_INPUTID, mModule.crmId);
+            	}
             	
             	// test saisie en cours ??
             	if( mModule.classObject == FileCaptureActivity.class && mTransaction != null ) {
@@ -496,6 +503,7 @@ public class MainMenuActivity extends Activity {
     
     public void myQuitActivity() {
     	Explorer.clearContext() ;
+    	Xpressfile.clearContext() ;
     	
     	if( CrmFileTransactionManager.getInstance(getApplicationContext()).getNbTransactions() == 0 ) {
     		finish() ;
@@ -593,6 +601,7 @@ public class MainMenuActivity extends Activity {
 	    // ...
 	    
 	    Explorer.clearContext() ;
+	    Xpressfile.clearContext() ;
 	}
 	
 	public void myRefreshDb(){
@@ -734,6 +743,7 @@ public class MainMenuActivity extends Activity {
             
             // Destruction des sigletons
             Explorer.clearContext() ;
+            Xpressfile.clearContext() ;
             
             // Non autorisé
             if( dbUpResult.isDenied ) {

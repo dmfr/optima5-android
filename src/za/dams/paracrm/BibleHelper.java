@@ -3,6 +3,7 @@ package za.dams.paracrm;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
@@ -46,6 +47,7 @@ public class BibleHelper {
     public static class BibleFieldCode {
     	public RecordType recordType ;
     	public String fieldCode ;
+    	public String fieldName ;
     	public FieldType fieldType ;
     	public String linkBible ;
     	public boolean isKey ;
@@ -55,10 +57,11 @@ public class BibleHelper {
     		this.recordType = recordType ;
     		this.fieldCode = fieldCode ;
     	}
-    	public BibleFieldCode( RecordType recordType, String fieldCode,
+    	public BibleFieldCode( RecordType recordType, String fieldCode, String fieldName,
     			FieldType fieldType, String linkBible, boolean isKey, boolean isHeader, boolean isHighlight ){
     		this.recordType = recordType ;
     		this.fieldCode = fieldCode ;
+    		this.fieldName = fieldName ;
     		this.fieldType = fieldType ;
     		this.linkBible = linkBible ;
     		this.isKey = isKey ;
@@ -91,6 +94,7 @@ public class BibleHelper {
     	public String displayStr ;
     	public String displayStr1 ;
     	public String displayStr2 ;
+    	public HashMap<String,String> optBibleFields ;
     	
     	public BibleEntry( String bibleCode, String treenodeKey, String entryKey ) {
     		this.bibleCode = bibleCode ;
@@ -226,7 +230,7 @@ public class BibleHelper {
     		
     		mMap.add(new BibleFieldCode(RecordType.BIBLE_TREENODE,"treenode_parent_key")) ;
     		mMap.add(new BibleFieldCode(RecordType.BIBLE_TREENODE,"treenode_key")) ;
-    		tmpCursor = mDb.rawQuery( String.format("SELECT tree_field_code,tree_field_type,tree_field_linkbible,tree_field_is_key,tree_field_is_header,tree_field_is_highlight FROM define_bible_tree WHERE bible_code='%s' ORDER BY tree_field_index",bibleCode.bibleCode) ) ;
+    		tmpCursor = mDb.rawQuery( String.format("SELECT tree_field_code,tree_field_type,tree_field_linkbible,tree_field_is_key,tree_field_is_header,tree_field_is_highlight,tree_field_lib FROM define_bible_tree WHERE bible_code='%s' ORDER BY tree_field_index",bibleCode.bibleCode) ) ;
     		while( tmpCursor.moveToNext() ){
     			
     			FieldType tFieldType ;
@@ -248,7 +252,7 @@ public class BibleHelper {
         		}
     			
         		BibleFieldCode bfc = new BibleFieldCode(
-        				RecordType.BIBLE_TREENODE,tmpCursor.getString(0),
+        				RecordType.BIBLE_TREENODE,tmpCursor.getString(0),tmpCursor.getString(6),
         				tFieldType,
         				tmpCursor.getString(2),
         				tmpCursor.getString(3).equals("O") ? true : false ,
@@ -269,7 +273,7 @@ public class BibleHelper {
     		
     		mMap.add(new BibleFieldCode(RecordType.BIBLE_ENTRY,"treenode_key")) ;
     		mMap.add(new BibleFieldCode(RecordType.BIBLE_ENTRY,"entry_key")) ;
-    		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible,entry_field_is_key,entry_field_is_header,entry_field_is_highlight FROM define_bible_entry WHERE bible_code='%s' ORDER BY entry_field_index",bibleCode.bibleCode) ) ;
+    		tmpCursor = mDb.rawQuery( String.format("SELECT entry_field_code,entry_field_type,entry_field_linkbible,entry_field_is_key,entry_field_is_header,entry_field_is_highlight,entry_field_lib FROM define_bible_entry WHERE bible_code='%s' ORDER BY entry_field_index",bibleCode.bibleCode) ) ;
     		while( tmpCursor.moveToNext() ){
     			
     			FieldType tFieldType ;
@@ -291,7 +295,7 @@ public class BibleHelper {
         		}
     			
         		BibleFieldCode bfc = new BibleFieldCode(
-        				RecordType.BIBLE_ENTRY,tmpCursor.getString(0),
+        				RecordType.BIBLE_ENTRY,tmpCursor.getString(0),tmpCursor.getString(6),
         				tFieldType,
         				tmpCursor.getString(2),
         				tmpCursor.getString(3).equals("O") ? true : false ,
@@ -314,7 +318,10 @@ public class BibleHelper {
     }
     
     
-    
+    public List<BibleFieldCode> getBibleFieldsDesc(String bibleCode) {
+    	BibleCode bc = new BibleCode(bibleCode) ;	
+    	return mapBible.get(bc) ;
+    }
     public BibleEntry getBibleEntry( String bibleCode, String entryKey ) {
     	
     	//Log.w(TAG, String.format("SELECT treenode_key FROM store_bible_entry WHERE bible_code='%s' AND entry_key='%s'",bibleCode,entryKey));
@@ -391,6 +398,13 @@ public class BibleHelper {
 				implodeArray(pretty.toArray(new String[pretty.size()]), " "),
 				implodeArray(pretty1.toArray(new String[pretty1.size()]), " "),
 				implodeArray(pretty2.toArray(new String[pretty2.size()]), " ")) ;
+       	
+       	bibleEntry.optBibleFields = new HashMap<String,String>() ;
+       	for( BibleFieldCode bfc : mapBible.get(new BibleCode(bibleEntry.bibleCode)) ) {
+       		if( bfc.recordType == RecordType.BIBLE_ENTRY && bfc.fieldType != null ) {
+       			bibleEntry.optBibleFields.put(bfc.fieldCode,bibleEntryFields.get("field_"+bfc.fieldCode)) ;
+       		}
+       	}
     	
     	return bibleEntry ;
     }

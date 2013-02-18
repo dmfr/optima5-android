@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/crm_row">
+    <TextView
+	android:id="@+id/crm_label"
+	android:text=""
+	android:layout_gravity="center_vertical"
+	android:textColor="#999999"
+	android:layout_height="wrap_content"
+	style="@android:style/TextAppearance.Medium" />
+    <View
+	android:layout_height="match_parent"
+	android:layout_width="16dp"/>
+    <TextView
+	android:id="@+id/crm_text"
+	android:text=""
+	android:textColor="@android:color/black"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_gravity="left"
+	style="@android:style/TextAppearance.Medium" />
+</TableRow>

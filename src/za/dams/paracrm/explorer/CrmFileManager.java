@@ -11,6 +11,7 @@ import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction.CrmFilePhoto;
 import za.dams.paracrm.DatabaseManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 
@@ -59,7 +60,7 @@ public class CrmFileManager {
 	
     // File descriptions
 	public enum FieldType {
-	    FIELD_TEXT, FIELD_NUMBER, FIELD_DATE, FIELD_DATETIME, FIELD_BIBLE, FIELD_NULL
+	    FIELD_TEXT, FIELD_BOOLEAN, FIELD_NUMBER, FIELD_DATE, FIELD_DATETIME, FIELD_BIBLE, FIELD_NULL
 	};
 	public static class CrmFileDesc {
 		public String fileCode ;
@@ -81,6 +82,7 @@ public class CrmFileManager {
     	
     	public boolean fieldIsHeader ;
     	public boolean fieldIsHighlight ;
+    	public boolean fieldIsMandatory ;
 	}
 	public static class CrmFileFieldValue {
     	public FieldType fieldType ;
@@ -198,7 +200,7 @@ public class CrmFileManager {
     	c.close() ;
     	
     	cfd.fieldsDesc = new ArrayList<CrmFileFieldDesc>() ;
-    	c = mDb.rawQuery( String.format("SELECT entry_field_code, entry_field_lib, entry_field_type, entry_field_linkbible, entry_field_is_header, entry_field_is_highlight FROM define_file_entry WHERE file_code='%s' ORDER BY entry_field_index",fileCode) ) ;
+    	c = mDb.rawQuery( String.format("SELECT entry_field_code, entry_field_lib, entry_field_type, entry_field_linkbible, entry_field_is_header, entry_field_is_highlight, entry_field_is_mandatory FROM define_file_entry WHERE file_code='%s' ORDER BY entry_field_index",fileCode) ) ;
     	while( c.moveToNext() ) {
     		CrmFileFieldDesc cffd = new CrmFileFieldDesc() ;
     		cffd.fieldCode = c.getString(0) ;
@@ -213,13 +215,20 @@ public class CrmFileManager {
     		else if( c.getString(2).equals("link") ) {
     			tFieldType = FieldType.FIELD_BIBLE ;
     		}
-    		else{
+    		else if( c.getString(2).equals("string") ) {
     			tFieldType = FieldType.FIELD_TEXT ;
+    		}
+    		else if( c.getString(2).equals("bool") ) {
+    			tFieldType = FieldType.FIELD_BOOLEAN ;
+    		}
+    		else{
+    			tFieldType = FieldType.FIELD_NULL ;
     		}
     		cffd.fieldType = tFieldType ;
     		cffd.fieldLinkBible = c.getString(3) ;
     		cffd.fieldIsHeader = c.getString(4).equals("O") ? true : false ;
     		cffd.fieldIsHighlight = c.getString(5).equals("O") ? true : false ;
+    		cffd.fieldIsMandatory = c.getString(6).equals("O") ? true : false ;
 
     		cfd.fieldsDesc.add(cffd) ;
     	}
@@ -399,7 +408,7 @@ public class CrmFileManager {
     								)
     						) ;				
     				break ;
-    			
+
     			case FIELD_NUMBER :
     				Float tFloat = sffr.valueNumber ;
     				float f = sffr.valueNumber ;
@@ -407,6 +416,15 @@ public class CrmFileManager {
     						new CrmFileFieldValue(fd.fieldType,
     								tFloat,false,null,new Date(),
     								displayFloat( f ),"",""
+    								)
+    						) ;								
+    				break ;
+
+    			case FIELD_BOOLEAN :
+    				cfr.recordData.put(fd.fieldCode,
+    						new CrmFileFieldValue(fd.fieldType,
+    								new Float(0),(sffr.valueNumber==1),null,new Date(),
+    								(sffr.valueNumber==1)?"true":"false","",""
     								)
     						) ;								
     				break ;
@@ -421,15 +439,38 @@ public class CrmFileManager {
     }
     
     
+    public CrmFileRecord fileGetEmptyRecord( String fileCode ) {
+		CrmFileRecord cfr = new CrmFileRecord();
+		cfr.fileCode = fileCode ;
+		cfr.filerecordId = -1 ;
+		cfr.syncVuid = "" ;
+		cfr.recordData = new HashMap<String,CrmFileFieldValue>() ;
+		
+		for( CrmFileFieldDesc fd : fileGetFileDescriptor(fileCode).fieldsDesc ) {
+			cfr.recordData.put(fd.fieldCode,
+					new CrmFileFieldValue(fd.fieldType,
+							new Float(0),false,"",new Date(),
+							"","",""
+							)
+					) ;
+		}
+    	
+		return cfr ;
+    }
+    
+    
     public String lookupFilecodeForId( long filerecordId ) {
     	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
     	Cursor c ;
     	c = mDb.rawQuery(String.format("SELECT file_code FROM store_file WHERE filerecord_id='%d'",filerecordId)) ;
     	if( c.getCount() != 1 ) {
+    		c.close() ;
     		return null ;
     	}
     	c.moveToNext() ;
-    	return c.getString(0) ;
+    	String tFileCode = c.getString(0) ;
+    	c.close();
+    	return tFileCode;
     }
     
     public String displayFloat( float f ) {
@@ -438,5 +479,81 @@ public class CrmFileManager {
     	} else {
     		return String.valueOf(f) ;
     	}
+    }
+    
+    
+    public boolean fileSaveRecord( CrmFileRecord cfr ) {
+    	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
+    	
+    	//Log.w(TAG,"Saving !!!") ;
+    	ContentValues cv ;
+    	
+    	String tFileCode = cfr.fileCode ;
+    	if( fileGetFileDescriptor(tFileCode) == null ) {
+    		return false ;
+    	}
+    	
+    	mDb.beginTransaction() ;
+    	
+    	long currentFileId ;
+    	
+    	// **** Entete fichier *****
+    	if( cfr.filerecordId < 1 ) {
+        	cv = new ContentValues() ;
+    		cv.put("file_code", tFileCode);
+    		currentFileId = mDb.insert("store_file", cv);
+    	}
+    	else {
+    		currentFileId = cfr.filerecordId ;
+    		mDb.execSQL(String.format("UPDATE store_file SET sync_is_synced=NULL,sync_timestamp=NULL WHERE filerecord_id='%d'",currentFileId));
+    	}
+    	
+    	
+    	mDb.execSQL(String.format("DELETE FROM store_file_field WHERE filerecord_id='%d'",currentFileId));
+		// ***** Revue de tous les champs à partir du define *****
+		for( CrmFileFieldDesc cffd : fileGetFileDescriptor(tFileCode).fieldsDesc ) {
+			String fileFieldCode = cffd.fieldCode ;
+			
+			
+			CrmFileFieldValue fv = cfr.recordData.get(fileFieldCode) ;
+			if( fv == null ) { // rien trouvé 
+				cv = new ContentValues() ;
+				cv.put("filerecord_id", currentFileId);
+				cv.put("filerecord_field_code", fileFieldCode);
+				mDb.insert("store_file_field", cv);
+				continue ;
+			}
+			
+			
+			cv = new ContentValues() ;
+			cv.put("filerecord_id", currentFileId);
+			cv.put("filerecord_field_code", fileFieldCode);
+			switch(fv.fieldType) {
+			case FIELD_BIBLE :
+				cv.put("filerecord_field_value_link", fv.valueString);
+				break ;
+			case FIELD_DATE :
+			case FIELD_DATETIME :
+				SimpleDateFormat sdf3 = new SimpleDateFormat("yyyy-MM-dd HH:mm") ;
+				cv.put("filerecord_field_value_date", sdf3.format(fv.valueDate)+":00");
+				break ;
+			case FIELD_NUMBER :
+				cv.put("filerecord_field_value_number", fv.valueFloat);
+				break ;
+			case FIELD_TEXT :
+				cv.put("filerecord_field_value_string", fv.valueString);
+				break ;
+			case FIELD_BOOLEAN :
+				cv.put("filerecord_field_value_number", (fv.valueBoolean)? 1 : 0 );
+				break ;
+			default :
+				break ;
+			}
+			mDb.insert("store_file_field", cv);
+		}
+		
+		mDb.endTransaction() ;
+		
+		return true ;
     }
 }

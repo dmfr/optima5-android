@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 import za.dams.paracrm.calendar.CalendarActivity;
 import za.dams.paracrm.explorer.ExplorerActivity;
+import za.dams.paracrm.explorer.xpressfile.CrmXpressfileManager;
+import za.dams.paracrm.explorer.xpressfile.XpressfileActivity;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.content.Context;
 import android.database.Cursor;
@@ -94,6 +96,19 @@ public class MainMenuAdapter extends BaseAdapter {
 	    	}
 		}
 		tmpCursor.close() ;
+		
+	    		
+		for( CrmXpressfileManager.CrmXpressfileInput cxi : CrmXpressfileManager.inputsList(mContext) ) {
+			if( cxi.mIsHidden ) {
+				continue ;
+			}
+
+			MODULES_DICT.add(new ModuleInfo(aId,
+				cxi.mTargetLib, 
+				R.drawable.mainmenu_xpressfile, 
+				XpressfileActivity.class,
+				cxi.mCrmInputId));
+		}
 		
 		initDone = true ;
 	}

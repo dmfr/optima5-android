@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="center_vertical"
+    android:id="@+id/crm_row">
+    <TextView
+	android:id="@+id/crm_label"
+	android:text=""
+	style="@style/TextAppearance.EditEvent_Label" />
+    <CheckBox
+	android:id="@+id/crm_checkbox"
+	android:layout_width="wrap_content"
+	android:layout_height="match_parent"
+	android:layout_gravity="center_vertical"
+	android:layout_marginLeft="16dip"
+	android:paddingLeft="8dip"
+	android:contentDescription="Done event"
+	android:gravity="center_vertical" />
+</TableRow>

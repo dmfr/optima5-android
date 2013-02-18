@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 25;
+    private final int DB_VERSION = 29;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -149,6 +149,7 @@ public class DatabaseManager {
                     + "entry_field_linkbible" + " VARCHAR(50),"
                     + "entry_field_is_header" + " VARCHAR(1),"
                     + "entry_field_is_highlight" + " VARCHAR(1),"
+                    + "entry_field_is_mandatory" + " VARCHAR(1),"
                     + "PRIMARY KEY( file_code, entry_field_code)"
                     + ");";
             db.execSQL(createTableQuery);
@@ -364,6 +365,16 @@ public class DatabaseManager {
                     + "account_is_on" + " VARCHAR(1),"
                     + "account_linkbible" + " VARCHAR(100),"
                     + "PRIMARY KEY( explorercfg_id )"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "input_xpressfile" + " ("
+                    + "xpressfile_id" + " INTEGER, "
+                    + "xpressfile_is_hidden" + " VARCHAR(1),"
+                    + "target_filecode" + " VARCHAR(100),"
+                    + "target_primarykey_fieldcode" + " VARCHAR(100),"
+                    + "PRIMARY KEY( xpressfile_id )"
                     + ");";
             db.execSQL(createTableQuery);
             
