@@ -207,7 +207,7 @@ public class CrmXpressfilePuller {
     
     private class ControllerResult extends SyncServiceController.Result {
     	public void onServiceEndCallback( int status, SyncPullRequest pr ) {
-    		if( pr == null && !mPendingPullRequests.containsValue(pr) ) {
+    		if( pr == null || !mPendingPullRequests.containsValue(pr) ) {
     			return ;
     		}
     		for( Map.Entry<XpressfilePullRequest,SyncPullRequest> tPair : mPendingPullRequests.entrySet() ) {
