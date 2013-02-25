@@ -636,7 +636,7 @@ public class CalendarController {
      */
     public long getForwardedEventId() {
     	if( mForwardedEventId == -1 ) {
-    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
+    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext.getApplicationContext() ) ;
     		mForwardedEventId = mManager.getForwardedEventId() ;
     	}
     	return mForwardedEventId ;
@@ -699,7 +699,7 @@ public class CalendarController {
     	int scenId = CrmCalendarManager.scenForwardGetId(mContext, crmInputId) ;
     	
     	if( scenId > 0 ) {
-    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext ) ;
+    		final CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( mContext.getApplicationContext() ) ;
     		
     		if( previousForwardedEventId > 0 && previousForwardedEventId != eventId ) {
     			mManager.purgeTransactions() ;
