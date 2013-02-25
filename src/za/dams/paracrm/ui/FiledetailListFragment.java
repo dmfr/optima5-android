@@ -7,14 +7,18 @@ import java.util.Iterator;
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
+import za.dams.paracrm.MainMenuActivity;
 import za.dams.paracrm.R;
 import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.explorer.xpressfile.XpressfileActivity;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
 import za.dams.paracrm.widget.InputPickerDialog;
 import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
 import android.app.FragmentTransaction;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,9 +26,11 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 
-public class FiledetailListFragment extends FiledetailFragment {
+public class FiledetailListFragment extends FiledetailFragment implements UtilityFragment.Listener {
 
 	private CrmFileTransaction mTransaction ;
+	
+	private UtilityFragment mUtilityFragment ;
 	
 	private ArrayList<HashMap<String,Object>> mList ;
 
@@ -42,11 +48,18 @@ public class FiledetailListFragment extends FiledetailFragment {
         return f;
     }
     
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState) ;
+		mUtilityFragment = (UtilityFragment) getFragmentManager().findFragmentByTag(UtilityFragment.TAG) ;
+	}
+	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
     	// LayoutInflater mInflate = getActivity().getLayoutInflater() ;
     	
     	return inflater.inflate(R.layout.filecapture_filedetail_list, container, false ) ;
     }
+	@Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
     	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
@@ -66,6 +79,32 @@ public class FiledetailListFragment extends FiledetailFragment {
         	   }
         }) ;
     }	
+	@Override
+	public void onResume(){
+		super.onResume() ;
+		mUtilityFragment.registerListener(this);
+		
+        int fieldIdx=-1 ;
+        for( CrmFileTransaction.CrmFileFieldDesc cffd : mTransaction.page_getFields(getShownIndex()) ) {
+        	fieldIdx++ ;
+        	if( cffd.fieldLinkfileIsOn ) {
+        		CrmFileTransaction.CrmFileFieldValue cffv = mTransaction.page_getRecordFieldValue(getShownIndex(), 0, fieldIdx) ;
+        		if( cffv==null ) {
+        			continue ;
+        		}
+        		if( !cffv.xpresscheckIsDone ) {
+        			mUtilityFragment.xpresscheckInvalidate(getPageInstanceTag(), fieldIdx);
+        		}
+        		mUtilityFragment.xpresscheckInit(getPageInstanceTag(), fieldIdx);
+        	}
+        }
+	}
+	@Override
+	public void onPause() {
+		mUtilityFragment.unregisterListener(this);
+		super.onPause() ;
+	}
+	
 	public void syncWithData(){
 		int pageId = getShownIndex() ;
 		
@@ -79,7 +118,7 @@ public class FiledetailListFragment extends FiledetailFragment {
     		fieldDesc = mIter.next() ;
     		
     		// fieldValue =  ;
-    		if( fieldDesc.fieldAutovalueIsOn ) {
+    		if( fieldDesc.fieldAutovalueIsOn && !fieldDesc.fieldLinkfileIsOn ) {
     			continue ;
     		}
     		
@@ -94,6 +133,20 @@ public class FiledetailListFragment extends FiledetailFragment {
     		else {
     			mPoint.put("icon",R.drawable.crm_missing) ;
     		}
+    		
+    		if( fieldDesc.fieldLinkfileIsOn ) {
+    			CrmFileTransaction.CrmFileFieldValue cffv = mTransaction.page_getRecordFieldValue(pageId,0,mindex) ;
+    			if( !cffv.xpresscheckIsDone ) {
+    				mPoint.put("icon",null) ;
+    			} else {
+    				if( cffv.xpresscheckHasRecord ) {
+    					mPoint.put("icon",R.drawable.crm_foldergreen) ;
+    				} else {
+    					mPoint.put("icon",R.drawable.crm_missing) ;
+    				}
+    			}
+    		}
+    		
     		mList.add(mPoint) ;
     	}
         ((SimpleAdapter) ((ListView) getView().findViewById(R.id.mylist)).getAdapter()).notifyDataSetChanged() ;
@@ -113,6 +166,15 @@ public class FiledetailListFragment extends FiledetailFragment {
 		int targetPageId = getShownIndex() ;
 		int targetRecordId = 0 ;
 		int targetFieldId = mindex ;
+		
+		if( mTransaction.page_getFields(getShownIndex()).get(mindex).fieldLinkfileIsOn ) {
+			mUtilityFragment.xpresscheckInvalidate(getPageInstanceTag(), mindex);
+			
+			int xpressfileId = mTransaction.page_getFields(getShownIndex()).get(mindex).fieldLinkfileXpressfileId ;
+			String xpressfilePrimaryKey = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueString ;
+			launchXpressfileActivity(xpressfileId,xpressfilePrimaryKey) ;
+			return ;
+		}
 		
 		String targetTitle = mTransaction.page_getFields(targetPageId).get(targetFieldId).fieldName ;
 		Bundle dialogBundle = new Bundle() ;
@@ -221,4 +283,23 @@ public class FiledetailListFragment extends FiledetailFragment {
         	FiledetailListFragment.this.syncWithData() ;
     	}
     }
+    
+    private void launchXpressfileActivity( int xpressfileInputId , String xpressfilePrimarykey ) {
+    	final Bundle bundle = new Bundle();
+		bundle.putInt(XpressfileActivity.BUNDLE_KEY_MODE, XpressfileActivity.MODE_XPRESSFILE);
+		bundle.putInt(XpressfileActivity.BUNDLE_KEY_XPRESSFILE_INPUTID, xpressfileInputId);
+		if( xpressfilePrimarykey != null ) {
+			bundle.putString(XpressfileActivity.BUNDLE_KEY_XPRESSFILE_PRIMARYKEY, xpressfilePrimarykey);
+		}
+		Intent intent = new Intent(getActivity(), XpressfileActivity.class);
+		intent.putExtras(bundle);
+		startActivity(intent);
+    }
+    
+	@Override
+	public void onPageInstanceChanged(int pageInstanceTag) {
+		if( pageInstanceTag==getPageInstanceTag() ) {
+			syncWithData() ;
+		}
+	}
 }

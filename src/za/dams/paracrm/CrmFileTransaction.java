@@ -290,6 +290,10 @@ public class CrmFileTransaction {
     	public Date valueDate ;
     	public String displayStr ;
     	public boolean isSet ;
+    	
+    	public boolean xpresscheckIsDone ;
+    	public boolean xpresscheckHasRecord ;
+    	
    	
     	public CrmFileFieldValue( FieldType fieldType,
     			float valueFloat ,
@@ -319,6 +323,49 @@ public class CrmFileTransaction {
     		this.valueDate = valueDate ;
     		this.displayStr = displayStr ;
     	}
+		public boolean equals( Object o ) {
+			if( o == null ) {
+				return false ;
+			}
+			CrmFileFieldValue ec = (CrmFileFieldValue)o ;
+			if( this.fieldType != ec.fieldType ) {
+				return false ;
+			}
+			if( this.valueFloat != ec.valueFloat ) {
+				return false ;
+			}
+			if( this.valueBoolean != ec.valueBoolean ) {
+				return false ;
+			}
+			if( (this.valueString == null && ec.valueString != null)
+					|| (this.valueString != null && !this.valueString.equals(ec.valueString)) ) {
+				return false ;
+			}
+			if( (this.valueDate == null && ec.valueDate != null)
+					|| (this.valueDate != null && !this.valueDate.equals(ec.valueDate)) ) {
+				return false ;
+			}
+			
+			if( this.isSet != ec.isSet ) {
+				return false ;
+			}
+			return true ;
+		}
+		public int hashCode() {
+			int result = 17 ;
+			
+			result = 31 * result + fieldType.ordinal() ;
+			
+			result = 31 * result + Float.floatToIntBits(valueFloat); ;		
+			result = 31 * result + ( valueBoolean? 1:0 ) ;
+			result = 31 * result + ( (valueString!=null)? valueString.hashCode():0 ) ;		
+			result = 31 * result + ( (valueDate!=null)? valueDate.hashCode():0 ) ;		
+		
+			result = 31 * result + ( isSet? 1:0 ) ;
+			
+			return result ;
+		}		
+		
     	public CrmFileFieldValue( JSONObject jsonObject ) {
     		try {
 				this.fieldType = FieldType.values()[jsonObject.getInt("fieldType")] ;
@@ -334,6 +381,8 @@ public class CrmFileTransaction {
 					this.displayStr = jsonObject.getString("displayStr") ;
 				}
 				this.isSet = jsonObject.getBoolean("isSet") ;
+				this.xpresscheckIsDone = jsonObject.getBoolean("xpresscheckIsDone") ;
+				this.xpresscheckHasRecord = jsonObject.getBoolean("xpresscheckHasRecord") ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -369,6 +418,8 @@ public class CrmFileTransaction {
     				jsonObject.put("displayStr", this.displayStr) ;
     			}
     			jsonObject.put("isSet", this.isSet) ;
+    			jsonObject.put("xpresscheckIsDone", this.xpresscheckIsDone) ;
+    			jsonObject.put("xpresscheckHasRecord", this.xpresscheckHasRecord) ;
     			return jsonObject ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -393,6 +444,9 @@ public class CrmFileTransaction {
     	public CrmFileFieldValue fieldAutovalue ;
     	
     	public boolean fieldSearchIsCondition ;
+    	
+    	public boolean fieldLinkfileIsOn ;
+    	public int fieldLinkfileXpressfileId ;
     	
     	
     	
@@ -426,6 +480,8 @@ public class CrmFileTransaction {
 					this.fieldAutovalue = new CrmFileFieldValue(jsonObject.getJSONObject("fieldAutovalue")) ;
 				}
 				this.fieldSearchIsCondition = jsonObject.optBoolean("fieldSearchIsCondition",false) ;
+				this.fieldLinkfileIsOn = jsonObject.optBoolean("fieldLinkfileIsOn",false) ;
+				this.fieldLinkfileXpressfileId = jsonObject.optInt("fieldLinkfileXpressfileId",0) ;
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -463,6 +519,8 @@ public class CrmFileTransaction {
     				jsonObject.put("fieldAutovalue",this.fieldAutovalue.toJSONObject()) ;
     			}
     			jsonObject.put("fieldSearchIsCondition",this.fieldSearchIsCondition) ;
+    			jsonObject.put("fieldLinkfileIsOn",this.fieldLinkfileIsOn) ;
+    			jsonObject.put("fieldLinkfileXpressfileId",this.fieldLinkfileXpressfileId) ;
     			
     			return jsonObject ;
     			
@@ -897,7 +955,7 @@ public class CrmFileTransaction {
 
 			ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
 
-			Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition " +
+			Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition, linkfile_is_on, linkfile_xpressfile_id " +
 					"FROM input_scen_page_field " +
 					"WHERE scen_id='%d' AND scen_page_index='%d' ORDER BY scen_page_field_index",
 					CrmInputScenId, tFileinfo.pageId )) ;
@@ -940,6 +998,10 @@ public class CrmFileTransaction {
 				}
 				if( tmpCursor.getString(5).equals("O") ) {
 					tmpField.fieldSearchIsCondition = true ;
+				}
+				if( tmpCursor.getString(6).equals("O") ) {
+					tmpField.fieldLinkfileIsOn = true ;
+					tmpField.fieldLinkfileXpressfileId = tmpCursor.getInt(7) ;
 				}
 				tFields.add( tmpField ) ;
 			}
@@ -1459,6 +1521,9 @@ public class CrmFileTransaction {
 						if( !recValue.isSet ){
 							return false ;
 						}
+						if( recValue.xpresscheckIsDone && !recValue.xpresscheckHasRecord ) {
+							return false ;
+						}
 					}
 				}
 			}
@@ -1548,7 +1613,8 @@ public class CrmFileTransaction {
 				CrmFileFieldDesc fieldDesc = descIter.next() ;
 				if( fieldDesc.fieldAutovalueIsOn ) {
 					CrmFileFieldValue fieldValue = TransactionPageRecords.get(0).get(0).recordData.get(fieldDesc.fieldAutovalueSrc) ;
-					if( fieldValue == null ) {
+					CrmFileFieldValue destValue = TransactionPageRecords.get(pageId).get(0).recordData.get(fieldDesc.fieldCode);
+					if( fieldValue == null || fieldValue.equals(destValue) ) {
 						continue ;
 					}
 					// Log.w(TAG,"Putting autovalue "+fieldDesc.fieldCode+" from "+fieldDesc.fieldAutovalueSrc) ;

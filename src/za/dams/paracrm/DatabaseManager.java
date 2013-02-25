@@ -28,7 +28,7 @@ public class DatabaseManager {
 
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 30;
+    private final int DB_VERSION = 32;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -343,6 +343,8 @@ public class DatabaseManager {
                     + "field_autovalue_src" + " VARCHAR(1),"
                     + "field_is_pivot" + " VARCHAR(1),"
                     + "search_is_condition" + " VARCHAR(1),"
+                    + "linkfile_is_on" + " VARCHAR(1),"
+                    + "linkfile_xpressfile_id" + " INTEGER,"
                     + "PRIMARY KEY( scen_id , scen_page_index , scen_page_field_index )"
                     + ");";
             db.execSQL(createTableQuery);

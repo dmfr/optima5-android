@@ -9,7 +9,6 @@ import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldDesc;
 import za.dams.paracrm.CrmFileTransaction.CrmFileFieldValue;
 import za.dams.paracrm.CrmFileTransaction.CrmFilePageinfo;
-import za.dams.paracrm.CrmFileTransaction.CrmFileRecord;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.CrmFileTransaction.PageType;
 import za.dams.paracrm.CrmFileTransactionManager;
@@ -17,6 +16,7 @@ import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.SyncPullRequest;
 import za.dams.paracrm.SyncServiceController;
 import za.dams.paracrm.explorer.CrmFileManager;
+import za.dams.paracrm.explorer.xpressfile.CrmXpressfilePuller;
 import android.app.Fragment;
 import android.content.Context;
 import android.database.Cursor;
@@ -29,8 +29,13 @@ public class UtilityFragment extends Fragment {
 	
 	private Context mContext ;
 	private CrmFileTransaction mCrmFileTransaction ;
+	
 	private SyncServiceController mSyncServiceController ;
 	private SyncControllerResult mSyncResult ;
+	
+	private CrmXpressfilePuller mCrmXpressfilePuller ;
+	private CrmXpressfilePullListener mCrmXpressfilePullListener ;
+	
 	
     public interface Listener {
     	public void onPageInstanceChanged(int pageInstanceTag) ;
@@ -77,16 +82,28 @@ public class UtilityFragment extends Fragment {
     	mSyncServiceController = SyncServiceController.getInstance(mContext);
         mSyncResult = new SyncControllerResult() ;
         mSyncServiceController.addResultCallback(mSyncResult) ;
+        
+        mCrmXpressfilePuller = CrmXpressfilePuller.getInstance(mContext);
+        mCrmXpressfilePullListener = new CrmXpressfilePullListener();
+        mCrmXpressfilePuller.registerListener(mCrmXpressfilePullListener);
     }
     @Override
     public void onDestroy(){
     	mSyncServiceController.removeResultCallback(mSyncResult);
+    	mCrmXpressfilePuller.unregisterListener(mCrmXpressfilePullListener);
     	super.onDestroy();
     }
     
     
     
     public boolean isPageHasPendingJobs( int pageInstanceTag ) {
+    	// recherche dans mXpresscheckScheduled
+    	for( XpresscheckJob tXpressJob : mXpresscheckScheduled ) {
+    		if( tXpressJob.targetPageInstanceTag == pageInstanceTag ) {
+    			return true ;
+    		}
+    	}
+    	
     	// recherche dans mAutocompleteScheduled
     	for( Map.Entry<SyncPullRequest,AutocompleteJob> tMap : mAutocompleteScheduled.entrySet() ) {
     		if( tMap.getValue().targetPageInstanceTag == pageInstanceTag ) {
@@ -103,6 +120,45 @@ public class UtilityFragment extends Fragment {
     	return false ;
     }
     
+    private class XpresscheckJob {
+    	int targetPageInstanceTag ;
+    	int targetFieldId ;
+    	
+    	int xpressfileInputId ;
+    	String xpressfilePrimarykey ;
+    	
+		public boolean equals( Object o ) {
+			if( o == null ) {
+				return false ;
+			}
+			XpresscheckJob ec = (XpresscheckJob)o ;
+			if( this.targetPageInstanceTag != ec.targetPageInstanceTag ) {
+				return false ;
+			}
+			if( this.targetFieldId != ec.targetFieldId ) {
+				return false ;
+			}
+			if( this.xpressfileInputId != ec.xpressfileInputId ) {
+				return false ;
+			}
+			if( (this.xpressfilePrimarykey == null && ec.xpressfilePrimarykey != null)
+					|| (this.xpressfilePrimarykey != null && !this.xpressfilePrimarykey.equals(ec.xpressfilePrimarykey)) ) {
+				return false ;
+			}
+			return true ;
+		}
+		public int hashCode() {
+			int result = 17 ;
+			
+			result = 31 * result + targetPageInstanceTag ;
+			result = 31 * result + targetFieldId ;
+			
+			result = 31 * result + xpressfileInputId ;
+			result = 31 * result + ( (xpressfilePrimarykey!=null)? xpressfilePrimarykey.hashCode():0 ) ;		
+			
+			return result ;
+		}		
+    }
     
     private class AutocompleteJob {
     	int targetPageInstanceTag ;
@@ -163,6 +219,72 @@ public class UtilityFragment extends Fragment {
 			
 			return result ;
 		}		
+    }
+    
+
+    
+    private List<XpresscheckJob> mXpresscheckScheduled = new ArrayList<XpresscheckJob>() ;
+    private List<XpresscheckJob> mXpresscheckInstalled = new ArrayList<XpresscheckJob>() ;
+    public void xpresscheckInit( int pageInstanceTag, int fieldIdx ) {
+    	int targetPageIdx = mCrmFileTransaction.list_getPageIdxByTag(pageInstanceTag) ;
+    	
+    	CrmFileFieldDesc cffd = mCrmFileTransaction.page_getFields(targetPageIdx).get(fieldIdx);
+    	CrmFileFieldValue cffv = mCrmFileTransaction.page_getRecordFieldValue(targetPageIdx, 0, fieldIdx);
+    	if( cffd==null || cffv==null || !cffv.isSet || !cffd.fieldLinkfileIsOn ) {
+    		return ;
+    	}
+    	
+    	//création du job
+    	XpresscheckJob aJob = new XpresscheckJob();
+    	aJob.targetPageInstanceTag = pageInstanceTag ;
+    	aJob.targetFieldId = fieldIdx ;
+    	aJob.xpressfileInputId = cffd.fieldLinkfileXpressfileId ;
+    	aJob.xpressfilePrimarykey = cffv.valueString;
+    	
+    	// si deja installé
+    	if( mXpresscheckInstalled.contains(aJob) ) {
+    		return ;
+    	}
+    	
+    	// lancement
+    	mXpresscheckScheduled.add(aJob);
+    	notifyPageChanged(pageInstanceTag);
+    	mCrmXpressfilePuller.requestPull(aJob.xpressfileInputId, aJob.xpressfilePrimarykey) ;
+    }
+    public void xpresscheckInvalidate( int pageInstanceTag, int fieldIdx ) {
+    	for(XpresscheckJob tJob : new ArrayList<XpresscheckJob>(mXpresscheckInstalled)) {
+    		if( tJob.targetPageInstanceTag==pageInstanceTag && tJob.targetFieldId==fieldIdx ) {
+    			mXpresscheckInstalled.remove(tJob);
+    		}
+    	}
+    	
+    	// CrmFileTransaction data
+    	int targetPageIdx = mCrmFileTransaction.list_getPageIdxByTag(pageInstanceTag) ;
+    	CrmFileFieldValue cffv = mCrmFileTransaction.page_getRecordFieldValue(targetPageIdx, 0, fieldIdx);
+    	if( cffv==null ) {
+    		return ;
+    	}
+    	cffv.xpresscheckIsDone = false ;
+    }
+    private void xpresscheckRun_onJobDone( XpresscheckJob aJob, boolean hasRecord ) {
+    	int targetPageInstanceTag = aJob.targetPageInstanceTag ;
+    	for( XpresscheckJob tJob : new ArrayList<XpresscheckJob>(mXpresscheckInstalled) ){
+    		if( tJob.targetPageInstanceTag == targetPageInstanceTag ) {
+    			mXpresscheckInstalled.remove(tJob);
+    		}
+    	}
+    	mXpresscheckInstalled.add(aJob) ;
+    
+    	// CrmFileTransaction data
+    	int targetPageIdx = mCrmFileTransaction.list_getPageIdxByTag(aJob.targetPageInstanceTag) ;
+    	CrmFileFieldValue cffv = mCrmFileTransaction.page_getRecordFieldValue(targetPageIdx, 0, aJob.targetFieldId);
+    	if( cffv==null ) {
+    		return ;
+    	}
+    	cffv.xpresscheckIsDone = true ;
+    	cffv.xpresscheckHasRecord = hasRecord ;
+    	
+    	notifyPageChanged(targetPageInstanceTag);
     }
     
     
@@ -355,12 +477,12 @@ public class UtilityFragment extends Fragment {
 		if( aJob.srcFilter_isOn ) {
 			c = mDb.rawQuery(String.format("SELECT store_file.filerecord_id FROM store_file " +
 					"JOIN store_file_field ON store_file_field.filerecord_id = store_file.filerecord_id AND store_file_field.filerecord_field_code='%s' " +
-					"WHERE store_file.file_code='%s' AND store_file_field.filerecord_field_value_link='%s' " +
+					"WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) AND store_file_field.filerecord_field_value_link='%s' " +
 					"ORDER BY sync_timestamp DESC LIMIT 1",
 					aJob.srcFilter_fieldCode,aJob.srcFileCode,aJob.srcFilter_fieldValue)) ;
 		} else {
 			c = mDb.rawQuery(String.format("SELECT store_file.filerecord_id FROM store_file " +
-					"WHERE store_file.file_code='%s' " +
+					"WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) " +
 					"ORDER BY sync_timestamp DESC LIMIT 1",
 					aJob.srcFileCode)) ;
 		}
@@ -468,7 +590,7 @@ public class UtilityFragment extends Fragment {
     }
     private void autocompleteRun_onJobDone( AutocompleteJob aJob ) {
     	int targetPageInstanceTag = aJob.targetPageInstanceTag ;
-    	for( AutocompleteJob tJob : mAutocompleteInstalled ){
+    	for( AutocompleteJob tJob : new ArrayList<AutocompleteJob>(mAutocompleteInstalled) ){
     		if( tJob.targetPageInstanceTag == targetPageInstanceTag ) {
     			mAutocompleteInstalled.remove(tJob);
     		}
@@ -487,10 +609,24 @@ public class UtilityFragment extends Fragment {
     }
     
     private class SyncControllerResult extends SyncServiceController.Result {
+    	@Override
     	public void onServiceEndCallback( int status, SyncPullRequest pr ) {
     		if( pr != null && mAutocompleteScheduled.containsKey(pr) ) {
         		AutocompleteJob tJobNow = mAutocompleteScheduled.remove(pr);
         		autocompleteDo(tJobNow) ;
+    		}
+    	}
+    }
+    private class CrmXpressfilePullListener implements CrmXpressfilePuller.Listener {
+    	@Override
+    	public void onXpressfilePullDeliver(int xpressfileInputId, String xpressfilePrimarykey, CrmFileManager.CrmFileRecord pulledCrmFileRecord ) {
+    		for( XpresscheckJob tJob : new ArrayList<XpresscheckJob>(mXpresscheckScheduled) ) {
+    			if( tJob.xpressfileInputId == xpressfileInputId 
+    					&& tJob.xpressfilePrimarykey.equals(xpressfilePrimarykey) ) {
+    				XpresscheckJob tJobNow = tJob ;
+    				mXpresscheckScheduled.remove(tJob);
+    				xpresscheckRun_onJobDone(tJobNow , (pulledCrmFileRecord != null) ) ;
+    			}
     		}
     	}
     }
