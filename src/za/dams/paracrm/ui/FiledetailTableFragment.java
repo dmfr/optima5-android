@@ -29,18 +29,23 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.CalendarView;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
-public class FiledetailTableFragment extends FiledetailFragment {
+public class FiledetailTableFragment extends FiledetailFragment implements UtilityFragment.Listener {
 
 	private CrmFileTransaction mTransaction ;
 	
 	@SuppressWarnings("unused")
 	private static final String TAG = "PARACRM/UI/FiledetailTableFragment";
 	
+	private UtilityFragment mUtilityFragment ;
+	
 	private HashMap<Integer,String> mSaveBuffer ;
+	
+	ProgressBar mProgressBar ;
 	
 	public static FiledetailTableFragment newInstance(int index) {
 		FiledetailTableFragment f = new FiledetailTableFragment();
@@ -53,9 +58,18 @@ public class FiledetailTableFragment extends FiledetailFragment {
 	    return f;
 	}
 	
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		return inflater.inflate(R.layout.filecapture_filedetail_table, container, false ) ;
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState) ;
+		mUtilityFragment = (UtilityFragment) getFragmentManager().findFragmentByTag(UtilityFragment.TAG) ;
 	}
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		View view = inflater.inflate(R.layout.filecapture_filedetail_table, container, false ) ;
+		mProgressBar = (ProgressBar) view.findViewById(R.id.myprogress) ;
+		return view ;
+	}
+	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 	    super.onActivityCreated(savedInstanceState);
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
@@ -63,15 +77,25 @@ public class FiledetailTableFragment extends FiledetailFragment {
 		
 		mSaveBuffer = new HashMap<Integer,String>() ;
 		
+		mUtilityFragment.autocompleteInit(getPageInstanceTag());
+		
 	    syncWithData() ;
+	}
+	@Override
+	public void onResume(){
+		super.onResume() ;
+		mUtilityFragment.registerListener(this);
 	}
 	
 	
-	
-	
+	private void updateFooterView(){
+		boolean isRefreshing = mUtilityFragment.isPageHasPendingJobs(getPageInstanceTag()) ;
+		mProgressBar.setVisibility(isRefreshing ? View.VISIBLE:View.GONE) ;
+	}
 	public void syncWithData(){
 		int pageId = getShownIndex() ;
 		
+		updateFooterView() ;
 		
 		ArrayList<CrmFileTransaction.CrmFileFieldDesc> tDesc = mTransaction.page_getFields(pageId) ;
 		Iterator<CrmFileTransaction.CrmFileFieldDesc> mIter ;
@@ -274,9 +298,13 @@ public class FiledetailTableFragment extends FiledetailFragment {
        	}
     	
 	}
+	@Override
 	public void onPause() {
 		saveValues() ;
 		mTransaction.links_refresh() ;
+		
+		mUtilityFragment.unregisterListener(this);
+		
 		super.onPause() ;
 	}
 	
@@ -330,5 +358,13 @@ public class FiledetailTableFragment extends FiledetailFragment {
         	FiledetailTableFragment.this.syncWithData() ;
     	}
     }
+    
+    
+	@Override
+	public void onPageInstanceChanged(int pageInstanceTag) {
+		if( pageInstanceTag==getPageInstanceTag() ) {
+			syncWithData() ;
+		}
+	}
 
 }

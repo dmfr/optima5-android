@@ -47,6 +47,8 @@ public class FileCaptureActivity extends Activity {
 	private static final String TAG = "PARACRM/UI/FileCaptureActivity";
 	
 	protected ProgressDialog mProgressDialog;
+	
+	private UtilityFragment mUtilityFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,7 +104,15 @@ public class FileCaptureActivity extends Activity {
         }
         
         
-        // 
+        // ************ Setup utility fragment ***************
+        mUtilityFragment = (UtilityFragment) getFragmentManager().findFragmentByTag(UtilityFragment.TAG) ;
+        if( mUtilityFragment == null ) {
+        	mUtilityFragment = UtilityFragment.newInstance() ;
+        	FragmentTransaction ft = getFragmentManager().beginTransaction();
+        	ft.add(mUtilityFragment, UtilityFragment.TAG) ;
+        	ft.commit() ;
+        }
+        // *************************************************
         
         setContentView(R.layout.filecapture);
     }

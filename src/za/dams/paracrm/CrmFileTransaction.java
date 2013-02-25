@@ -34,6 +34,8 @@ public class CrmFileTransaction {
 	private int CrmInputScenId ;
 	private String CrmFileCode ;
 	
+	private int nextPageInstanceTag ;
+	
 	private ArrayList<CrmFilePivot> outerPivots ;
 	
 	private ArrayList<CrmFilePageinfo> TransactionPages ;
@@ -55,6 +57,7 @@ public class CrmFileTransaction {
 	};
 	
 	public static class CrmFilePageinfo {
+    	public int pageInstanceTag ;
     	public int pageId ;
     	public int nbChildren ;
     	public PageType pageType = PageType.PAGETYPE_NULL ;
@@ -73,8 +76,12 @@ public class CrmFileTransaction {
     	public CrmFilePivot innerPivot ;
     	public String pivotTag ;
     	public int pivotForeignRefIdx ;
+    	public boolean autocompleteIsOn ;
+    	public boolean autocompleteFilterIsOn ;
+    	public String autocompleteFilterSrc ;
 	
-    	public CrmFilePageinfo( int aPageId , PageType aPageType , PageTableType aPageTableType , String aFileCode, String aFileLib, boolean aIsSubfile, boolean aFileHasGmap ) {
+    	public CrmFilePageinfo( int aPageInstanceTag, int aPageId , PageType aPageType , PageTableType aPageTableType , String aFileCode, String aFileLib, boolean aIsSubfile, boolean aFileHasGmap ) {
+    		pageInstanceTag = aPageInstanceTag ;
     		pageId = aPageId ;
     		pageType = aPageType ;
     		pageTableType = aPageTableType ;
@@ -89,7 +96,8 @@ public class CrmFileTransaction {
     		pageIsHidden = true ;
     		pageInnerContainer = false ;
     	}
-    	public CrmFilePageinfo( int aPageId , PageType aPageType , int aNbChildren ) {
+    	public CrmFilePageinfo( int aPageInstanceTag, int aPageId , PageType aPageType , int aNbChildren ) {
+    		pageInstanceTag = aPageInstanceTag ;
     		pageId = aPageId ;
     		nbChildren = aNbChildren ;
     		pageType = aPageType ;
@@ -107,6 +115,7 @@ public class CrmFileTransaction {
     	}
     	public CrmFilePageinfo( JSONObject jsonObject ) {
     		try {
+				pageInstanceTag = jsonObject.getInt("pageInstanceTag");
 				pageId = jsonObject.getInt("pageId");
 				nbChildren = jsonObject.getInt("nbChildren");
 				pageType = PageType.values()[jsonObject.getInt("pageType")] ;
@@ -131,6 +140,11 @@ public class CrmFileTransaction {
 					pivotTag = jsonObject.getString("pivotTag");
 				}
 				pivotForeignRefIdx = jsonObject.getInt("pivotForeignRefIdx");
+				autocompleteIsOn = jsonObject.getBoolean("autocompleteIsOn");
+				autocompleteFilterIsOn = jsonObject.getBoolean("autocompleteFilterIsOn");
+				if( jsonObject.has("autocompleteFilterSrc") ) {
+					autocompleteFilterSrc = jsonObject.getString("autocompleteFilterSrc");
+				}
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -139,6 +153,7 @@ public class CrmFileTransaction {
     	public JSONObject toJSONObject() {
     		try {
     			JSONObject jsonObject = new JSONObject() ;
+				jsonObject.put("pageInstanceTag", pageInstanceTag) ;
 				jsonObject.put("pageId", pageId) ;
 				jsonObject.put("nbChildren", nbChildren) ;
 				jsonObject.put("pageType",pageType.ordinal()) ;
@@ -163,6 +178,11 @@ public class CrmFileTransaction {
 					jsonObject.put("pivotTag", pivotTag) ;
 				}
 				jsonObject.put("pivotForeignRefIdx", pivotForeignRefIdx) ;
+				jsonObject.put("autocompleteIsOn", autocompleteIsOn) ;
+				jsonObject.put("autocompleteFilterIsOn", autocompleteFilterIsOn) ;
+				if( autocompleteFilterSrc != null ) {
+					jsonObject.put("autocompleteFilterSrc", autocompleteFilterSrc) ;
+				}
 				return jsonObject ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -564,6 +584,7 @@ public class CrmFileTransaction {
 		try {
 			this.CrmInputScenId = jsonObj.getInt("CrmInputScenId") ;
 			this.CrmFileCode = jsonObj.getString("CrmFileCode") ;
+			this.nextPageInstanceTag = jsonObj.getInt("nextPageInstanceTag") ;
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -627,7 +648,7 @@ public class CrmFileTransaction {
 		this.mContext = c ;
 		mDb = DatabaseManager.getInstance(c) ;
 		this.CrmInputScenId = CrmInputScenId ;
-		
+		this.nextPageInstanceTag = 1 ;
 		
 		outerPivots = new ArrayList<CrmFilePivot>() ;
 		TransactionPages = new ArrayList<CrmFilePageinfo>() ;
@@ -753,10 +774,10 @@ public class CrmFileTransaction {
 			}
 			tmpInnerCursor.close() ;
 
-			tmpPageInfo = new CrmFilePageinfo(tmpCursor.getInt(4),pageType,nbChildren) ;
+			tmpPageInfo = new CrmFilePageinfo(nextPageInstanceTag++,tmpCursor.getInt(4),pageType,nbChildren) ;
 		}
 		else if( pageType == PageType.PAGETYPE_SAVE ){
-			tmpPageInfo = new CrmFilePageinfo(tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ;
+			tmpPageInfo = new CrmFilePageinfo(nextPageInstanceTag++,tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ;
 		}
 		else {
 			tmpInnerCursor = mDb.rawQuery( String.format("SELECT file_code, file_lib, gmap_is_on, file_parent_code FROM define_file WHERE file_code='%s'",tmpCursor.getString(1)) ) ;
@@ -766,7 +787,7 @@ public class CrmFileTransaction {
 			}
 			tmpInnerCursor.moveToNext() ;
 
-			tmpPageInfo = new CrmFilePageinfo( tmpCursor.getInt(4), pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ;
+			tmpPageInfo = new CrmFilePageinfo( nextPageInstanceTag++, tmpCursor.getInt(4), pageType,pagetableType, tmpInnerCursor.getString(0) , tmpCursor.getString(0) , !(tmpInnerCursor.getString(3).equals("")), tmpInnerCursor.getString(2).equals("O") ) ;
 			if( pageType == PageType.PAGETYPE_LOGLIST ) {
 				tmpPageInfo.loadIsLoadable = true ;
 				tmpPageInfo.loadIsLoaded = false ;
@@ -776,6 +797,14 @@ public class CrmFileTransaction {
 			}
 			tmpInnerCursor.close() ;
 		}
+		tmpCursor.close() ;
+		
+		// paramètres autocomplete
+		tmpCursor = mDb.rawQuery( String.format("SELECT autocomplete_is_on, autocomplete_filter_is_on, autocomplete_filter_src FROM input_scen_page WHERE scen_id='%d' AND scen_page_index='%d'",CrmInputScenId,pageId) ) ;
+		tmpCursor.moveToNext() ;
+		tmpPageInfo.autocompleteIsOn = tmpCursor.getString(0).equals("O");
+		tmpPageInfo.autocompleteFilterIsOn = tmpCursor.getString(1).equals("O");
+		tmpPageInfo.autocompleteFilterSrc = tmpCursor.getString(2);
 		tmpCursor.close() ;
 		
 		// ajout de outerPivot ?
@@ -1138,11 +1167,9 @@ public class CrmFileTransaction {
 	
 	
 	
-	/*
 	public String getCrmFileCode(){
 		return CrmFileCode ;
 	}
-	*/
 	public int getCrmInputScenId() {
 		return CrmInputScenId ;
 	}
@@ -1151,11 +1178,33 @@ public class CrmFileTransaction {
 	public ArrayList<CrmFilePageinfo> list_getAllPages() {
 		return TransactionPages ;
 	}
+	public CrmFilePageinfo list_getPage( int pageId ) {
+		if( pageId >= TransactionPages.size() || pageId<0 ) {
+			return null ;
+		}
+		return TransactionPages.get(pageId) ;
+	}
 	public PageType list_getPageType( int pageId ) {
 		if( TransactionPages.get(pageId) != null ) {
 			return TransactionPages.get(pageId).pageType ;
 		}
 		return PageType.PAGETYPE_NULL ;
+	}
+	public int list_getPageInstanceTag( int pageId ) {
+		if( TransactionPages.get(pageId) != null ) {
+			return TransactionPages.get(pageId).pageInstanceTag ;
+		}
+		return -1 ;
+	}
+	public int list_getPageIdxByTag( int pageInstanceTag ) {
+		int cnt = -1 ;
+		for( CrmFilePageinfo fpi : TransactionPages ) {
+			cnt++ ;
+			if( fpi.pageInstanceTag == pageInstanceTag ) {
+				return cnt;
+			}
+		}
+		return -1 ;
 	}
 	
 	
@@ -2099,6 +2148,7 @@ public class CrmFileTransaction {
 			JSONObject jsonObj = new JSONObject() ;
 			jsonObj.put("CrmInputScenId",CrmInputScenId) ;
 			jsonObj.put("CrmFileCode", CrmFileCode) ;
+			jsonObj.put("nextPageInstanceTag", nextPageInstanceTag) ;
 			
 			JSONArray JsonOuterPivots = new JSONArray() ;
 			for( CrmFilePivot opivot : outerPivots ) {
