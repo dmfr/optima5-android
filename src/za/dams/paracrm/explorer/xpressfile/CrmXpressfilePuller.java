@@ -13,6 +13,7 @@ import za.dams.paracrm.explorer.CrmFileManager.CrmFileRecord;
 import za.dams.paracrm.explorer.xpressfile.CrmXpressfileManager.CrmXpressfileInput;
 import android.content.Context;
 import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Handler;
 
 public class CrmXpressfilePuller {
@@ -179,30 +180,56 @@ public class CrmXpressfilePuller {
     	mSyncServiceController.requestPull(spr) ;
     	return ;
     }
+    
     private void deliverForRequest( XpressfilePullRequest xpr ) {
-    	CrmFileRecord crmFileRecord = null ;
-    	
-    	// Requete dans la base local Explorer.CrmFileManager
-		DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
-		Cursor c = mDb.rawQuery(String.format("SELECT store_file.filerecord_id FROM store_file " +
-				"JOIN store_file_field ON store_file_field.filerecord_id = store_file.filerecord_id AND store_file_field.filerecord_field_code='%s' " +
-				"WHERE store_file.file_code='%s' AND store_file_field.filerecord_field_value_link='%s' " +
-				"ORDER BY sync_timestamp DESC LIMIT 1",
-				xpr.mFileFieldCode,xpr.mFileCode,xpr.mFileFieldValue)) ;
-		if( c.getCount() == 1 ) {
-			c.moveToNext() ;
-			int filerecordId = c.getInt(0) ;
-			crmFileRecord = mCrmFileManager.filePullData(xpr.mFileCode, filerecordId, 0).get(0) ;
+    	new DeliverTask().execute(xpr);
+    }
+    private class DeliverTask extends AsyncTask<XpressfilePullRequest,Void,CrmFileRecord> {
+    	private XpressfilePullRequest mXpressfilePullRequest ;
+
+		@Override
+		protected CrmFileRecord doInBackground(XpressfilePullRequest... arrXpr) {
+			if( arrXpr.length != 1 ) {
+				return null ;
+			}
+			XpressfilePullRequest xpr = arrXpr[0] ;
+			mXpressfilePullRequest = xpr ;
+			
+			CrmFileRecord crmFileRecord = null ;
+			
+	    	// Requete dans la base local Explorer.CrmFileManager
+			DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
+			Cursor c = mDb.rawQuery(String.format("SELECT store_file.filerecord_id FROM store_file " +
+					"JOIN store_file_field ON store_file_field.filerecord_id = store_file.filerecord_id AND store_file_field.filerecord_field_code='%s' " +
+					"WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) AND store_file_field.filerecord_field_value_link='%s' " +
+					"ORDER BY sync_timestamp DESC LIMIT 1",
+					xpr.mFileFieldCode,xpr.mFileCode,xpr.mFileFieldValue)) ;
+			if( c.getCount() == 1 ) {
+				c.moveToNext() ;
+				int filerecordId = c.getInt(0) ;
+				mCrmFileManager.fileInitDescriptors();
+				crmFileRecord = mCrmFileManager.filePullData(xpr.mFileCode, filerecordId, 0).get(0) ;
+			}
+			c.close() ;
+			
+			if( crmFileRecord != null ) {
+				mFilesLastRefresh.put(xpr, mClock.getTime()) ;
+			}
+			
+			return crmFileRecord;
 		}
-		c.close() ;
-		
-		if( crmFileRecord != null ) {
-			mFilesLastRefresh.put(xpr, mClock.getTime()) ;
-		}
-		
-        for (Listener l : mListeners) {
-            l.onXpressfilePullDeliver(xpr.mLinkXpressfileInputId,xpr.mFileFieldValue,crmFileRecord) ;
-        }
+    	@Override
+    	protected void onPostExecute(CrmFileRecord crmFileRecord) {
+    		XpressfilePullRequest xpr = mXpressfilePullRequest ;
+            for (Listener l : mListeners) {
+                l.onXpressfilePullDeliver(xpr.mLinkXpressfileInputId,xpr.mFileFieldValue,crmFileRecord) ;
+            }
+    	}
+
+    	public DeliverTask execute(XpressfilePullRequest xpr) {
+			executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,xpr) ;
+			return this ;
+    	}
     }
     
     private class ControllerResult extends SyncServiceController.Result {
