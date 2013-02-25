@@ -149,7 +149,8 @@ public class QueryView extends View {
 		mPageIdx = pageIdx ;
 		mTableViewsInstalled = false ;
 		
-		if( mPageIdx >= Math.ceil( mTabGridGetter.getTabCount(tabIdx) / mNumRows ) ) {
+		int nbPages = (int) Math.ceil( (double)mTabGridGetter.getTabCount(tabIdx) / mNumRows ) ;
+		if( mPageIdx >= nbPages - 1 ) {
 			mOffsetIsLast = true ;
 		} else {
 			mOffsetIsLast = false ;
