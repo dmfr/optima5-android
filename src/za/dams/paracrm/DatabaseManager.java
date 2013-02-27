@@ -13,8 +13,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
@@ -26,6 +28,8 @@ public class DatabaseManager {
 
     private static DatabaseManager instance;
 
+    private Context mContext;
+    
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
     private final int DB_VERSION = 32;
@@ -49,6 +53,7 @@ public class DatabaseManager {
     private DatabaseManager(Context context) {
         // create or open database
         DatabaseHelper helper = new DatabaseHelper(context);
+        this.mContext = context ;
         this.mDb = helper.getWritableDatabase();
     }
 
@@ -465,6 +470,11 @@ public class DatabaseManager {
     	    	db.endTransaction() ;
     		}
     		tmpCursor.close() ;
+    		
+    		SharedPreferences settings = mContext.getSharedPreferences("MainMenuActivity",Activity.MODE_PRIVATE);
+    		SharedPreferences.Editor editor = settings.edit();
+    		editor.remove("bibleTimestamp");
+    		editor.commit();
     		
     		onCreate(db); 
     	}
