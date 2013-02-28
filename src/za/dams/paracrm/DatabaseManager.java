@@ -32,7 +32,7 @@ public class DatabaseManager {
     
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 32;
+    private final int DB_VERSION = 34;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -430,8 +430,10 @@ public class DatabaseManager {
             
     		createTableQuery = "CREATE TABLE IF NOT EXISTS "
                     + "query_cache_json" + " ("
-                    + "json_result_id" + " INTEGER PRIMARY KEY, "
-                    + "json_blob" + " BLOB, "
+                    + "json_result_id" + " INTEGER PRIMARY KEY,"
+                    + "json_blob" + " BLOB,"
+                    + "querysrc_id" + " INTEGER,"
+                    + "request_footprint" + " VARCHAR(500),"
                     + "pull_timestamp" + " INTEGER"
                     + ");";
             db.execSQL(createTableQuery);

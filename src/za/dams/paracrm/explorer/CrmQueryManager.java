@@ -35,6 +35,7 @@ public class CrmQueryManager {
 	private static final String LOG_TAG = "CrmQueryManager" ;
 	
 	private static final int QUERY_TTL_PURGE = 2 * 24 * 60 * 60 ; // 2 days in seconds
+	private static final int QUERY_MAX_CACHE = 20 ;
 	
 	public static List<CrmQueryModel> model_getAll( Context context ) {
 		DatabaseManager mDb = DatabaseManager.getInstance(context) ;
@@ -278,9 +279,25 @@ public class CrmQueryManager {
         }
         
         
-        if( jsonString == null ) {
+        if( jsonString == null && !getAsXls ) {
+        	// Recherche en cache
+        	int cachedJsonResultId = -1 ;
+        	DatabaseManager mDb = DatabaseManager.getInstance(c) ;
+        	Cursor tCursor = mDb.rawQuery(String.format(
+        			"SELECT json_result_id FROM query_cache_json WHERE querysrc_id='%d' AND request_footprint='%s' ORDER BY pull_timestamp DESC LIMIT 1",
+        			cqm.querysrcId,cqm.getQueryFootprint()
+        			)) ;
+        	if( tCursor.moveToNext() ) {
+        		cachedJsonResultId = tCursor.getInt(0);
+        	}
+        	tCursor.close() ;
+        	if( cachedJsonResultId > 0 ) {
+        		return cachedJsonResultId ;
+        	}
         	return null ;
         }
+        
+        
         try {
 			JSONObject jsonObject = new JSONObject(jsonString) ;
 			if( jsonObject.optBoolean("success") != true ) {
@@ -292,10 +309,22 @@ public class CrmQueryManager {
 			return null ;
 		}
         
+        
         DatabaseManager mDb = DatabaseManager.getInstance(c) ;
+        
+        
         ContentValues cv = new ContentValues() ;
         cv.put("json_blob", jsonString) ;
         cv.put("pull_timestamp", pullTimestamp) ;
+        if( !getAsXls ) {
+            cv.put("querysrc_id", cqm.querysrcId);
+            cv.put("request_footprint", cqm.getQueryFootprint());
+        	
+            mDb.execSQL(String.format(
+        			"DELETE FROM query_cache_json WHERE querysrc_id='%d' AND request_footprint='%s'",
+        			cqm.querysrcId,cqm.getQueryFootprint()
+        			)) ;
+        }
         int jsonResultId = (int)mDb.insert("query_cache_json", cv);
         
         afterPullTTLpurge(c,pullTimestamp) ;
@@ -305,20 +334,30 @@ public class CrmQueryManager {
 	
     static private boolean afterPullTTLpurge( Context context , int newPullTimestamp )
     {
+    	DatabaseManager mDb = DatabaseManager.getInstance(context) ;
+    	Cursor c ;
+    	
     	int deadLine = (newPullTimestamp - QUERY_TTL_PURGE) ;
     	boolean doIt = false ;
-    	
-    	DatabaseManager mDb = DatabaseManager.getInstance(context) ;
-    	Cursor c = mDb.rawQuery(String.format("SELECT count(*) FROM query_cache_json WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
+    	c = mDb.rawQuery(String.format("SELECT count(*) FROM query_cache_json WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
     	while( c.moveToNext() ) {
     		doIt = (c.getInt(0)>0) ? true : false ;
     		break ;
     	}
-    	c.close() ;
-    	
+    	c.close() ;    	
     	if( doIt ) {
     		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE pull_timestamp<'%d' AND pull_timestamp NOT NULL",deadLine)) ;
     	}
+    	
+    	
+    	c = mDb.rawQuery(String.format("SELECT count(*) FROM query_cache_json",deadLine)) ;
+    	c.moveToNext();
+    	int cacheOver = c.getInt(0) - QUERY_MAX_CACHE ;
+    	c.close() ;
+    	if( QUERY_MAX_CACHE > 0 && cacheOver > 0 ) {
+    		mDb.execSQL(String.format("DELETE FROM query_cache_json ORDER BY pull_timestamp LIMIT %d",cacheOver)) ;
+    	}
+    	
     	
     	return true ;
     }

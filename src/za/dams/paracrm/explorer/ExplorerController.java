@@ -7,9 +7,11 @@ import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.R;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -1291,6 +1293,18 @@ public class ExplorerController implements ExplorerLayout.Callback,
 	// QueryLaunchFragment$Callback
 	@Override
 	public void onQueryResponseFailure(int querysrcId) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(mActivity);
+		builder.setMessage("Unable to complete query. Check network status.")
+		.setCancelable(false)
+		.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int id) {
+				dialog.cancel();
+			}
+		});
+		AlertDialog alert = builder.create();
+		alert.show();
+		
+		
 		mActivity.invalidateOptionsMenu();
 	}
 	// QueryLaunchFragment$Callback

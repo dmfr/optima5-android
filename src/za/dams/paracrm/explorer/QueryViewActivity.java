@@ -234,7 +234,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		}
 		c.close();
 		
-		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
+		//mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
 		
 		loadFromJsonBlob(jsonBlob) ;
 		
