@@ -1566,6 +1566,13 @@ public class CrmFileTransaction {
 			}
 		}
 		
+		
+		// ******** REFRESH des pivots *******
+		pivots_refreshOuter() ;
+		pivots_refreshInner() ;
+		// ********************************
+		
+		
 		// ****** Mask/Unmask pages *****
 		Iterator<CrmFilePageinfo> iter1 = TransactionPages.iterator() ;
 		pageId = 0 ;
@@ -1579,18 +1586,16 @@ public class CrmFileTransaction {
 			}
 			else {
 				pageInfo.pageIsHidden = !isFirstComplete ;
+				if( pageInfo.pageType == PageType.PAGETYPE_TABLE || pageInfo.innerPivot!=null ) {
+					if( TransactionPageRecords.get(pageId).size() == 0 ) {
+						pageInfo.pageIsHidden = true ;
+					}
+				}
 			}
 				
 			pageId++ ;
 		}
-		
-		
-		
-		// ******** REFRESH des pivots *******
-		pivots_refreshOuter() ;
-		pivots_refreshInner() ;
-		// ********************************
-		
+
 		
 		// ****** Each page => Autofill FIELD_AUTOVALUEs ******
 		// ******     => if different, destroy Data
