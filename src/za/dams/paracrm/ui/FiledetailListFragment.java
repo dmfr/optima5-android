@@ -1,20 +1,24 @@
 package za.dams.paracrm.ui;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
 import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
-import za.dams.paracrm.MainMenuActivity;
 import za.dams.paracrm.R;
-import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.explorer.xpressfile.XpressfileActivity;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
+import za.dams.paracrm.widget.DatetimePickerDialog;
+import za.dams.paracrm.widget.DatetimePickerDialog.OnDatetimeSetListener;
 import za.dams.paracrm.widget.InputPickerDialog;
 import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
+import android.app.DialogFragment;
+import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.os.Bundle;
@@ -102,6 +106,12 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 	@Override
 	public void onPause() {
 		mUtilityFragment.unregisterListener(this);
+		
+		Fragment dialogFragment = getFragmentManager().findFragmentByTag("dialog") ;
+		if( dialogFragment != null ) {
+			((DialogFragment)dialogFragment).dismiss() ;
+		}
+		
 		super.onPause() ;
 	}
 	
@@ -205,13 +215,14 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 			
 		case FIELD_DATE :
 		case FIELD_DATETIME :
-			DatetimepickerFragment datetimePicker = DatetimepickerFragment.newInstance(getShownIndex(),0,mindex) ;
-			datetimePicker.setTargetFragment(this, 0);
-			// biblePicker.s
+			DateListener dateListener = new DateListener(targetPageId,targetRecordId,targetFieldId) ;
+			
+			Date curDate = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueDate ;
+			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes());
+			datetimePicker.setTitle(targetTitle);
+			datetimePicker.setListener(dateListener) ;
 			ft = getFragmentManager().beginTransaction();
-
-			datetimePicker.show(ft, "dialoggg") ;
-			//ft.commit();
+			datetimePicker.show(ft, "dialog") ;
 			break ;
 			
 		case FIELD_NUMBER :
@@ -226,7 +237,29 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 	}
 	
 	
-	
+	private class DateListener implements OnDatetimeSetListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+
+    	public DateListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+    	}
+
+		@Override
+		public void onDatetimeSet(int year, int month, int monthDay,
+				int hourOfDay, int minute) {
+	    	Date newDate = new Date(year-1900,month,monthDay,hourOfDay,minute) ;
+			
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	mTransaction.page_setRecordFieldValue_date(pageId,recordId,fieldId,newDate ) ;
+        	FiledetailListFragment.this.syncWithData() ;
+		}
+		
+	}
     private class BibleListener implements OnBibleSetListener {
     	int pageId ;
     	int recordId ;

@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -22,9 +23,13 @@ import za.dams.paracrm.HttpPostHelper;
 import za.dams.paracrm.R;
 import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.widget.BiblePickerDialog;
+import za.dams.paracrm.widget.DatetimePickerDialog;
 import za.dams.paracrm.widget.InputPickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
+import za.dams.paracrm.widget.DatetimePickerDialog.OnDatetimeSetListener;
 import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
+import android.app.DialogFragment;
+import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -81,6 +86,15 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         	   }
         }) ;
     }	
+	@Override
+	public void onPause() {
+		Fragment dialogFragment = getFragmentManager().findFragmentByTag("dialog") ;
+		if( dialogFragment != null ) {
+			((DialogFragment)dialogFragment).dismiss() ;
+		}
+		
+		super.onPause() ;
+	}
 	public synchronized void syncWithData(){
 		int pageId = getShownIndex() ;
 		
@@ -183,13 +197,13 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 			break ;
 		case FIELD_DATE :
 		case FIELD_DATETIME :
-			DatetimepickerFragment datetimePicker = DatetimepickerFragment.newInstance(getShownIndex(),0,mPivotPosition) ;
-			datetimePicker.setTargetFragment(this, 0);
-			// biblePicker.s
+			DateListener dateListener = new DateListener(targetPageId,targetRecordId,targetFieldId) ;
+			
+			Date curDate = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueDate ;
+			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes());
+			datetimePicker.setListener(dateListener) ;
 			ft = getFragmentManager().beginTransaction();
-
-			datetimePicker.show(ft, "dialoggg") ;
-			//ft.commit();
+			datetimePicker.show(ft, "dialog") ;
 			break ;
 		}
 	}
@@ -332,6 +346,29 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         }
     }
 
+	private class DateListener implements OnDatetimeSetListener {
+    	int pageId ;
+    	int recordId ;
+    	int fieldId ;
+
+    	public DateListener(int pageId, int recordId, int fieldId) {
+    		this.pageId = pageId ;
+    		this.recordId = recordId ;
+    		this.fieldId = fieldId ;
+    	}
+
+		@Override
+		public void onDatetimeSet(int year, int month, int monthDay,
+				int hourOfDay, int minute) {
+	    	Date newDate = new Date(year-1900,month,monthDay,hourOfDay,minute) ;
+			
+        	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
+        	CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	mTransaction.page_setRecordFieldValue_date(pageId,recordId,fieldId,newDate ) ;
+        	FiledetailLoglistFragment.this.syncWithData() ;
+		}
+		
+	}
     private class BibleListener implements OnBibleSetListener {
     	int pageId ;
     	int recordId ;
