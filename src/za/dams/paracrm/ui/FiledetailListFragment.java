@@ -194,7 +194,6 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 		if( mTransaction.page_getFields(getShownIndex()).get(mindex).fieldIsReadonly ) {
 			return ;
 		}
-		FragmentTransaction ft ;
 		InputPickerDialog ipd ;
 		switch( mTransaction.page_getFields(getShownIndex()).get(mindex).fieldType ){
 		case FIELD_TEXT :
@@ -202,7 +201,6 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 			
 			ipd = new InputPickerDialog(getActivity(), new InputListener(targetPageId,targetRecordId,targetFieldId), InputPickerDialog.TYPE_TEXT, curString ) ;
 			ipd.setArguments(dialogBundle) ;
-            ft = getFragmentManager().beginTransaction();
             ipd.show(getFragmentManager(), "dialog") ;
 			break ;
 			
@@ -210,8 +208,7 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 			BibleHelper.BibleCode bibleCode = new BibleHelper.BibleCode(mTransaction.page_getFields(targetPageId).get(targetFieldId).fieldLinkBible) ;
 			ArrayList<BibleHelper.BibleEntry> bibleConditions = mTransaction.links_getBibleConditions() ;
             BiblePickerDialog bpd = new BiblePickerDialog(getActivity(), new BibleListener(targetPageId,targetRecordId,targetFieldId), bibleCode, bibleConditions);
-            ft = getFragmentManager().beginTransaction();
-            bpd.show(ft, "dialog") ;
+            bpd.show(getFragmentManager(), "dialog") ;
 			break ;
 			
 		case FIELD_DATE :
@@ -232,8 +229,7 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes(), hideTime, boundDateMinMillis, boundDateMaxMillis);
 			datetimePicker.setTitle(targetTitle);
 			datetimePicker.setListener(dateListener) ;
-			ft = getFragmentManager().beginTransaction();
-			datetimePicker.show(ft, "dialog") ;
+			datetimePicker.show(getFragmentManager(), "dialog") ;
 			break ;
 			
 		case FIELD_NUMBER :
@@ -241,7 +237,6 @@ public class FiledetailListFragment extends FiledetailFragment implements Utilit
 			
 			ipd = new InputPickerDialog(getActivity(), new InputListener(targetPageId,targetRecordId,targetFieldId), InputPickerDialog.TYPE_INTEGER, curFloat ) ;
 			ipd.setArguments(dialogBundle) ;
-            ft = getFragmentManager().beginTransaction();
             ipd.show(getFragmentManager(), "dialog") ;
 			break ;
 		}

@@ -44,7 +44,6 @@
     <issue id="NamespaceTypo" severity="ignore" />
     <issue id="NestedScrolling" severity="ignore" />
     <issue id="NestedWeights" severity="ignore" />
-    <issue id="NewApi" severity="ignore" />
     <issue id="ObsoleteLayoutParam" severity="ignore" />
     <issue id="OnClick" severity="ignore" />
     <issue id="Overdraw" severity="ignore" />

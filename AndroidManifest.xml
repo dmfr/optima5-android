@@ -32,10 +32,6 @@
             android:label="VISIT Transaction"
             android:screenOrientation="landscape" >
         </activity>
-        <activity
-            android:name=".ui.FileCaptureActivity$DetailsActivity"
-            android:label="VISIT Transaction" >
-        </activity>
         
         <activity
             android:name=".calendar.CalendarActivity"

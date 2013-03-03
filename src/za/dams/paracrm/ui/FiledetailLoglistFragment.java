@@ -175,7 +175,6 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 		Bundle dialogBundle = new Bundle() ;
 		dialogBundle.putString("title",targetTitle) ;
 
-		FragmentTransaction ft ;
 		InputPickerDialog ipd ;
 		switch( mTransaction.page_getFields(getShownIndex()).get(mPivotPosition).fieldType ){
 		case FIELD_TEXT :
@@ -183,7 +182,6 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 			
 			ipd = new InputPickerDialog(getActivity(), new InputListener(targetPageId,targetRecordId,targetFieldId), InputPickerDialog.TYPE_TEXT, curString ) ;
 			ipd.setArguments(dialogBundle) ;
-            ft = getFragmentManager().beginTransaction();
             ipd.show(getFragmentManager(), "dialog") ;
 			break ;
 		case FIELD_BIBLE :
@@ -192,8 +190,7 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
             BiblePickerDialog bpd = new BiblePickerDialog(getActivity(), new BibleListener(targetPageId,targetRecordId,targetFieldId), bibleCode, bibleConditions);
             //bpd.setTargetFragment(this, 0);
             //bpd.setCanceledOnTouchOutside(true);
-            ft = getFragmentManager().beginTransaction();
-            bpd.show(ft, "dialog") ;
+            bpd.show(getFragmentManager(), "dialog") ;
             
 			break ;
 		case FIELD_DATE :
@@ -213,8 +210,7 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 			Date curDate = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueDate ;
 			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes(), hideTime, boundDateMinMillis, boundDateMaxMillis);
 			datetimePicker.setListener(dateListener) ;
-			ft = getFragmentManager().beginTransaction();
-			datetimePicker.show(ft, "dialog") ;
+			datetimePicker.show(getFragmentManager(), "dialog") ;
 			break ;
 		}
 	}

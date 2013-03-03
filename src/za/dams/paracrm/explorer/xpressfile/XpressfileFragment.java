@@ -127,7 +127,7 @@ public class XpressfileFragment extends Fragment
     	switch( mArgMode ) {
     	case MODE_XPRESSFILE :
     		mArgXpressfileInputId = args.getInt(ARG_XPRESSFILE_INPUTID);
-   			mArgXpressfilePrimarykey = args.getString(ARG_XPRESSFILE_PRIMARYKEY,null);
+   			mArgXpressfilePrimarykey = args.getString(ARG_XPRESSFILE_PRIMARYKEY);
    			break ;
     	case MODE_RAWFILE :
     		mArgRawfileFilecode = args.getString(ARG_RAWFILE_FILECODE);

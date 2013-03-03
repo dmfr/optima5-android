@@ -347,8 +347,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes(), hideTime, boundDateMinMillis, boundDateMaxMillis);
 			datetimePicker.setTitle(targetTitle);
 			datetimePicker.setListener(dateListener) ;
-			FragmentTransaction ft = getFragmentManager().beginTransaction();
-			datetimePicker.show(ft, "dialog") ;
+			datetimePicker.show(getFragmentManager(), "dialog") ;
 		}
 	}
 	private class DateListener implements OnDatetimeSetListener {
