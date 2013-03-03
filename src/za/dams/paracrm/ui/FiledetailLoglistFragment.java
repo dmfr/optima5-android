@@ -22,6 +22,7 @@ import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.HttpPostHelper;
 import za.dams.paracrm.R;
 import za.dams.paracrm.BibleHelper.BibleEntry;
+import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.DatetimePickerDialog;
 import za.dams.paracrm.widget.InputPickerDialog;
@@ -199,8 +200,18 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 		case FIELD_DATETIME :
 			DateListener dateListener = new DateListener(targetPageId,targetRecordId,targetFieldId) ;
 			
+			boolean hideTime = (mTransaction.page_getFields(targetPageId).get(targetFieldId).fieldType == FieldType.FIELD_DATE) ;
+			long boundDateMinMillis = -1 ;
+			if( mTransaction.page_getFields(targetPageId).get(targetFieldId).inputCfg_dateBoundMin ) {
+				boundDateMinMillis = DatetimePickerDialog.getDayOffsetMillis(mTransaction.page_getFields(targetPageId).get(targetFieldId).inputCfg_dateBoundMin_dayOffset) ;
+			}
+			long boundDateMaxMillis = -1 ;
+			if( mTransaction.page_getFields(targetPageId).get(targetFieldId).inputCfg_dateBoundMax ) {
+				boundDateMaxMillis = DatetimePickerDialog.getDayOffsetMillis(mTransaction.page_getFields(targetPageId).get(targetFieldId).inputCfg_dateBoundMax_dayOffset) ;
+			}
+						
 			Date curDate = mTransaction.page_getRecordFieldValue( targetPageId , targetRecordId, targetFieldId ).valueDate ;
-			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes());
+			DatetimePickerDialog datetimePicker = DatetimePickerDialog.newInstance(curDate.getYear() + 1900, curDate.getMonth(), curDate.getDate(), curDate.getHours(), curDate.getMinutes(), hideTime, boundDateMinMillis, boundDateMaxMillis);
 			datetimePicker.setListener(dateListener) ;
 			ft = getFragmentManager().beginTransaction();
 			datetimePicker.show(ft, "dialog") ;

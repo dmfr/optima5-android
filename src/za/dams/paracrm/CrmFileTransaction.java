@@ -28,6 +28,9 @@ import android.util.Log;
 public class CrmFileTransaction {
 	public final static String TAG = "PARACRM/CrmFileTransaction";
 	
+	private final static String DATETIME_FORMAT = "dd/MM/yyyy HH:mm" ;
+	private final static String DATE_FORMAT = "dd/MM/yyyy" ;
+	
 	private Context mContext ;
 	private DatabaseManager mDb ;
 	
@@ -448,6 +451,11 @@ public class CrmFileTransaction {
     	public boolean fieldLinkfileIsOn ;
     	public int fieldLinkfileXpressfileId ;
     	
+    	public boolean inputCfg_dateSetNow ;
+    	public boolean inputCfg_dateBoundMin ;
+    	public int inputCfg_dateBoundMin_dayOffset ;
+    	public boolean inputCfg_dateBoundMax ;
+    	public int inputCfg_dateBoundMax_dayOffset ;
     	
     	
     	public CrmFileFieldDesc( FieldType fieldType, String fieldLinkBible, String fieldCode, String fieldName, boolean fieldIsPivot, boolean fieldIsReadonly )  {
@@ -483,6 +491,12 @@ public class CrmFileTransaction {
 				this.fieldLinkfileIsOn = jsonObject.optBoolean("fieldLinkfileIsOn",false) ;
 				this.fieldLinkfileXpressfileId = jsonObject.optInt("fieldLinkfileXpressfileId",0) ;
 				
+				this.inputCfg_dateSetNow = jsonObject.optBoolean("inputCfg_dateSetNow",false) ;
+				this.inputCfg_dateBoundMin = jsonObject.optBoolean("inputCfg_dateBoundMin",false) ;
+				this.inputCfg_dateBoundMin_dayOffset = jsonObject.optInt("inputCfg_dateBoundMin_dayOffset",0) ;
+				this.inputCfg_dateBoundMax = jsonObject.optBoolean("inputCfg_dateBoundMax",false) ;
+				this.inputCfg_dateBoundMax_dayOffset = jsonObject.optInt("inputCfg_dateBoundMax_dayOffset",0) ;
+				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -516,11 +530,19 @@ public class CrmFileTransaction {
     			if( this.fieldAutovalueIsOn ) {
     				jsonObject.put("fieldAutovalueIsOn",this.fieldAutovalueIsOn) ;
     				jsonObject.put("fieldAutovalueSrc",this.fieldAutovalueSrc) ;
-    				jsonObject.put("fieldAutovalue",this.fieldAutovalue.toJSONObject()) ;
+    				if( this.fieldAutovalue != null ) {
+    					jsonObject.put("fieldAutovalue",this.fieldAutovalue.toJSONObject()) ;
+    				}
     			}
     			jsonObject.put("fieldSearchIsCondition",this.fieldSearchIsCondition) ;
     			jsonObject.put("fieldLinkfileIsOn",this.fieldLinkfileIsOn) ;
     			jsonObject.put("fieldLinkfileXpressfileId",this.fieldLinkfileXpressfileId) ;
+    			
+    			jsonObject.put("inputCfg_dateSetNow",this.inputCfg_dateSetNow) ;
+    			jsonObject.put("inputCfg_dateBoundMin",this.inputCfg_dateBoundMin) ;
+    			jsonObject.put("inputCfg_dateBoundMin_dayOffset",this.inputCfg_dateBoundMin_dayOffset) ;
+    			jsonObject.put("inputCfg_dateBoundMax",this.inputCfg_dateBoundMax) ;
+    			jsonObject.put("inputCfg_dateBoundMax_dayOffset",this.inputCfg_dateBoundMax_dayOffset) ;
     			
     			return jsonObject ;
     			
@@ -955,7 +977,7 @@ public class CrmFileTransaction {
 
 			ArrayList<CrmFileFieldDesc> tFields = new ArrayList<CrmFileFieldDesc>() ;
 
-			Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition, linkfile_is_on, linkfile_xpressfile_id " +
+			Cursor tmpCursor = mDb.rawQuery( String.format("SELECT target_filecode, target_filefield, field_is_pivot, field_autovalue_is_on, field_autovalue_src, search_is_condition, linkfile_is_on, linkfile_xpressfile_id, input_cfg_json " +
 					"FROM input_scen_page_field " +
 					"WHERE scen_id='%d' AND scen_page_index='%d' ORDER BY scen_page_field_index",
 					CrmInputScenId, tFileinfo.pageId )) ;
@@ -1003,6 +1025,28 @@ public class CrmFileTransaction {
 					tmpField.fieldLinkfileIsOn = true ;
 					tmpField.fieldLinkfileXpressfileId = tmpCursor.getInt(7) ;
 				}
+				
+				try{
+					JSONObject jsonObject = new JSONObject(tmpCursor.getString(8)) ;
+					if( jsonObject.has("date_type") ) {
+						if( tmpField.fieldType == FieldType.FIELD_DATETIME 
+								&& jsonObject.getString("date_type").equals("DATE") ) {
+							tmpField.fieldType = FieldType.FIELD_DATE;
+						}
+					}
+					if( jsonObject.has("date_setnow") && jsonObject.getBoolean("date_setnow") ) {
+						tmpField.inputCfg_dateSetNow = true ;
+					}
+					if( jsonObject.has("date_bound_min") ) {
+						tmpField.inputCfg_dateBoundMin = true ;
+						tmpField.inputCfg_dateBoundMin_dayOffset = jsonObject.getInt("date_bound_min") ;
+					}
+					if( jsonObject.has("date_bound_max") ) {
+						tmpField.inputCfg_dateBoundMax = true ;
+						tmpField.inputCfg_dateBoundMax_dayOffset = jsonObject.getInt("date_bound_max") ;
+					}
+				} catch(JSONException e ) {}
+				
 				tFields.add( tmpField ) ;
 			}
 			tmpCursor.close() ;
@@ -1045,6 +1089,15 @@ public class CrmFileTransaction {
     		
     		switch( tFieldDesc.fieldType ) {
     		case FIELD_DATE :
+    			recordData.put(tFieldDesc.fieldCode,
+    					new CrmFileFieldValue(tFieldDesc.fieldType,
+    							new Float(0),
+    							false,
+    							null,
+    							new Date(),
+    							new SimpleDateFormat(DATE_FORMAT).format(new Date()),
+    							tFieldDesc.inputCfg_dateSetNow) ) ;
+    			break ;
     		case FIELD_DATETIME :
     			recordData.put(tFieldDesc.fieldCode,
     					new CrmFileFieldValue(tFieldDesc.fieldType,
@@ -1052,8 +1105,8 @@ public class CrmFileTransaction {
     							false,
     							null,
     							new Date(),
-    							new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()),
-    							true) ) ;
+    							new SimpleDateFormat(DATETIME_FORMAT).format(new Date()),
+    							tFieldDesc.inputCfg_dateSetNow) ) ;
     			break ;
     			
     		case FIELD_TEXT :
@@ -1169,6 +1222,15 @@ public class CrmFileTransaction {
 
     				switch( tFieldDesc.fieldType ) {
     				case FIELD_DATE :
+    					recordData.put(tFieldDesc.fieldCode,
+    							new CrmFileFieldValue(tFieldDesc.fieldType,
+    									new Float(0),
+    									false,
+    									null,
+    									new Date(),
+    									new SimpleDateFormat(DATE_FORMAT).format(new Date()),
+    									tFieldDesc.inputCfg_dateSetNow) ) ;
+    					break ;
     				case FIELD_DATETIME :
     					recordData.put(tFieldDesc.fieldCode,
     							new CrmFileFieldValue(tFieldDesc.fieldType,
@@ -1176,7 +1238,8 @@ public class CrmFileTransaction {
     									false,
     									null,
     									new Date(),
-    									new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date()) ) ) ;
+    									new SimpleDateFormat(DATETIME_FORMAT).format(new Date()),
+    									tFieldDesc.inputCfg_dateSetNow) ) ;
     					break ;
 
     				case FIELD_TEXT :
@@ -1328,11 +1391,11 @@ public class CrmFileTransaction {
 		
 		record.valueDate = date ;
 		SimpleDateFormat sdf ;
-		if( TransactionPages.get(pageId).pageType == PageType.PAGETYPE_TABLE ) {
-			sdf = new SimpleDateFormat("dd/MM/yyyy") ;
+		if( TransactionPageFields.get(pageId).get(fieldId).fieldType == FieldType.FIELD_DATETIME ) {
+			sdf = new SimpleDateFormat(DATETIME_FORMAT) ;
 		}
 		else{
-			sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm") ;
+			sdf = new SimpleDateFormat(DATE_FORMAT) ;
 		}
 		record.displayStr = sdf.format(date) ;
 		record.isSet = true ;
@@ -1429,11 +1492,11 @@ public class CrmFileTransaction {
 					}
         			
         			String displayDate ;
-        			if( TransactionPages.get(pageId).pageType == PageType.PAGETYPE_TABLE ) {
-        				displayDate = new SimpleDateFormat("dd/MM/yyyy").format(tDate) ;
+        			if( tFieldDesc.fieldType == FieldType.FIELD_DATETIME ) {
+        				displayDate = new SimpleDateFormat(DATETIME_FORMAT).format(tDate) ;
         			}
         			else{
-        				displayDate = new SimpleDateFormat("dd/MM/yyyy HH:mm").format(tDate) ;
+        				displayDate = new SimpleDateFormat(DATE_FORMAT).format(tDate) ;
         			}
         			
         			recordData.put(tFieldDesc.fieldCode,
