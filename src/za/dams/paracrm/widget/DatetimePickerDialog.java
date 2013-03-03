@@ -1,22 +1,24 @@
 package za.dams.paracrm.widget;
 
 import za.dams.paracrm.R;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.format.Time;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.DatePicker;
 import android.widget.TimePicker;
 
-public class DatetimePickerDialog extends DialogFragment implements View.OnClickListener {
+public class DatetimePickerDialog extends DialogFragment implements DialogInterface.OnClickListener {
 	@SuppressWarnings("unused")
 	private static final String TAG = "Widget/DatetimePickerDialog";
 	
+	View mView ;
 	DatePicker mDatePicker ;
 	TimePicker mTimePicker ;
-	View mOkButton ;
 	
 	private Runnable mWorkaround = new Runnable(){
 		@Override
@@ -80,21 +82,14 @@ public class DatetimePickerDialog extends DialogFragment implements View.OnClick
     	getArguments().putCharSequence("dialogTitle", dialogTitle);
     }
     
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View myCreateView(Bundle savedInstanceState) {
+    	LayoutInflater inflater = getActivity().getLayoutInflater() ;
     	View mv =  inflater.inflate(R.layout.datetimepicker_fragment, null, false ) ;
     	
     	mDatePicker = ((DatePicker)mv.findViewById(R.id.mydatepicker)) ;
     	mTimePicker = ((TimePicker)mv.findViewById(R.id.mytimepicker)) ;
-    	mOkButton = mv.findViewById(R.id.mydatetimeokbutton) ;
     	
     	Bundle args = getArguments() ;
-    	
-    	if( args.containsKey("dialogTitle") ) {
-    		getDialog().setTitle(args.getCharSequence("dialogTitle"));
-    	} else {
-    		getDialog().setTitle("Date Picker");
-    	}
     	
      	int year, month, monthDay, hourOfDay, minute ; 
     	if( savedInstanceState != null ) {
@@ -125,9 +120,28 @@ public class DatetimePickerDialog extends DialogFragment implements View.OnClick
     		mTimePicker.setVisibility(View.GONE) ;
     	}
     	
-    	mOkButton.setOnClickListener(this);
-    	
     	return mv ;
+    }
+    @Override
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+    	Bundle args = getArguments() ;
+    	
+    	CharSequence title ;
+    	if( args.containsKey("dialogTitle") ) {
+    		title = args.getCharSequence("dialogTitle");
+    	} else {
+    		title = "Date Picker";
+    	}
+    	
+    	mView = myCreateView(savedInstanceState) ;
+
+        Dialog d = new AlertDialog.Builder(getActivity(),getTheme())
+                .setTitle(title)
+                .setView(mView)
+                .setPositiveButton("OK",this)
+                .setNegativeButton("Cancel",this)
+                .create();
+        return d ;
     }
     @Override
     public void onSaveInstanceState(Bundle outState) {
@@ -142,20 +156,33 @@ public class DatetimePickerDialog extends DialogFragment implements View.OnClick
     @Override
     public void onResume() {
     	super.onResume();
-    	getView().postDelayed(mWorkaround,10);
+    	mDatePicker.postDelayed(mWorkaround,10);
     }
     
 	@Override
-	public void onClick(View arg0) {
-		if( arg0==mOkButton ) {
+	public void onClick(DialogInterface dialog, int whichButton) {
+		switch( whichButton ) {
+		case DialogInterface.BUTTON_POSITIVE :
 			onSubmit();
+			break ;
+		case DialogInterface.BUTTON_NEGATIVE :
+			dismiss() ;
+			break ;
+		default :
+			return ;
 		}
 	}
+
     
 	public void onSubmit() {
+		Bundle args = getArguments() ;
+		int year = mDatePicker.getYear() ;
+		int month = mDatePicker.getMonth() ;
+		int monthDay = mDatePicker.getDayOfMonth() ;
+		int hourOfDay = ( (!args.getBoolean("hideTime"))? mTimePicker.getCurrentHour() : 0 ) ;
+		int minute = ( (!args.getBoolean("hideTime"))? mTimePicker.getCurrentMinute() : 0 ) ;
 		if( mListener != null ) {
-			mListener.onDatetimeSet(mDatePicker.getYear(), mDatePicker.getMonth(), mDatePicker.getDayOfMonth(),
-					mTimePicker.getCurrentHour(), mTimePicker.getCurrentMinute()) ;
+			mListener.onDatetimeSet(year, month, monthDay, hourOfDay, minute) ;
 		}
 		dismiss();
 	}

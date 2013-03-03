@@ -16,12 +16,5 @@
         android:id="@+id/mytimepicker"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
-    
-    <Button
-        android:id="@+id/mydatetimeokbutton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Ok" />
 
 </LinearLayout>
