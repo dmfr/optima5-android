@@ -1,10 +1,9 @@
 package za.dams.paracrm.explorer;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -12,19 +11,32 @@ import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
 import za.dams.paracrm.SdcardManager;
 import android.app.ActionBar;
+import android.app.ActionBar.Tab;
+import android.app.ActionBar.TabListener;
 import android.app.Activity;
+import android.app.FragmentTransaction;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.webkit.WebSettings;
+import android.view.ViewGroup.LayoutParams;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
 import android.widget.ProgressBar;
+import android.widget.ViewSwitcher;
+import android.widget.ViewSwitcher.ViewFactory;
 
-public class QwebViewActivity extends Activity {
+public class QwebViewActivity extends Activity implements ViewFactory, TabListener {
+    /**
+     * The view id used for all the views we create. It's OK to have all child
+     * views have the same ID. This ID is used to pick which view receives
+     * focus when a view hierarchy is saved / restore
+     */
+    private static final int VIEW_ID = 1;
+    
     /** Argument name(s) */
     public static final String ARG_QUERYSRC_ID = "querysrcId";
     public static final String ARG_JSONRESULT_ID = "jsonresultId";
@@ -32,12 +44,20 @@ public class QwebViewActivity extends Activity {
     private int querysrcId ;
     private int jsonresultId ;
     
-    private boolean mDone ;
+    private List<Tab> mTabs ;
     private ProgressBar mProgressBar ;
-    private WebView mWebView ;
+    private ViewSwitcher mViewSwitcher ;
+    protected Animation mInAnimationForward;
+    protected Animation mOutAnimationForward;
+    protected Animation mInAnimationBackward;
+    protected Animation mOutAnimationBackward;
     
-    private String mContentHtml ;
-    private HashMap<String,String> mImgMap ;
+    private String mTitle ;
+    private List<String> mTabTitles ;
+    private List<String> mTabHtmlBlobs ;
+    
+    private int mCurrentTabIdx ;
+    
     
 	/** Called when the activity is first created. */
 	@Override
@@ -48,19 +68,19 @@ public class QwebViewActivity extends Activity {
 		querysrcId = bundle.getInt(ARG_QUERYSRC_ID) ;
 		jsonresultId = bundle.getInt(ARG_JSONRESULT_ID) ;
 		
-		setContentView(R.layout.explorer_viewer_qweb);
+		setContentView(R.layout.explorer_viewer_query);
+
+		mProgressBar = (ProgressBar) findViewById(R.id.progressbar) ;
+		mViewSwitcher = (ViewSwitcher) findViewById(R.id.switcher) ;
+		mTabs = new ArrayList<Tab>() ;
 		
-		mDone = false ;
-		mProgressBar = (ProgressBar)this.findViewById(R.id.progressbar) ;
-		mWebView = (WebView)this.findViewById(R.id.webview) ;
-		
-		
+        mInAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_in);
+        mOutAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_out);
+        mInAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_in);
+        mOutAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_out);
 		
 		final ActionBar ab = getActionBar();
-
-		// set defaults for logo & home up
 		ab.setDisplayHomeAsUpEnabled(true);
-		//ab.setDisplayUseLogoEnabled(useLogo);
 		
 		
 		DatabaseManager mDb = DatabaseManager.getInstance(this) ;
@@ -76,18 +96,12 @@ public class QwebViewActivity extends Activity {
 	
 	@Override
 	protected void onDestroy() {
-        if (mWebView != null) {
-        	mWebView.destroy();
-        	mWebView = null;
-        }
-        /*
-        if( mImgMap != null ) {
-        	for( Map.Entry<String,String> entry : mImgMap.entrySet() ) {
-        		String filePath = entry.getValue() ;
-        		File f = new File(filePath) ;
-        		f.delete() ;
+        if (mViewSwitcher != null) {
+        	((WebView)mViewSwitcher.getCurrentView()).destroy();
+        	if( mViewSwitcher.getNextView() != null ) {
+        		((WebView)mViewSwitcher.getNextView()).destroy();
         	}
-        }*/
+        }
         super.onDestroy() ;
 	}
 	@Override
@@ -117,14 +131,15 @@ public class QwebViewActivity extends Activity {
     
     private class LoadQweb extends AsyncTask<Void,Void,Boolean> {
         protected void onPreExecute() {
-        	mDone = false ;
         }
         protected Boolean doInBackground(Void... arg0) {
-        	mContentHtml = "" ;
-        	//mImgMap = new HashMap<String,String>() ;
-        	
     		DatabaseManager mDb = DatabaseManager.getInstance(QwebViewActivity.this) ;
     		Cursor c ;
+    		
+    		c = mDb.rawQuery(String.format("SELECT querysrc_name FROM input_query WHERE querysrc_id='%d'",querysrcId));
+    		c.moveToNext() ;
+    		mTitle = c.getString(0) ;
+    		c.close() ;
     		
     		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
     		if( c.getCount() != 1 ) {
@@ -135,28 +150,28 @@ public class QwebViewActivity extends Activity {
     		String jsonBlob = c.getString(0) ;
     		c.close();
         	
+    		mTabTitles = new ArrayList<String>() ;
+    		mTabHtmlBlobs = new ArrayList<String>() ;
     		try {
     			JSONObject jsonObj = new JSONObject(jsonBlob) ;
-    			mContentHtml = jsonObj.getString("html") ;
-    			/*
-    			JSONObject jsonImgs = jsonObj.getJSONObject("img") ;
-    			Iterator<String> myIter = jsonImgs.keys();
-    		    while(myIter.hasNext()){
-    		        String imgTag = myIter.next();
-    		        String imgBase64 = jsonImgs.getString(imgTag);
-    		        byte[] imgBinary = Base64.decode(imgBase64, Base64.DEFAULT);
-    		        
-    		        String imgFilename = "Qweb_"+String.valueOf(System.currentTimeMillis())+"_"+imgTag+".png";
-    		        CacheManager.cacheData(QwebViewActivity.this, imgBinary, imgFilename);
-    		        
-    		        String imgPath = QwebViewActivity.this.getCacheDir()+"/"+imgFilename ;
-    		        
-    		        mImgMap.put(imgTag, imgPath);
-    		    }
-    		    */
+    			
+    			if( jsonObj.has("html") ) {
+    				mTabHtmlBlobs.add(jsonObj.getString("html")) ;
+    			} else if( jsonObj.has("tabs") ) {
+    				JSONArray jsonTabs = jsonObj.getJSONArray("tabs") ;
+    				// set up tabs nav
+    				for (int i = 0; i < jsonTabs.length(); i++) {
+    					JSONObject jsonObjTab = jsonTabs.getJSONObject(i) ;
+    					
+    					String tabTitle = jsonObjTab.getString("tab_title") ;
+    					String tabHtml = jsonObjTab.getString("html") ;
+    					
+    					mTabTitles.add(tabTitle) ;
+    					mTabHtmlBlobs.add(tabHtml) ;
+    				}
+    			}
     			
     		} catch (JSONException e) {
-    			// TODO Auto-generated catch block
     			// e.printStackTrace();
     		}
     		
@@ -172,22 +187,97 @@ public class QwebViewActivity extends Activity {
         		QwebViewActivity.this.finish() ;
         		return ;
         	}
+        	if( mTabHtmlBlobs.size() == 0 ) {
+            	mProgressBar.setVisibility(View.GONE) ;
+        		return ;
+        	}
+        	mCurrentTabIdx = 0 ;
         	
-        	WebSettings settings = mWebView.getSettings();
-        	settings.setDefaultTextEncodingName("utf-8");
-            mWebView.loadDataWithBaseURL(null, mContentHtml, "text/html","UTF-8", null);
-            mProgressBar.setVisibility(View.GONE) ;
-            mWebView.setVisibility(View.VISIBLE) ;
-            mDone = true ;
+        	// Initialisation du ViewSwitcher / ViewSwitcher.Factory 
+        	mProgressBar.setVisibility(View.GONE) ;
+        	mViewSwitcher.setVisibility(View.VISIBLE);
+        	mViewSwitcher.setFactory(QwebViewActivity.this) ;
+        	
+        	// Init des tabs + highlight 1ere tab
+        	if( mTabTitles.size() > 0 ) {
+        		buildTabs() ;
+        	}
+        	initFirstTab() ;
         }
     	
+    }
+	private void buildTabs() {
+		ActionBar ab = getActionBar();
+		ab.setTitle(mTitle);
+		for( int tabIdx=0 ; tabIdx<mTabTitles.size() ; tabIdx++ ) {
+			String tabTitle = mTabTitles.get(tabIdx) ;
+			Tab t = ab.newTab().setText(tabTitle).setTabListener(this) ;
+			mTabs.add(t);
+			ab.addTab(t);
+		}
+		ab.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+	}
+	private void initFirstTab() {
+    	mCurrentTabIdx = 0 ;
+		((WebView) mViewSwitcher.getCurrentView()).loadDataWithBaseURL(null, mTabHtmlBlobs.get(mCurrentTabIdx), "text/html","UTF-8", null);
+	}
+    private void setCurrentTab(int tabIdx) {
+    	if( tabIdx == mCurrentTabIdx ) {
+    		return ;
+    	}
+    	
+        if (tabIdx-mCurrentTabIdx > 0) {
+            mViewSwitcher.setInAnimation(mInAnimationForward);
+            mViewSwitcher.setOutAnimation(mOutAnimationForward);
+        } else {
+            mViewSwitcher.setInAnimation(mInAnimationBackward);
+            mViewSwitcher.setOutAnimation(mOutAnimationBackward);
+        }
+
+    	mCurrentTabIdx = tabIdx ;
+    	
+    	WebView view = (WebView) mViewSwitcher.getNextView();
+        view.loadDataWithBaseURL(null, mTabHtmlBlobs.get(mCurrentTabIdx), "text/html","UTF-8", null);
+    	mViewSwitcher.showNext();
     }
     
     private void onSaveToSd() {
     	ActionBar ab = getActionBar() ;
     	String title = ab.getTitle().toString() ;
     	String timestamp = String.valueOf((int)(System.currentTimeMillis() / 1000)) ; 
-    	String queryName = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp+".html" ;
-    	SdcardManager.saveData(this, queryName, mContentHtml.getBytes(), true) ;
+    	String queryNameBase = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp ;
+    	if( mTabTitles.size() > 0 ) {
+    		for( int tabIdx=0 ; tabIdx<mTabTitles.size() ; tabIdx++ ) {
+    			String tabTitle = mTabTitles.get(tabIdx) ;
+    			SdcardManager.saveData(this, queryNameBase+"_"+tabTitle.replaceAll("[^a-zA-Z0-9]", "")+".html", mTabHtmlBlobs.get(tabIdx).getBytes(), true) ;
+    		}
+    	} else {
+    		SdcardManager.saveData(this, queryNameBase+".html", mTabHtmlBlobs.get(0).getBytes(), true) ;
+    	}
     }
+
+	@Override
+	public View makeView() {
+		WebView webView = new WebView(this) ;
+		webView.setLayoutParams(new ViewSwitcher.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+		webView.setId(VIEW_ID) ;
+		return webView;
+	}
+
+	@Override
+	public void onTabReselected(Tab arg0, FragmentTransaction arg1) {
+	}
+
+	@Override
+	public void onTabSelected(Tab arg0, FragmentTransaction arg1) {
+		if( mTabs.contains(arg0) ) {
+			int tabIdx = mTabs.indexOf(arg0) ;
+			setCurrentTab(tabIdx) ;
+		}
+	}
+
+	@Override
+	public void onTabUnselected(Tab arg0, FragmentTransaction arg1) {
+	}
 }
