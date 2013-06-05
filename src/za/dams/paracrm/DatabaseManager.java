@@ -32,7 +32,7 @@ public class DatabaseManager {
     
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 35;
+    private final int DB_VERSION = 36;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -411,6 +411,7 @@ public class DatabaseManager {
                     + "input_query_where" + " ("
                     + "querysrc_id" + " INTEGER, "
                     + "querysrc_targetfield_ssid" + " INTEGER,"
+                    + "field_is_optional" + " VARCHAR(1),"
                     + "field_type" + " VARCHAR(100),"
                     + "field_linkbible" + " VARCHAR(100),"
                     + "field_lib" + " VARCHAR(100),"
@@ -421,6 +422,7 @@ public class DatabaseManager {
                     + "input_query_progress" + " ("
                     + "querysrc_id" + " INTEGER, "
                     + "querysrc_targetfield_ssid" + " INTEGER,"
+                    + "field_is_optional" + " VARCHAR(1),"
                     + "field_type" + " VARCHAR(100),"
                     + "field_linkbible" + " VARCHAR(100),"
                     + "field_lib" + " VARCHAR(100),"

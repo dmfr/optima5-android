@@ -20,6 +20,7 @@ public class CrmQueryModel {
 		
 		public FieldType fieldType ;
 		public String fieldLinkBible ;
+		public boolean fieldIsOptional ;
 		
 		public String fieldName ;
 		

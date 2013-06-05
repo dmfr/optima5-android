@@ -23,7 +23,6 @@ import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
-import za.dams.paracrm.SyncService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -77,7 +76,7 @@ public class CrmQueryManager {
 		crmQueryModel.querysrcName = c.getString(3) ;
 		c.close() ;
 		
-		c = mDb.rawQuery(String.format("SELECT querysrc_targetfield_ssid, field_type, field_linkbible, field_lib FROM input_query_where WHERE querysrc_id='%s' ORDER BY querysrc_targetfield_ssid",querysrcId));
+		c = mDb.rawQuery(String.format("SELECT querysrc_targetfield_ssid, field_type, field_linkbible, field_lib, field_is_optional FROM input_query_where WHERE querysrc_id='%s' ORDER BY querysrc_targetfield_ssid",querysrcId));
 		while( c.moveToNext() ) {
 			CrmQueryModel.CrmQueryCondition cqc = new CrmQueryModel.CrmQueryCondition() ;
 			cqc.querysrcTargetFieldSsid = c.getInt(0) ;
@@ -91,13 +90,16 @@ public class CrmQueryManager {
 			}
 			cqc.fieldLinkBible = c.getString(2) ;
 			cqc.fieldName = c.getString(3);
+			if( c.getString(4).equals("O") ) {
+				cqc.fieldIsOptional=true ;
+			}
 			cqc.conditionIsSet=false ;
 			
 			crmQueryModel.querysrcWhereConditions.add(cqc) ;
 		}
 		c.close() ;
 		
-		c = mDb.rawQuery(String.format("SELECT querysrc_targetfield_ssid, field_type, field_linkbible, field_lib FROM input_query_progress WHERE querysrc_id='%s' ORDER BY querysrc_targetfield_ssid",querysrcId));
+		c = mDb.rawQuery(String.format("SELECT querysrc_targetfield_ssid, field_type, field_linkbible, field_lib, field_is_optional FROM input_query_progress WHERE querysrc_id='%s' ORDER BY querysrc_targetfield_ssid",querysrcId));
 		while( c.moveToNext() ) {
 			CrmQueryModel.CrmQueryCondition cqc = new CrmQueryModel.CrmQueryCondition() ;
 			cqc.querysrcTargetFieldSsid = c.getInt(0) ;
@@ -111,6 +113,9 @@ public class CrmQueryManager {
 			}
 			cqc.fieldLinkBible = c.getString(2) ;
 			cqc.fieldName = c.getString(3);
+			if( c.getString(4).equals("O") ) {
+				cqc.fieldIsOptional=true ;
+			}
 			cqc.conditionIsSet=false ;
 			
 			crmQueryModel.querysrcProgressConditions.add(cqc) ;
@@ -130,7 +135,12 @@ public class CrmQueryManager {
 				//                 => on est en mode ADMIN
 				//                 => pas d'alerte, champ ignoré				
 			}
-			else if( !cqc.conditionIsSet ) {
+			else if( !cqc.conditionIsSet && !cqc.fieldIsOptional ) {
+				return false ;
+			}
+		}
+		for( CrmQueryModel.CrmQueryCondition cqc : cqm.querysrcProgressConditions ) {
+			if( !cqc.conditionIsSet && !cqc.fieldIsOptional ) {
 				return false ;
 			}
 		}
