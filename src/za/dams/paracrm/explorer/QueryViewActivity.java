@@ -19,6 +19,7 @@ import android.app.ProgressDialog;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
@@ -81,6 +82,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     
     private static final String DUMMY_STRING = "DUMMY STRING" ;
     private int mCalculatedPageSize = 0 ;
+    private int mCalculatedRowHeight = 0 ;
     
     private List<Tab> mTabs ;
     private ProgressBar mProgressBar ;
@@ -147,6 +149,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		TableRow tTableRowModel = (TableRow)tInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
 		TextView tTableCellModel = (TextView)tInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
 		tTableCellModel.setText(DUMMY_STRING);
+		tTableCellModel.setTypeface(null, Typeface.BOLD) ; // Some devices displays TextViews larger/higher with bold font (AOSP 3.x) 
 		tTableRowModel.addView(tTableCellModel) ;
 		
 		tTableRowModel.setLayoutParams(new ViewGroup.LayoutParams(
@@ -157,6 +160,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		
 		//Log.w("QueryViewActivity","Page height="+tViewHeight+"   Row height="+tRowHeight) ;
 		mCalculatedPageSize = (int) Math.floor( (tViewHeight-tRowHeight) / tRowHeight );
+		mCalculatedRowHeight = tRowHeight ;
 	}
 	
 	
@@ -518,7 +522,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     }
 	@Override
 	public View makeView() {
-		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,mCalculatedPageSize) ;
+		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,mCalculatedPageSize,mCalculatedRowHeight) ;
 		queryView.setLayoutParams(new ViewSwitcher.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		queryView.setId(VIEW_ID) ;

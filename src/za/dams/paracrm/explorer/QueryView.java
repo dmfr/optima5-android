@@ -39,6 +39,7 @@ public class QueryView extends View {
     private GestureDetector mGestureDetector;
 	private TabGridGetter mTabGridGetter ;
 	private int mNumRows ;
+	private int mMinRowHeight ;
 	private QueryViewActivity.QueryGridTemplate mQgt ;
 	
 	private BuildTableTask mBuildTableTask ;
@@ -99,12 +100,13 @@ public class QueryView extends View {
     	}
     }
 
-	public QueryView(Context context, ViewSwitcher viewSwitcher, TabGridGetter tabGridGetter, int numRows) {
+	public QueryView(Context context, ViewSwitcher viewSwitcher, TabGridGetter tabGridGetter, int numRows, int minRowHeight) {
 		super(context) ;
 		mContext = context ;
 		mViewSwitcher = viewSwitcher ;
 		mTabGridGetter = tabGridGetter ;
 		mNumRows = numRows ;
+		mMinRowHeight = minRowHeight ;
 		mQgt = mTabGridGetter.getQueryGridTemplate() ;
 		
 		mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE) ;
@@ -270,6 +272,9 @@ public class QueryView extends View {
 		
 		TableLayout table = (TableLayout)tableView.findViewById(R.id.table) ;
 		TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+		if( mMinRowHeight > 0 ) {
+			tr.setMinimumHeight(mMinRowHeight);
+		}
 		for( ColumnDesc cd : columnsDesc ) {
 			if( !cd.is_bold ) {
 				continue ;
@@ -292,6 +297,9 @@ public class QueryView extends View {
 
 			cnt++ ;
 			TableRow trData = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+			if( mMinRowHeight > 0 ) {
+				trData.setMinimumHeight(mMinRowHeight);
+			}
 			if( mQgt.template_is_on ) {
 				trData.setBackgroundColor((cnt%2==0)?mQgt.colorhex_row:mQgt.colorhex_row_alt) ;
 			}
@@ -318,6 +326,9 @@ public class QueryView extends View {
 		
 		TableLayout table = (TableLayout)tableView.findViewById(R.id.table) ;
 		TableRow tr = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+		if( mMinRowHeight > 0 ) {
+			tr.setMinimumHeight(mMinRowHeight);
+		}
 		for( ColumnDesc cd : columnsDesc ) {
 			if( cd.is_bold ) {
 				continue ;
@@ -341,6 +352,9 @@ public class QueryView extends View {
 
 			cnt++ ;
 			TableRow trData = (TableRow)mInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
+			if( mMinRowHeight > 0 ) {
+				trData.setMinimumHeight(mMinRowHeight);
+			}
 			if( mQgt.template_is_on ) {
 				trData.setBackgroundColor((cnt%2==0)?mQgt.colorhex_row:mQgt.colorhex_row_alt) ;
 			}
