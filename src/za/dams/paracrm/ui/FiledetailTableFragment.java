@@ -42,8 +42,6 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 
 	private UtilityFragment mUtilityFragment ;
 
-	private HashMap<Integer,String> mSaveBuffer ;
-
 	ProgressBar mProgressBar ;
 
 	public static FiledetailTableFragment newInstance(int index) {
@@ -73,8 +71,6 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 		super.onActivityCreated(savedInstanceState);
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
 		mTransaction = mManager.getTransaction() ;
-
-		mSaveBuffer = new HashMap<Integer,String>() ;
 
 		mUtilityFragment.autocompleteInit(getPageInstanceTag());
 
@@ -202,15 +198,6 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 						}
 						etext.setId( (a*100) + b ) ;
 
-						etext.setOnKeyListener(new OnKeyListener() {
-							public boolean onKey(View v, int actionId, KeyEvent event) {
-								EditText ed = (EditText) v ;
-								FiledetailTableFragment.this.mSaveBuffer.put(new Integer(v.getId()), ed.getText().toString()) ;
-								return false;
-							}
-						});
-
-
 						//row.addView(icon);
 						row.addView(etext) ;
 					}
@@ -271,31 +258,47 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
 		CrmFileTransaction mTransaction = mManager.getTransaction() ;
 		//mTransaction.page_setRecordFieldValue_bible(pageId,recordId,fieldId,mEntryKey ) ;
-
-		Iterator<Integer> mIter = mSaveBuffer.keySet().iterator() ;
-		Integer mId ;
-		ArrayList<CrmFileTransaction.CrmFileFieldDesc> tDesc = mTransaction.page_getFields( getShownIndex()) ;
-		while( mIter.hasNext() ){
-			mId = mIter.next() ;
-			int myB = mId % 100  ;
-			int myA = (mId - myB) / 100 ;
-			// Log.w(TAG,"New text value for "+myA+" "+myB+" is "+mSaveBuffer.get(mId)) ;
-
-			if( mSaveBuffer.get(mId).length() < 1 ){
-				mTransaction.page_setRecordFieldValue_unset( getShownIndex() , myA, myB ) ;
+		int pageId = getShownIndex() ;
+		
+		ArrayList<CrmFileTransaction.CrmFileFieldDesc> tDesc = mTransaction.page_getFields( pageId ) ;
+		
+		// Récupération de tous les EditText
+		ViewGroup tableLayout = (ViewGroup)getView().findViewById(R.id.mytable) ;
+		for( int trIdx=0 ; trIdx < tableLayout.getChildCount() ; trIdx++ ) {
+			View tableChild = tableLayout.getChildAt(trIdx) ;
+			if( !(tableChild instanceof ViewGroup) ) {
+				continue ;
 			}
-			else {
-				switch( tDesc.get(myB).fieldType ) {
-				case FIELD_NUMBER :
-					mTransaction.page_setRecordFieldValue_number( getShownIndex() , myA, myB, Float.parseFloat(mSaveBuffer.get(mId)) ) ;
-					break ;
-				default :
-					mTransaction.page_setRecordFieldValue_text( getShownIndex() , myA, myB, mSaveBuffer.get(mId) ) ;
-					break ;
+			ViewGroup tableRow = (ViewGroup)tableChild ;
+			for( int tdIdx=0 ; tdIdx < tableRow.getChildCount() ; tdIdx++ ) {
+				View rowChild = tableRow.getChildAt(tdIdx) ;
+				if( !(rowChild instanceof EditText) ) {
+					continue ;
+				}
+
+				EditText editText = (EditText)rowChild ;
+				int myId = editText.getId();
+				String myTextValue = editText.getText().toString() ;
+				
+				//recherche du myA + myB (position dans la grille record>desc)
+				int myB = myId % 100  ;
+				int myA = (myId - myB) / 100 ;
+
+				if( myTextValue.length() < 1 ){
+					mTransaction.page_setRecordFieldValue_unset( pageId , myA, myB ) ;
+				}
+				else {
+					switch( tDesc.get(myB).fieldType ) {
+					case FIELD_NUMBER :
+						mTransaction.page_setRecordFieldValue_number( pageId , myA, myB, Float.parseFloat(myTextValue) ) ;
+						break ;
+					default :
+						mTransaction.page_setRecordFieldValue_text( pageId , myA, myB, myTextValue ) ;
+						break ;
+					}
 				}
 			}
 		}
-
 	}
 	@Override
 	public void onPause() {
