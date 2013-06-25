@@ -89,4 +89,8 @@
     <dimen name="mailbox_list_width">160dip</dimen>
     
     <dimen name="search_view_text_min_width">160dip</dimen>
+    
+    <!-- Explorer Show Image -->
+    <dimen name="explorer_showimage_dialog_width">400dip</dimen>
+    <dimen name="explorer_showimage_dialog_height">300dip</dimen>
 </resources>

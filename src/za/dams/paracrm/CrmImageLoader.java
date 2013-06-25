@@ -383,6 +383,7 @@ public class CrmImageLoader {
                 // Or if we don't use any bitmap to task association (NO_DOWNLOADED_DRAWABLE mode)
                 if( this == bitmapDownloaderTask ) {
                 	if( bitmap!=null ) {
+                		imageView.setScaleType(ScaleType.FIT_XY);
                 		imageView.setImageBitmap(bitmap);
                 	} else {
                 		imageView.setScaleType(ScaleType.CENTER) ;

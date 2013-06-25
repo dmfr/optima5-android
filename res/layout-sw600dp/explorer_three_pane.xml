@@ -20,7 +20,7 @@
     android:splitMotionEvents="true"
     >
 
-    <include layout="@layout/explorer_three_pane_collapsible_impl" />
+    <include layout="@layout/explorer_three_pane_impl" />
 
 </za.dams.paracrm.explorer.ExplorerLayout>
 

@@ -2,6 +2,4 @@
 <resources
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Size of event info dialog box -->
-    <integer name="explorer_showimage_dialog_width">1000</integer>
-    <integer name="explorer_showimage_dialog_height">750</integer>
 </resources>

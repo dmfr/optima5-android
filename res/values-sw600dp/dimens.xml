@@ -22,4 +22,7 @@
     <dimen name="mailbox_list_width">304dip</dimen>
     
     <dimen name="search_view_text_min_width">374dip</dimen>
+    
+    <dimen name="explorer_showimage_dialog_width">980dip</dimen>
+    <dimen name="explorer_showimage_dialog_height">735dip</dimen>
 </resources>

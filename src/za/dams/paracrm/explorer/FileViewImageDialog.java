@@ -94,8 +94,8 @@ public class FileViewImageDialog extends DialogFragment implements View.OnClickL
 
         WindowManager.LayoutParams a = window.getAttributes();
         Resources r = mContext.getResources();
-        int dialogWidth = r.getInteger(R.integer.explorer_showimage_dialog_width);
-        int dialogHeight = r.getInteger(R.integer.explorer_showimage_dialog_height);
+        int dialogWidth = (int) r.getDimension(R.dimen.explorer_showimage_dialog_width);
+        int dialogHeight = (int) r.getDimension(R.dimen.explorer_showimage_dialog_height);
         a.width = dialogWidth ;
         a.height = dialogHeight ;
         window.setAttributes(a);

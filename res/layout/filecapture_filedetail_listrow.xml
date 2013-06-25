@@ -8,11 +8,11 @@
     
     <ImageView
         android:id="@+id/icon5"
-        android:layout_width="16px"
-        android:layout_height="16px"
-        android:layout_marginLeft="4px"
-        android:layout_marginRight="10px"
-        android:layout_marginTop="0px"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="0dp"
         android:src="@drawable/ic_launcher" >
     </ImageView>
     
@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#ffffff"
-            android:textSize="20px" >
+            android:textSize="20sp" >
         </TextView>
 
         <TextView
@@ -37,7 +37,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingLeft="8dp"
-            android:textSize="16px" >
+            android:textSize="16sp" >
         </TextView>
     </LinearLayout>
     
