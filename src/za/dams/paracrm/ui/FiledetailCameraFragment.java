@@ -26,7 +26,9 @@ import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
@@ -145,6 +147,22 @@ public class FiledetailCameraFragment extends FiledetailFragment {
         // Use mCurrentCamera to select the camera desired to safely restore
         // the fragment after the camera has been changed
         mCamera = getCameraInstance();
+        if( mCamera == null ) {
+        	AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        	builder.setTitle("Error")
+        		   .setMessage("Cannot open device camera")
+        	       .setCancelable(false)
+        	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+        	           public void onClick(DialogInterface dialog, int id) {
+        	                dialog.cancel();
+        	                getFragmentManager().popBackStack() ;
+        	           }
+        	       });
+        	AlertDialog alert = builder.create();            
+        	alert.show();
+        	
+        	return ;
+        }
 
         Camera.Parameters mCamParams = mCamera.getParameters() ;
         
