@@ -93,4 +93,8 @@
     <!-- Explorer Show Image -->
     <dimen name="explorer_showimage_dialog_width">400dip</dimen>
     <dimen name="explorer_showimage_dialog_height">300dip</dimen>
+    
+    <!-- Filecapture Show Image -->
+    <dimen name="filecapture_showimage_dialog_width">400dip</dimen>
+    <dimen name="filecapture_showimage_dialog_height">300dip</dimen>
 </resources>

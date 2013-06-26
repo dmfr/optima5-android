@@ -7,9 +7,14 @@ import java.util.Iterator;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
+import za.dams.paracrm.explorer.FileViewImageDialog;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -25,6 +30,9 @@ public class FiledetailGalleryFragment extends FiledetailFragment {
 	private ArrayList<HashMap<String,Object>> mList ;
 
 	private static final String TAG = "PARACRM/UI/FiledetailGalleryFragment";
+	
+	public static final int SHOWIMAGE_REQUEST = 1 ;
+	public static final int DELETEIMAGE_RESULT = 1 ;
     
     public static FiledetailGalleryFragment newInstance(int index) {
     	FiledetailGalleryFragment f = new FiledetailGalleryFragment();
@@ -42,30 +50,29 @@ public class FiledetailGalleryFragment extends FiledetailFragment {
     	return inflater.inflate(R.layout.filecapture_filedetail_gallery, container, false ) ;
     }
     public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+    	super.onActivityCreated(savedInstanceState);
     	CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
     	mTransaction = mManager.getTransaction() ;
-    	
+
     	//Log.w(TAG,"My Fragment Id is "+mTransaction.getCrmFileCode() );
-        mList = new ArrayList<HashMap<String,Object>>() ;
+    	mList = new ArrayList<HashMap<String,Object>>() ;
     	String[] adaptFrom = { new String("pictureLink") } ;
     	int[] adaptTo = { R.id.mygallerypicture } ;
-        GridView mgv = (GridView) getView().findViewById(R.id.mygalleryview) ;
-        mgv.setAdapter(new SimpleAdapter(getActivity().getApplicationContext(), mList, R.layout.filecapture_filedetail_galleryitem, adaptFrom, adaptTo )) ;
-        syncWithData() ;
-        
-        mgv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-     	   public void onItemClick(AdapterView<?> parentView, View childView, int position, long id) {
-     		   FiledetailGalleryFragment.this.handleClickList(position) ;
-     	   }
-     }) ;
-        mgv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-     	   public boolean onItemLongClick(AdapterView<?> parentView, View childView, int position, long id) {
-     		   FiledetailGalleryFragment.this.handleLongClickList(position) ;
-     		   return true ;
-     	   }
-     }) ;
+    	GridView mgv = (GridView) getView().findViewById(R.id.mygalleryview) ;
+    	mgv.setAdapter(new SimpleAdapter(getActivity().getApplicationContext(), mList, R.layout.filecapture_filedetail_galleryitem, adaptFrom, adaptTo )) ;
+
+    	mgv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+    		public void onItemClick(AdapterView<?> parentView, View childView, int position, long id) {
+    			FiledetailGalleryFragment.this.handleClickList(position) ;
+    		}
+    	}) ;
     }	
+	@Override
+	public void onResume() {
+		super.onResume();
+		syncWithData() ;
+	}
+
 	public void syncWithData(){
 		int pageId = getShownIndex() ;
 		
@@ -92,29 +99,40 @@ public class FiledetailGalleryFragment extends FiledetailFragment {
 	}
 	public void handleClickList(int position) {
 		if( position != 0 ){ 
-			return ;
+			int pageId = getShownIndex() ;
+			int recordId = position - 1 ;
+			Log.w(TAG,"Displaying page "+pageId+" position "+recordId) ;
+			
+			FiledetailGalleryImageDialog fragment = FiledetailGalleryImageDialog.newInstance(pageId,recordId,true) ;
+			fragment.setTargetFragment(this, SHOWIMAGE_REQUEST);
+            FragmentManager fm = getFragmentManager();
+            FragmentTransaction ft = fm.beginTransaction();
+            // if we have an old popup replace it
+            Fragment fOld = fm.findFragmentByTag(FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+            if (fOld != null && fOld.isAdded()) {
+                ft.remove(fOld);
+            }
+            ft.add(fragment, FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+            ft.commit();
+            return ;
 		}
+		
 		FiledetailCameraFragment cameraFragment = FiledetailCameraFragment.newInstance(getShownIndex()); 
-
-        // Execute a transaction, replacing any existing fragment
-        // with this one inside the frame.
         FragmentTransaction ft = getFragmentManager().beginTransaction();
         ft.replace(R.id.filedetail, cameraFragment);
         ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
         ft.addToBackStack(null) ;
         ft.commit();
 	}
-	public void handleLongClickList(int position) {
-    	AlertDialog.Builder builder = new AlertDialog.Builder(this.getActivity());
-    	builder.setMessage("Was long clicked !!")
-    	       .setCancelable(false)
-    	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-    	           public void onClick(DialogInterface dialog, int id) {
-    	                dialog.cancel();
-    	           }
-    	       });
-    	AlertDialog alert = builder.create();            
-    	alert.show();
-	}
 
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch( requestCode ) {
+		case SHOWIMAGE_REQUEST:
+			switch( resultCode ) {
+			case DELETEIMAGE_RESULT:
+				syncWithData();
+			}
+		}
+	}
 }

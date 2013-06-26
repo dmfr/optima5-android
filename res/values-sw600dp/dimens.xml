@@ -25,4 +25,7 @@
     
     <dimen name="explorer_showimage_dialog_width">980dip</dimen>
     <dimen name="explorer_showimage_dialog_height">735dip</dimen>
+    
+    <dimen name="filecapture_showimage_dialog_width">980dip</dimen>
+    <dimen name="filecapture_showimage_dialog_height">735dip</dimen>
 </resources>

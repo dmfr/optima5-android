@@ -1459,6 +1459,21 @@ public class CrmFileTransaction {
 
 		return ;
 	}
+	public void page_delRecord_photo( int pageId, int recordId ) {
+		CrmFileRecord cfr = TransactionPageRecords.get(pageId).get(recordId) ;
+		try {
+			String mPath = new URI(cfr.recordPhoto.uriString).getPath() ;
+			File mFileDelete = new File(mPath);
+			mFileDelete.delete() ;
+			String mPathThumb = new URI(cfr.recordPhoto.uriStringThumb).getPath() ;
+			File mFileThumbDelete = new File(mPathThumb);
+			mFileThumbDelete.delete() ;
+		} catch (Exception e) {
+		}
+		
+		TransactionPageRecords.get(pageId).remove(cfr) ;
+		return ;
+	}
 	
 	public void page_populateRecordsFromJSON( int pageId, JSONArray data ) {
 		
