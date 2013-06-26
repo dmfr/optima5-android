@@ -3,11 +3,23 @@ package za.dams.paracrm.ui;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransactionManager;
 import android.app.Fragment;
+import android.os.Bundle;
 
 public class FiledetailFragment extends Fragment {
 	
 	int cache_pageInstanceTag=-1 ;
 
+	public static FiledetailFragment newInstance(int index) {
+		FiledetailFragment f = new FiledetailFragment();
+	
+	    // Supply index input as an argument.
+	    Bundle args = new Bundle();
+	    args.putInt("index", index);
+	    f.setArguments(args);
+	
+	    return f;
+	}
+	
     public int getShownIndex() {
     	if( getArguments() != null ) {
     		return getArguments().getInt("index", 0);

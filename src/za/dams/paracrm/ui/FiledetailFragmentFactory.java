@@ -28,9 +28,13 @@ public class FiledetailFragmentFactory {
             f = FiledetailContainerFragment.newInstance(position);
             break;
             
+    	case  PAGETYPE_SAVE :
+            f = FiledetailSaveFragment.newInstance(position);
+            break;
+            
     		
     	default :
-            f = FiledetailDummyFragment.newInstance(position);
+            f = FiledetailFragment.newInstance(position);
             break;
     	}
 
