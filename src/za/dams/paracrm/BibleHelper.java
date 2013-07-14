@@ -28,7 +28,7 @@ public class BibleHelper {
 		BIBLE_TREENODE, BIBLE_ENTRY
 	}
 	public enum FieldType {
-		FIELD_STRING, FIELD_NUMBER, FIELD_LINKBIBLE, FIELD_DATE
+		FIELD_STRING, FIELD_NUMBER, FIELD_LINKBIBLE, FIELD_DATE, FIELD_BOOLEAN
 	}
     
     public static class BibleCode {
@@ -246,7 +246,12 @@ public class BibleHelper {
             				tFieldType = FieldType.FIELD_LINKBIBLE ;
             			}
             			else{
-            				tFieldType = FieldType.FIELD_STRING ;
+                			if( tmpCursor.getString(1).equals("bool") ) {
+                				tFieldType = FieldType.FIELD_BOOLEAN ;
+                			}
+                			else {
+                				tFieldType = FieldType.FIELD_STRING ;
+                			}
             			}
         			}
         		}
@@ -289,7 +294,12 @@ public class BibleHelper {
             				tFieldType = FieldType.FIELD_LINKBIBLE ;
             			}
             			else{
-            				tFieldType = FieldType.FIELD_STRING ;
+                			if( tmpCursor.getString(1).equals("bool") ) {
+                				tFieldType = FieldType.FIELD_BOOLEAN ;
+                			}
+                			else {
+                				tFieldType = FieldType.FIELD_STRING ;
+                			}
             			}
         			}
         		}
@@ -364,6 +374,9 @@ public class BibleHelper {
     			break ;
     		case FIELD_DATE :
     			tmpBufSub.put("field_"+bfc.fieldCode,c.getString(3)) ;
+    			break ;
+    		case FIELD_BOOLEAN :
+    			tmpBufSub.put("field_"+bfc.fieldCode,( c.getString(2).equals("1") ? "true":"false" ) ) ;
     			break ;
     		}
 		}
@@ -623,6 +636,9 @@ public class BibleHelper {
        			break ;
        		case FIELD_NUMBER :
        			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,c.getString(4)) ;
+       			break ;
+       		case FIELD_BOOLEAN :
+       			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,(c.getString(4).equals("1") ? "true":"false" )) ;
        			break ;
        		case FIELD_DATE :
        			tmpBuffer.get(entryKey).put("field_"+bfc.fieldCode,c.getString(5)) ;
