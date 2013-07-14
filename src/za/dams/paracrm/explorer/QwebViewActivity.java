@@ -262,6 +262,7 @@ public class QwebViewActivity extends Activity implements ViewFactory, TabListen
 		webView.setLayoutParams(new ViewSwitcher.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		webView.setId(VIEW_ID) ;
+		webView.getSettings().setJavaScriptEnabled(true);
 		return webView;
 	}
 
