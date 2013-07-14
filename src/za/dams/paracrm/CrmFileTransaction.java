@@ -206,6 +206,9 @@ public class CrmFileTransaction {
 		public String targetBibleCode ;
 		public int targetPageId ;
 		public int targetFieldId ;
+		
+		public boolean localConditionsIsOn ;
+		public List<CrmFilePivotCondition> localConditions ;
 
 		public boolean conditionSrc ;
 		public int conditionSrcPageId ;
@@ -244,6 +247,14 @@ public class CrmFileTransaction {
 						copymapDestfieldSrcfield.put(destFieldId,srcFieldId) ;
 					}
 				}
+				localConditionsIsOn = jsonObject.getBoolean("localConditionsIsOn");
+				if( localConditionsIsOn ) {
+					localConditions = new ArrayList<CrmFilePivotCondition>();
+					JSONArray jsonLocalConditions = jsonObject.getJSONArray("localConditions");
+					for( int jlcIdx=0 ; jlcIdx<jsonLocalConditions.length() ; jlcIdx++ ) {
+						localConditions.add( new CrmFilePivotCondition( jsonLocalConditions.getJSONObject(jlcIdx) ) ) ;
+					}
+				}
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -273,6 +284,14 @@ public class CrmFileTransaction {
 					}
 					jsonObject.put("copymapDestfieldSrcfield", jsonObjCopymap) ;
 				}
+				jsonObject.put("localConditionsIsOn", localConditionsIsOn) ;
+				if( localConditionsIsOn ) {
+					JSONArray jsonLocalConditions = new JSONArray() ;
+					for( CrmFilePivotCondition cfpc : localConditions ) {
+						jsonLocalConditions.put( cfpc.toJSONObject() ) ;
+					}
+					jsonObject.put("localConditions", jsonLocalConditions) ;
+				}
 				return jsonObject ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -281,6 +300,81 @@ public class CrmFileTransaction {
 			}
     	}
 		
+	}
+	public static class CrmFilePivotCondition {
+		public String entryFieldCode ;
+		public String conditionSign ;
+		public String conditionValue ;
+		public List<String> conditionValueArr ;
+		
+		public CrmFilePivotCondition() {
+			entryFieldCode = "";
+			conditionSign = "";
+			conditionValue = "";
+			conditionValueArr = new ArrayList<String>();
+		}
+		public CrmFilePivotCondition(JSONObject jsonObject) {
+			try {
+				entryFieldCode = jsonObject.getString("entry_field_code");
+				conditionSign = jsonObject.getString("condition_sign");
+				conditionValue = jsonObject.optString("condition_value");
+				conditionValueArr = new ArrayList<String>();
+				try {
+					JSONArray jsonConditionValueArr = jsonObject.getJSONArray("condition_value_arr") ;
+					for( int cvaIdx=0 ; cvaIdx<jsonConditionValueArr.length() ; cvaIdx++ ) {
+						conditionValueArr.add( jsonConditionValueArr.getString(cvaIdx) ) ;
+					}
+				} catch (JSONException e) {
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
+    	public JSONObject toJSONObject() {
+    		try {
+    			JSONObject jsonObject = new JSONObject() ;
+				jsonObject.put("entry_field_code", entryFieldCode) ;
+				jsonObject.put("condition_sign", conditionSign) ;
+				jsonObject.put("condition_value", conditionValue) ;
+				JSONArray jsonConditionValueArr = new JSONArray() ;
+				for( String conditionValueArrItem : conditionValueArr ) {
+					jsonConditionValueArr.put(conditionValueArrItem) ;
+				}
+				jsonObject.put("condition_value_arr", jsonConditionValueArr) ;
+				return jsonObject ;
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null ;
+			}
+    	}
+		
+		public boolean equals( Object o ) {
+			CrmFilePivotCondition cfpc = (CrmFilePivotCondition)o ;
+			if( !this.entryFieldCode.equals(cfpc.entryFieldCode) ) {
+				return false ;
+			}
+			if( !this.conditionSign.equals(cfpc.conditionSign) ) {
+				return false ;
+			}
+			if( !this.conditionValue.equals(cfpc.conditionValue) ) {
+				return false ;
+			}
+			if( !this.conditionValueArr.equals(cfpc.conditionValueArr) ) {
+				return false ;
+			}
+			return true ;
+		}
+		public int hashCode() {
+			int result = 17 ;
+			
+			result = 31 * result + entryFieldCode.hashCode() ;
+			result = 31 * result + conditionSign.hashCode() ;
+			result = 31 * result + conditionValue.hashCode() ;
+			result = 31 * result + conditionValueArr.hashCode() ;
+			
+			return result ;
+		}
 	}
 	
 	
@@ -905,6 +999,20 @@ public class CrmFileTransaction {
 			cfpivot.targetBibleCode = tmpCursor.getString(tmpCursor.getColumnIndex("target_bible_code")) ;
 			cfpivot.targetPageId = tmpCursor.getInt(tmpCursor.getColumnIndex("target_page_index")) ;
 			cfpivot.targetFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("target_page_field_index")) - 1 ;
+			
+			cfpivot.localConditionsIsOn = tmpCursor.getString(tmpCursor.getColumnIndex("condition_is_on")).equals("O") ? true : false ;
+			if( cfpivot.localConditionsIsOn ) {
+				cfpivot.localConditions = new ArrayList<CrmFilePivotCondition>();
+				try {
+					JSONArray jsonLocalConditions = new JSONArray( tmpCursor.getString(tmpCursor.getColumnIndex("condition_json")) ) ;
+					for( int jlcIdx=0 ; jlcIdx<jsonLocalConditions.length() ; jlcIdx++ ) {
+						JSONObject jsonLocalCondition = jsonLocalConditions.getJSONObject(jlcIdx) ;
+						CrmFilePivotCondition cfpc = new CrmFilePivotCondition( jsonLocalCondition ) ;
+						cfpivot.localConditions.add(cfpc);
+					}
+				} catch (JSONException e) {
+				}
+			}
 
 			cfpivot.conditionSrcPageId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_index")) ;
 			cfpivot.conditionSrcFieldId = tmpCursor.getInt(tmpCursor.getColumnIndex("foreignsrc_page_field_index")) - 1 ;
@@ -1153,10 +1261,10 @@ public class CrmFileTransaction {
     	tRecords.add( new CrmFileRecord(0,recordData,false) ) ;
 		
 	}
-	private void page_fillTable( int pageOffset, ArrayList<BibleEntry> bibleConditions ) {
-		page_fillTable(pageOffset,bibleConditions,1) ;
+	private void page_fillTable( int pageOffset, List<CrmFilePivotCondition> localConditions, ArrayList<BibleEntry> bibleConditions ) {
+		page_fillTable(pageOffset,localConditions,bibleConditions,1) ;
 	}
-	private void page_fillTable( int pageOffset, ArrayList<BibleEntry> bibleConditions, int repeatCount ) {
+	private void page_fillTable( int pageOffset, List<CrmFilePivotCondition> localConditions, ArrayList<BibleEntry> bibleConditions, int repeatCount ) {
 		// ************ Création d'une table ************
 		//  - delete all records
 		//  - create tagged records
@@ -1196,6 +1304,27 @@ public class CrmFileTransaction {
     	BibleHelper bibleHelper = new BibleHelper(mContext) ;
     	int a = 0 ;
     	for( BibleHelper.BibleEntry bibleEntry : bibleHelper.queryBible(tFieldDescPivot.fieldLinkBible,bibleConditions) ){
+    		
+    		if( localConditions != null ) {
+    			boolean passed = true ;
+    			for( CrmFilePivotCondition cfpc : localConditions ) {
+    				String bibleEntryField = cfpc.entryFieldCode ;
+    				String bibleEntryFieldValue = bibleEntry.optBibleFields.get(bibleEntryField) ;
+    				if( cfpc.conditionSign.equals("eq") ) {
+    					if( cfpc.conditionValue.equals(bibleEntryFieldValue) ) {} else {
+    						passed = false ;
+    					}
+    				}
+    				if( cfpc.conditionSign.equals("in") ) {
+    					if( cfpc.conditionValueArr.contains(bibleEntryFieldValue) ) {} else {
+    						passed = false ;
+    					}
+    				}
+    			}
+    			if( !passed ) {
+    				continue ;
+    			}
+    		}
 
     		for( int cnt=0 ; cnt<repeatCount ; cnt++ ) {
 
@@ -1962,7 +2091,7 @@ public class CrmFileTransaction {
 				if( fpivot.previousConditionsHash!=null && fpivot.previousConditionsHash.equals("*") ) {
 					continue ;
 				}
-				page_fillTable( pageIdx, null ) ;
+				page_fillTable( pageIdx, ( fpivot.localConditionsIsOn ? fpivot.localConditions:null ) , null ) ;
 				fpivot.previousConditionsHash = "*" ;
 				continue ;
 			}
@@ -2037,9 +2166,9 @@ public class CrmFileTransaction {
 			}
 			
 			if( fpivot.repeatSrc ) {
-				page_fillTable( pageIdx, foreignEntries, repeatCount ) ;
+				page_fillTable( pageIdx, fpivot.localConditions, foreignEntries, repeatCount ) ;
 			} else {
-				page_fillTable( pageIdx, foreignEntries ) ;
+				page_fillTable( pageIdx, fpivot.localConditions, foreignEntries ) ;
 			}
 		}
 	}

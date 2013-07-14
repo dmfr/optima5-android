@@ -32,7 +32,7 @@ public class DatabaseManager {
     
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 36;
+    private final int DB_VERSION = 37;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -318,6 +318,8 @@ public class DatabaseManager {
                     + "target_bible_code" + " VARCHAR(50),"
                     + "target_page_index" + " INTEGER, "
                     + "target_page_field_index" + " INTEGER, "
+                    + "condition_is_on" + " VARCHAR(1),"
+                    + "condition_json" + " VARCHAR(500),"
                     + "foreignsrc_is_on" + " VARCHAR(1),"
                     + "foreignsrc_page_index" + " INTEGER, "
                     + "foreignsrc_page_field_index" + " INTEGER, "
