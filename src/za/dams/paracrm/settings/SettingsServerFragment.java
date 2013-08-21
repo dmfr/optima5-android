@@ -188,6 +188,10 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
 		}
 		switch( clickDle.itemId ) {
 		case ACTION_SRVMANUAL :
+			if( mCallback != null && mCallback.IsLocalDbDirty() ) {
+				UiUtilities.showAlert(mContext, "Unavailable", "Pending sync/uploads in progress !\n> Wait for completion or clear local DB") ;
+				return ;
+			}
 			switchToFragment( "za.dams.paracrm.settings.SettingsSrvManualFragment", clickDle.itemTitle ) ;
 			break ;
 		case ACTION_DBPURGE :

@@ -4,4 +4,5 @@ public interface SettingsCallbacks {
 	// Container Activity must implement this interface
     public void OnServerChanged();
     public void OnRequestClearDb();
+    public boolean IsLocalDbDirty() ;
 }

@@ -4,6 +4,8 @@ import java.util.List;
 
 import za.dams.paracrm.DatabaseManager;
 import za.dams.paracrm.R;
+import za.dams.paracrm.SyncServiceController;
+import za.dams.paracrm.UploadServiceHelper;
 import za.dams.paracrm.explorer.Explorer;
 import za.dams.paracrm.explorer.xpressfile.Xpressfile;
 
@@ -190,6 +192,14 @@ public class SettingsActivity extends PreferenceActivity implements SettingsCall
 	@Override
 	public void OnRequestClearDb() {
 		myClearDbAsk();
+	}
+
+	@Override
+	public boolean IsLocalDbDirty() {
+		if( SyncServiceController.hasPendingPush(mContext) || UploadServiceHelper.hasPendingUploads(mContext) ) {
+			return true;
+		}
+		return false ;
 	}
     
 }
