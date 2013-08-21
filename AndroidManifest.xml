@@ -99,6 +99,13 @@
             android:theme="@android:style/Theme.Holo.Light">
         </activity>
         
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:icon="@drawable/mainmenu_config"
+            android:label="Settings"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.Light" >
+        </activity>
         		
 		<service
             android:name=".UploadService"

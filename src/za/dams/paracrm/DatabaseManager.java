@@ -721,6 +721,11 @@ public class DatabaseManager {
 	    	mDb.endTransaction() ;
 		}
 		tmpCursor.close() ;
+		
+		SharedPreferences settings = mContext.getSharedPreferences("MainMenuActivity",Activity.MODE_PRIVATE);
+		SharedPreferences.Editor editor = settings.edit();
+		editor.remove("bibleTimestamp");
+		editor.commit();
     	
     	return new DatabaseUpgradeResult( true, 0, nbTables , 0 ) ;
     }

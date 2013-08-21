@@ -67,7 +67,7 @@ public class MainMenuStaticAdapter extends BaseAdapter {
 		//Generic
 		MODULES_DICT.add(new StaticInfo("CFG", "Settings", 
 				R.drawable.mainmenu_config, 
-				"myClearDbAsk"));
+				"mySettings"));
 		MODULES_DICT.add(new StaticInfo("BIBLEDL", "Refresh DB", 
 				R.drawable.mainmenu_refreshdb, 
 				"myRefreshDb"));

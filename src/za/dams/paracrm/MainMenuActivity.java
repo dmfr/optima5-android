@@ -23,6 +23,7 @@ import org.json.JSONObject;
 import za.dams.paracrm.explorer.Explorer;
 import za.dams.paracrm.explorer.xpressfile.Xpressfile;
 import za.dams.paracrm.explorer.xpressfile.XpressfileActivity;
+import za.dams.paracrm.settings.SettingsActivity;
 import za.dams.paracrm.ui.FileCaptureActivity;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -38,8 +39,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.provider.Settings.Secure;
 import android.util.Log;
 import android.view.View;
@@ -54,7 +53,6 @@ public class MainMenuActivity extends Activity {
 
 	protected ProgressDialog mProgressDialog;
 	private Context mContext;
-	private ErrorStatus status;
 	
 	private MainMenuAdapter mAdapter ;
 	private MainMenuStaticAdapter mStaticMenuAdapter ;
@@ -63,10 +61,6 @@ public class MainMenuActivity extends Activity {
 	private Thread asyncSanityCheker ;
 	
 	private RefreshDbTask refreshDbTask ;
-	
-	public static final int MSG_ERR = 0;
-	public static final int MSG_CNF = 1;
-	public static final int MSG_IND = 2;
 	
 	static final int ACT_FILECAPTURE = 0;
 
@@ -138,10 +132,6 @@ public class MainMenuActivity extends Activity {
         
         mContext = getApplicationContext();
         
-        
-        updateBackground() ;
-        
- 
         mAdapter = new MainMenuAdapter(this) ;
         
         GridView gridview = (GridView) findViewById(R.id.dynamicgridview);
@@ -232,18 +222,6 @@ public class MainMenuActivity extends Activity {
 
             }
         });
-        
-        onForeground = true ;
-
-        // Async check
-        asyncSanityCheker = new Thread() {
-            public void run() {
-                asyncSanityCheck();
-            };
-        };
-        asyncSanityCheker.start();
-        
-         // mStaticMenuAdapterRefreshThread.start();
     }
     protected void onStart() {
     	super.onStart() ;
@@ -258,9 +236,19 @@ public class MainMenuActivity extends Activity {
     protected void onResume() {
     	super.onResume() ;
 
+        updateBackground() ;
+        mAdapter.notifyDataSetChanged();
+        
     	onForeground = true ;
     	
-    	
+        // Async check
+        asyncSanityCheker = new Thread() {
+            public void run() {
+                asyncSanityCheck();
+            };
+        };
+        asyncSanityCheker.start();
+        
         mStaticMenuAdapterRefreshThread = new Thread(){
         	public void run(){
         		try{
@@ -528,81 +516,14 @@ public class MainMenuActivity extends Activity {
     	alert.show();
     }
     
-	
-    public void myClearDbAsk(){
-    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    	builder.setMessage("This will clear the database ?")
-    	       .setCancelable(true)
-    	       .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-    	           public void onClick(DialogInterface dialog, int id) {
-    	        	   MainMenuActivity.this.myClearDb();
-    	           }
-    	       })
-    	       .setNegativeButton("No", new DialogInterface.OnClickListener() {
-    	           public void onClick(DialogInterface dialog, int id) {
-    	                dialog.cancel();
-    	           }
-    	       });
-    	AlertDialog alert = builder.create();
-    	alert.show();
+    public void mySettings() {
+    	Log.w(TAG,"Settings?");
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setClass(this, SettingsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        this.startActivity(intent);
     }
-	public void myClearDb() {
-	    mProgressDialog = ProgressDialog.show(
-	    		this,
-	    		"Reset All",
-	            "Erasing database...",
-	            true);
-	 
-	    // useful code, variables declarations...
-	    new Thread((new Runnable() {
-	        @Override
-	        public void run() {
-	            Message msg = null;
-	            /*
-	            String progressBarData = "Erasing database...";
-	            msg = mHandler.obtainMessage(MSG_IND, (Object) progressBarData);
-	            mHandler.sendMessage(msg);
-	            */
-	 
-	            // starts the second long operation
-	            DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
-	            DatabaseManager.DatabaseUpgradeResult dbUpResult = mDbManager.purgeReferentiel() ;
-	            if( dbUpResult.success == true ) {
-	            	status = ErrorStatus.NO_ERROR ;
-	            	
-	            	SharedPreferences settings = getPreferences(MODE_PRIVATE);
-	                SharedPreferences.Editor editor = settings.edit();
-	                editor.putLong("bibleTimestamp", dbUpResult.versionTimestamp);
-	                editor.putBoolean("appEnabled", false);
-	                editor.commit();
-	            }
-	            else {
-	            	status = ErrorStatus.ERROR ;
-	            }
-
-	            try {
-	            	Thread.sleep(1000);
-	            } catch (InterruptedException e) {
-	            }
-
-	            if (ErrorStatus.NO_ERROR != status) {
-	            	msg = mHandler.obtainMessage(MSG_ERR,
-	            			"error while building database");
-	            	mHandler.sendMessage(msg);
-	            } else {
-	            	msg = mHandler.obtainMessage(MSG_CNF,
-	            			"Database cleared");
-	            	mHandler.sendMessage(msg);
-	            }
-	            
-	        }
-
-	    })).start();
-	    // ...
-	    
-	    Explorer.clearContext() ;
-	    Xpressfile.clearContext() ;
-	}
+	
 	
 	public void myRefreshDb(){
 		if( refreshDbTask == null ) {
@@ -875,37 +796,5 @@ public class MainMenuActivity extends Activity {
     }
 	
 	 
-	final Handler mHandler = new Handler() {
-	    public void handleMessage(Message msg) {
-	        String text2display = null;
-	        switch (msg.what) {
-	        case MSG_IND:
-	            if (mProgressDialog.isShowing()) {
-	                mProgressDialog.setMessage(((String) msg.obj));
-	            }
-	            break;
-	        case MSG_ERR:
-	            text2display = (String) msg.obj;
-	            Toast.makeText(mContext, "Error: " + text2display,
-	                    Toast.LENGTH_LONG).show();
-	            if (mProgressDialog.isShowing()) {
-	                mProgressDialog.dismiss();
-	            }
-	            break;
-	        case MSG_CNF:
-	            text2display = (String) msg.obj;
-	            Toast.makeText(mContext, "Info: " + text2display,
-	                    Toast.LENGTH_LONG).show();
-	            if (mProgressDialog.isShowing()) {
-	                mProgressDialog.dismiss();
-	            }
-	            mAdapter.notifyDataSetChanged();
-	            updateBackground() ;
-	            break;
-	        default: // should never happen
-	            break;
-	        }
-	    }
-	};
 	
 }
