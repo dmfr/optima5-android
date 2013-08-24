@@ -19,7 +19,7 @@ import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction;
 import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.CrmFileTransactionManager;
-import za.dams.paracrm.HttpPostHelper;
+import za.dams.paracrm.HttpServerHelper;
 import za.dams.paracrm.R;
 import za.dams.paracrm.widget.BiblePickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
@@ -273,8 +273,8 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         	postParams.put("sort", new JSONArray().put(jsonSort).toString() );
         	postParams.put("filter", new JSONArray().put(jsonFilter).toString() );
         	
-	        final HttpClient httpclient = HttpPostHelper.getHttpClient(getActivity(), HttpPostHelper.TIMEOUT_DL) ;
-	        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(getActivity(), postParams);
+	        final HttpClient httpclient = HttpServerHelper.getHttpClient(getActivity(), HttpServerHelper.TIMEOUT_DL) ;
+	        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(getActivity(), postParams);
         	
         	try {
         		Thread.sleep(100);
@@ -286,7 +286,7 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 				HttpResponse httpresponse = httpclient.execute(httppost);
 				HttpEntity entity = httpresponse.getEntity();
 				InputStream content = entity.getContent();
-				response= HttpPostHelper.readStream(content) ;
+				response= HttpServerHelper.readStream(content) ;
         	}
         	catch(Exception e){
         		//e.printStackTrace() ;

@@ -112,15 +112,15 @@ public class UploadService extends Service {
 		        nameValuePairs.put("filerecord_id",tmpCursor.getString(0));
 		        nameValuePairs.put("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT));
 		        
-		        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
-		        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, nameValuePairs);
+		        final HttpClient httpclient = HttpServerHelper.getHttpClient(this, HttpServerHelper.TIMEOUT_DL) ;
+		        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(this, nameValuePairs);
 		        
 				String response = new String();
 				try{
 					HttpResponse httpresponse = httpclient.execute(httppost);
 					HttpEntity entity = httpresponse.getEntity();
 					InputStream content = entity.getContent();
-					response = HttpPostHelper.readStream(content) ;
+					response = HttpServerHelper.readStream(content) ;
 					//Log.w("upload ","Result "+builder.toString()) ;
 					///Toast.makeText(UploadImage.this, "Response " + the_string_response, Toast.LENGTH_LONG).show();
 				}catch(Exception e){

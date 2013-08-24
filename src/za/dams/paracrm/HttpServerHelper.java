@@ -23,25 +23,7 @@ import android.content.Context;
 import android.net.http.AndroidHttpClient;
 import android.provider.Settings;
 
-public class HttpPostHelper {
-	
-	public static String getPostString( HashMap<String,String> postParams ) {
-		if(postParams.size() == 0)
-	        return "";
-
-	    StringBuffer buf = new StringBuffer();
-	    Iterator<String> keys = postParams.keySet().iterator() ;
-	    while(keys.hasNext()) {
-	        buf.append(buf.length() == 0 ? "" : "&");
-	        String key = keys.next() ;
-	        try {
-				buf.append(key).append("=").append(URLEncoder.encode(postParams.get(key),"UTF-8"));
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-			}
-	    }
-	    return buf.toString();
-	}
+public class HttpServerHelper {
 	
 	public static String readStream(InputStream in) throws IOException {  
 	    StringBuilder sb = new StringBuilder();  

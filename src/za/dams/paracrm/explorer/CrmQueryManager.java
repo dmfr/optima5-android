@@ -18,7 +18,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
-import za.dams.paracrm.HttpPostHelper;
+import za.dams.paracrm.HttpServerHelper;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -214,8 +214,8 @@ public class CrmQueryManager {
         	nameValuePairs.put("xls_export", "true");
         }
         
-        final HttpClient httpclient = HttpPostHelper.getHttpClient(c, HttpPostHelper.TIMEOUT_DL) ;
-        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(c, nameValuePairs);
+        final HttpClient httpclient = HttpServerHelper.getHttpClient(c, HttpServerHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(c, nameValuePairs);
         
         try {
             HttpResponse response = httpclient.execute(httppost);

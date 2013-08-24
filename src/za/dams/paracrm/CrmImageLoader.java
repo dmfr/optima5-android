@@ -220,8 +220,8 @@ public class CrmImageLoader {
         nameValuePairs.put("thumbnail", crmUrl.thumbnail?"O":"N");
         
         // AndroidHttpClient is not allowed to be used from the main thread
-        final HttpClient client = HttpPostHelper.getHttpClient(mContext, HttpPostHelper.TIMEOUT_PULL) ;
-        final HttpPost postRequest = HttpPostHelper.getHttpPostRequest(mContext, nameValuePairs);
+        final HttpClient client = HttpServerHelper.getHttpClient(mContext, HttpServerHelper.TIMEOUT_PULL) ;
+        final HttpPost postRequest = HttpServerHelper.getHttpPostRequest(mContext, nameValuePairs);
         try {
             HttpResponse response = client.execute(postRequest);
             final int statusCode = response.getStatusLine().getStatusCode();

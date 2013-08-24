@@ -260,8 +260,8 @@ public class SyncService extends Service {
     		postParams.put("limit", String.valueOf(pr.limitResults));
     	}
     	
-        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_PULL) ;
-        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
+        final HttpClient httpclient = HttpServerHelper.getHttpClient(this, HttpServerHelper.TIMEOUT_PULL) ;
+        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(this, postParams);
         
         try {
             HttpResponse response = httpclient.execute(httppost);
@@ -412,8 +412,8 @@ public class SyncService extends Service {
 		
 		String response = null ;
 		
-        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
-        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
+        final HttpClient httpclient = HttpServerHelper.getHttpClient(this, HttpServerHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(this, postParams);
 		try {
 			HttpResponse httpresponse = httpclient.execute(httppost);
 			StatusLine statusLine = httpresponse.getStatusLine();
@@ -421,7 +421,7 @@ public class SyncService extends Service {
 			if (statusCode == 200) {
 				HttpEntity entity = httpresponse.getEntity();
 				InputStream content = entity.getContent();
-				response = HttpPostHelper.readStream(content) ;
+				response = HttpServerHelper.readStream(content) ;
 			} else {
 				return new ArrayList<UploadEntry>() ;
 			}

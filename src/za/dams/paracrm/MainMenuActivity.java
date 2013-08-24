@@ -381,7 +381,7 @@ public class MainMenuActivity extends Activity {
 				*/
 
 				InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
-				String response= HttpPostHelper.readStream(in) ;
+				String response= HttpServerHelper.readStream(in) ;
 				
 				int nightlyVersion = 0 ;
 				try{
@@ -418,15 +418,15 @@ public class MainMenuActivity extends Activity {
 			//e1.printStackTrace();
 		}
     	
-        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
-        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
+        final HttpClient httpclient = HttpServerHelper.getHttpClient(this, HttpServerHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpServerHelper.getHttpPostRequest(this, postParams);
     	
     	String response = null ;
     	try {
 			HttpResponse httpresponse = httpclient.execute(httppost);
 			HttpEntity entity = httpresponse.getEntity();
 			InputStream content = entity.getContent();
-			response= HttpPostHelper.readStream(content) ;
+			response= HttpServerHelper.readStream(content) ;
     	} catch(Exception e){
     		
     	} finally {
@@ -565,8 +565,8 @@ public class MainMenuActivity extends Activity {
         	postParams.put("__DBversionCode", String.valueOf(mDbManager.getDbVersion()));
         	postParams.put("_action", "android_getDbImageTab");
         	
-            final HttpClient httpclient = HttpPostHelper.getHttpClient(mContext, HttpPostHelper.TIMEOUT_DL) ;
-            final HttpPost httppost = HttpPostHelper.getHttpPostRequest(mContext, postParams);
+            final HttpClient httpclient = HttpServerHelper.getHttpClient(mContext, HttpServerHelper.TIMEOUT_DL) ;
+            final HttpPost httppost = HttpServerHelper.getHttpPostRequest(mContext, postParams);
             
         	DatabaseManager.DatabaseUpgradeResult dbUpResult = new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
     		
