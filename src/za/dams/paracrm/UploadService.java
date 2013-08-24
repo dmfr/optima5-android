@@ -1,41 +1,24 @@
 package za.dams.paracrm;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.HashMap;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.StatusLine;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.app.Service;
-import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 
@@ -55,11 +38,6 @@ public class UploadService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		new UploadTask().execute() ;
     	return START_STICKY;
-	}
-	
-	
-	private String getDeviceAndroidId() {
-		return Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
 	}
 	
 	
@@ -129,38 +107,35 @@ public class UploadService extends Service {
 				}
 
 
-				ArrayList<NameValuePair> nameValuePairs = new  ArrayList<NameValuePair>();
-				StringBuilder builder = new StringBuilder();
-				nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", getDeviceAndroidId()));
-				nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-				nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-				nameValuePairs.add(new BasicNameValuePair("_action", "android_postBinary"));
-				nameValuePairs.add(new BasicNameValuePair("filerecord_id",tmpCursor.getString(0)));
-				nameValuePairs.add(new BasicNameValuePair("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT)));
+		        HashMap<String,String> nameValuePairs = new HashMap<String,String>();
+		        nameValuePairs.put("_action", "android_postBinary");
+		        nameValuePairs.put("filerecord_id",tmpCursor.getString(0));
+		        nameValuePairs.put("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT));
+		        
+		        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
+		        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, nameValuePairs);
+		        
+				String response = new String();
 				try{
-					HttpClient httpclient = new DefaultHttpClient();
-					HttpPost httppost = new HttpPost(getString(R.string.server_url));
-					httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-					HttpResponse response = httpclient.execute(httppost);
-					HttpEntity entity = response.getEntity();
+					HttpResponse httpresponse = httpclient.execute(httppost);
+					HttpEntity entity = httpresponse.getEntity();
 					InputStream content = entity.getContent();
-					BufferedReader reader = new BufferedReader(
-							new InputStreamReader(content));
-					String line;
-					while ((line = reader.readLine()) != null) {
-						builder.append(line);
-					}
+					response = HttpPostHelper.readStream(content) ;
 					//Log.w("upload ","Result "+builder.toString()) ;
 					///Toast.makeText(UploadImage.this, "Response " + the_string_response, Toast.LENGTH_LONG).show();
 				}catch(Exception e){
 					//e.printStackTrace() ;
 					//Log.w("Bin upload","Failed 3") ;
+				}finally {
+		            if ((httpclient instanceof AndroidHttpClient)) {
+		                ((AndroidHttpClient) httpclient).close();
+		            }
 				}
 
 				// do something with builder ;
 				JSONObject jsonResp = new JSONObject() ;
 				try {
-					jsonResp = new JSONObject(builder.toString()) ;
+					jsonResp = new JSONObject(response) ;
 				} catch (JSONException e) {
 
 				}

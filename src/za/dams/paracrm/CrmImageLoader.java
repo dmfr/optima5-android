@@ -213,25 +213,16 @@ public class CrmImageLoader {
 
     Bitmap downloadBitmap(CrmUrl crmUrl) {
         final int IO_BUFFER_SIZE = 4 * 1024;
-        
-        // Android ID
-        String android_id = Settings.Secure.getString(mContext.getContentResolver(),Settings.Secure.ANDROID_ID);
 
+        HashMap<String,String> nameValuePairs = new HashMap<String,String>();
+        nameValuePairs.put("_action", "android_imgPull");
+        nameValuePairs.put("sync_vuid", crmUrl.syncVuid);
+        nameValuePairs.put("thumbnail", crmUrl.thumbnail?"O":"N");
+        
         // AndroidHttpClient is not allowed to be used from the main thread
-        final HttpClient client = AndroidHttpClient.newInstance("Android");
-        final HttpPost postRequest = new HttpPost(mContext.getString(R.string.server_url));
-        client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
-        client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 10000);
+        final HttpClient client = HttpPostHelper.getHttpClient(mContext, HttpPostHelper.TIMEOUT_PULL) ;
+        final HttpPost postRequest = HttpPostHelper.getHttpPostRequest(mContext, nameValuePairs);
         try {
-            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-            nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", android_id));
-            nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-            nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-            nameValuePairs.add(new BasicNameValuePair("_action", "android_imgPull"));
-            nameValuePairs.add(new BasicNameValuePair("sync_vuid", crmUrl.syncVuid));
-            nameValuePairs.add(new BasicNameValuePair("thumbnail", crmUrl.thumbnail?"O":"N"));
-			postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-        	
             HttpResponse response = client.execute(postRequest);
             final int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {

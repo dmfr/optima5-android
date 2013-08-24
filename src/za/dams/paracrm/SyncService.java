@@ -5,29 +5,20 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -239,13 +230,10 @@ public class SyncService extends Service {
     	}
 
 
-    	HashMap<String,String> postParams = new HashMap<String,String>() ;
-    	postParams.put("__ANDROID_ID", getDeviceAndroidId());
-    	postParams.put("_domain", "paramount");
-    	postParams.put("_moduleName", "paracrm");
-    	postParams.put("_action", "android_syncPull");
-    	postParams.put("file_code", pr.fileCode);
-    	postParams.put("local_sync_hashmap", jsonHashmapLocalVuidSync.toString()) ;
+        HashMap<String,String> postParams = new HashMap<String,String>();
+        postParams.put("_action", "android_syncPull");
+        postParams.put("file_code", pr.fileCode);
+        postParams.put("local_sync_hashmap", jsonHashmapLocalVuidSync.toString());
     	if( pr.fileConditions != null && pr.fileConditions.size() > 0 ) {
 			try {
 				JSONArray jsonArr = new JSONArray() ;
@@ -272,18 +260,11 @@ public class SyncService extends Service {
     		postParams.put("limit", String.valueOf(pr.limitResults));
     	}
     	
-        final HttpClient client = AndroidHttpClient.newInstance("Android");
-        final HttpPost postRequest = new HttpPost(getString(R.string.server_url));
-        client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
-        client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 10000);
+        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_PULL) ;
+        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
+        
         try {
-            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-            for( Map.Entry<String,String> kv : postParams.entrySet() ) {
-            	nameValuePairs.add(new BasicNameValuePair(kv.getKey(), kv.getValue()));
-            }
-			postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-        	
-            HttpResponse response = client.execute(postRequest);
+            HttpResponse response = httpclient.execute(httppost);
             final int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
                 return false ;
@@ -306,14 +287,14 @@ public class SyncService extends Service {
                 }
             }
         } catch (IOException e) {
-        	postRequest.abort();
+        	httppost.abort();
         } catch (IllegalStateException e) {
-        	postRequest.abort();
+        	httppost.abort();
         } catch (Exception e) {
-        	postRequest.abort();
+        	httppost.abort();
         } finally {
-            if ((client instanceof AndroidHttpClient)) {
-                ((AndroidHttpClient) client).close();
+            if ((httpclient instanceof AndroidHttpClient)) {
+                ((AndroidHttpClient) httpclient).close();
             }
         }
         return true ;
@@ -424,38 +405,23 @@ public class SyncService extends Service {
     
     
 	public ArrayList<UploadEntry> uploadToServer(JSONObject jsonDump) {
-    	HttpParams httpParameters = new BasicHttpParams();
-    	HttpConnectionParams.setConnectionTimeout(httpParameters, 30000);
-    	HttpConnectionParams.setSoTimeout(httpParameters, 30000);
     	
-		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-		nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", getDeviceAndroidId()));
-		nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-		nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-		nameValuePairs.add(new BasicNameValuePair("_action", "android_syncPush"));
-		nameValuePairs.add(new BasicNameValuePair("data", jsonDump.toString()));
+        HashMap<String,String> postParams = new HashMap<String,String>();
+        postParams.put("_action", "android_syncPush") ;
+        postParams.put("data", jsonDump.toString()) ;
 		
-		StringBuilder builder = new StringBuilder();
-		HttpClient client = new DefaultHttpClient(httpParameters);
-		HttpPost httpPost = new HttpPost(getString(R.string.server_url));
+		String response = null ;
+		
+        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
 		try {
-			httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-		} catch (UnsupportedEncodingException e1) {
-			return new ArrayList<UploadEntry>() ;
-		}
-		try {
-			HttpResponse response = client.execute(httpPost);
-			StatusLine statusLine = response.getStatusLine();
+			HttpResponse httpresponse = httpclient.execute(httppost);
+			StatusLine statusLine = httpresponse.getStatusLine();
 			int statusCode = statusLine.getStatusCode();
 			if (statusCode == 200) {
-				HttpEntity entity = response.getEntity();
+				HttpEntity entity = httpresponse.getEntity();
 				InputStream content = entity.getContent();
-				BufferedReader reader = new BufferedReader(
-						new InputStreamReader(content));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					builder.append(line);
-				}
+				response = HttpPostHelper.readStream(content) ;
 			} else {
 				return new ArrayList<UploadEntry>() ;
 			}
@@ -463,6 +429,10 @@ public class SyncService extends Service {
 			return new ArrayList<UploadEntry>() ;
 		} catch (IOException e) {
 			return new ArrayList<UploadEntry>() ;
+		} finally {
+            if ((httpclient instanceof AndroidHttpClient)) {
+                ((AndroidHttpClient) httpclient).close();
+            }
 		}
 		
 		
@@ -471,7 +441,7 @@ public class SyncService extends Service {
 		// do something with builder ;
         JSONObject jsonResp = new JSONObject() ;
         try {
-        	jsonResp = new JSONObject(builder.toString()) ;
+        	jsonResp = new JSONObject(response) ;
         } catch (JSONException e) {
         	return new ArrayList<UploadEntry>() ;
         }

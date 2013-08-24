@@ -1,41 +1,37 @@
 package za.dams.paracrm.ui;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.BibleHelper.BibleEntry;
 import za.dams.paracrm.CrmFileTransaction;
+import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.HttpPostHelper;
 import za.dams.paracrm.R;
-import za.dams.paracrm.BibleHelper.BibleEntry;
-import za.dams.paracrm.CrmFileTransaction.FieldType;
 import za.dams.paracrm.widget.BiblePickerDialog;
-import za.dams.paracrm.widget.DatetimePickerDialog;
-import za.dams.paracrm.widget.InputPickerDialog;
 import za.dams.paracrm.widget.BiblePickerDialog.OnBibleSetListener;
+import za.dams.paracrm.widget.DatetimePickerDialog;
 import za.dams.paracrm.widget.DatetimePickerDialog.OnDatetimeSetListener;
+import za.dams.paracrm.widget.InputPickerDialog;
 import za.dams.paracrm.widget.InputPickerDialog.OnInputSetListener;
 import android.app.DialogFragment;
 import android.app.Fragment;
-import android.app.FragmentTransaction;
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -271,17 +267,14 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
         		//e.printStackTrace();
         	}
         	
-        	String android_id = Settings.Secure.getString(getActivity().getContentResolver(),Settings.Secure.ANDROID_ID);
-        	
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
-        	postParams.put("__ANDROID_ID", android_id);
-        	postParams.put("_domain", "paramount");
-        	postParams.put("_moduleName", "paracrm");
         	postParams.put("_action", "android_getFileGrid_data");
         	postParams.put("file_code", mTransaction.list_getAllPages().get(pageId).fileCode );
         	postParams.put("sort", new JSONArray().put(jsonSort).toString() );
         	postParams.put("filter", new JSONArray().put(jsonFilter).toString() );
-        	String postString = HttpPostHelper.getPostString(postParams) ;
+        	
+	        final HttpClient httpclient = HttpPostHelper.getHttpClient(getActivity(), HttpPostHelper.TIMEOUT_DL) ;
+	        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(getActivity(), postParams);
         	
         	try {
         		Thread.sleep(100);
@@ -290,33 +283,18 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 
         	String response = new String() ;
         	try {
-        		URL url = new URL(getString(R.string.server_url));
-        		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-        		httpURLConnection.setDoOutput(true);
-        		httpURLConnection.setRequestMethod("POST");
-        		httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-        		httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        		try {
-        			PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-        			out.print(postString);
-        			out.close();
-
-        			InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
-        			response= HttpPostHelper.readStream(in) ;
+				HttpResponse httpresponse = httpclient.execute(httppost);
+				HttpEntity entity = httpresponse.getEntity();
+				InputStream content = entity.getContent();
+				response= HttpPostHelper.readStream(content) ;
+        	}
+        	catch(Exception e){
+        		//e.printStackTrace() ;
+        		//Log.w("Bin upload","Failed 3") ;
+        	}finally {
+        		if ((httpclient instanceof AndroidHttpClient)) {
+        			((AndroidHttpClient) httpclient).close();
         		}
-        		catch (IOException e) {
-        			return new Boolean(false) ;
-        		}
-        		finally{
-        			httpURLConnection.disconnect() ;
-        		}
-
-        	} catch (MalformedURLException e) {
-        		// TODO Auto-generated catch block
-        		return new Boolean(false) ;
-        	} catch (IOException e) {
-        		// TODO Auto-generated catch block
-        		return new Boolean(false) ;
         	}
 
         	try {

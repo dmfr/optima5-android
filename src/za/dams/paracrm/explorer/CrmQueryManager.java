@@ -5,29 +5,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import za.dams.paracrm.DatabaseManager;
-import za.dams.paracrm.R;
+import za.dams.paracrm.HttpPostHelper;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.http.AndroidHttpClient;
-import android.provider.Settings;
 import android.util.Log;
 
 public class CrmQueryManager {
@@ -210,30 +205,20 @@ public class CrmQueryManager {
 		
 		String jsonString = null ;
 		
-		// Android ID
-		final String android_id = Settings.Secure.getString(c.getContentResolver(),Settings.Secure.ANDROID_ID);
-        // AndroidHttpClient is not allowed to be used from the main thread
-        final HttpClient client = AndroidHttpClient.newInstance("Android");
-        final HttpParams httpParameters = client.getParams() ;
-    	HttpConnectionParams.setConnectionTimeout(httpParameters, 60000);
-    	HttpConnectionParams.setSoTimeout(httpParameters, 60000);
-        final HttpPost postRequest = new HttpPost(c.getString(R.string.server_url));
-
+        HashMap<String,String> nameValuePairs = new HashMap<String,String>();
+        nameValuePairs.put("_action", "android_postBinary");
+        nameValuePairs.put("querysrc_id", String.valueOf(cqm.querysrcId));
+        nameValuePairs.put("querysrc_where", jsonArrayWhere.toString());
+        nameValuePairs.put("querysrc_progress", jsonArrayProgress.toString());
+        if( getAsXls ) {
+        	nameValuePairs.put("xls_export", "true");
+        }
+        
+        final HttpClient httpclient = HttpPostHelper.getHttpClient(c, HttpPostHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(c, nameValuePairs);
+        
         try {
-            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-            nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", android_id));
-            nameValuePairs.add(new BasicNameValuePair("_domain", "paramount"));
-            nameValuePairs.add(new BasicNameValuePair("_moduleName", "paracrm"));
-            nameValuePairs.add(new BasicNameValuePair("_action", "android_query_fetchResult"));
-            nameValuePairs.add(new BasicNameValuePair("querysrc_id", String.valueOf(cqm.querysrcId)));
-            nameValuePairs.add(new BasicNameValuePair("querysrc_where", jsonArrayWhere.toString()));
-            nameValuePairs.add(new BasicNameValuePair("querysrc_progress", jsonArrayProgress.toString()));
-            if( getAsXls ) {
-            	nameValuePairs.add(new BasicNameValuePair("xls_export", "true"));
-            }
-			postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-        	
-            HttpResponse response = client.execute(postRequest);
+            HttpResponse response = httpclient.execute(httppost);
             final int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
                 Log.w(LOG_TAG, "Error " + statusCode +
@@ -274,17 +259,17 @@ public class CrmQueryManager {
                 }
             }
         } catch (IOException e) {
-        	postRequest.abort();
+        	httppost.abort();
             Log.w(LOG_TAG, "I/O error while retrieving query", e);
         } catch (IllegalStateException e) {
-        	postRequest.abort();
+        	httppost.abort();
             Log.w(LOG_TAG, "Incorrect URL: ");
         } catch (Exception e) {
-        	postRequest.abort();
+        	httppost.abort();
             Log.w(LOG_TAG, "Error while retrieving query", e);
         } finally {
-            if ((client instanceof AndroidHttpClient)) {
-                ((AndroidHttpClient) client).close();
+            if ((httpclient instanceof AndroidHttpClient)) {
+                ((AndroidHttpClient) httpclient).close();
             }
         }
         

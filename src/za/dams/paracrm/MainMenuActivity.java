@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -14,6 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
@@ -37,6 +40,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings.Secure;
@@ -405,12 +409,7 @@ public class MainMenuActivity extends Activity {
 		}
     }
     private long asyncGetBibleTimestamp(){
-    	String android_id = Secure.getString(getContentResolver(),Secure.ANDROID_ID);
-    	
     	HashMap<String,String> postParams = new HashMap<String,String>() ;
-    	postParams.put("__ANDROID_ID",android_id);
-    	postParams.put("_domain", "paramount");
-    	postParams.put("_moduleName", "paracrm");
     	postParams.put("_action", "android_getDbImageTimestamp");
     	try {
 			postParams.put("__versionCode", String.valueOf( getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA).versionCode) ) ;
@@ -418,49 +417,39 @@ public class MainMenuActivity extends Activity {
 			// TODO Auto-generated catch block
 			//e1.printStackTrace();
 		}
-    	String postString = HttpPostHelper.getPostString(postParams) ;
     	
-		try {
-			URL url = new URL(getString(R.string.server_url));
-			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-			httpURLConnection.setDoOutput(true);
-			httpURLConnection.setRequestMethod("POST");
-			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			try {
-				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-				out.print(postString);
-				out.close();
-
-				InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
-				String response= HttpPostHelper.readStream(in) ;
-				
-				long versionTimestamp = 0 ;
-	            try {
-	            	JSONObject jsonResp ;
-	            	jsonResp = new JSONObject(response) ;
-	            	if( jsonResp.getBoolean("success") ) {
-	            		versionTimestamp = jsonResp.getLong("timestamp") ;
-	            	}
-	            } catch (JSONException e) {
-	            	return 0 ;
-	            }
-				return versionTimestamp ;
-			}
-			catch (IOException e) {
-				return 0 ;
-			}
-			finally{
-				httpURLConnection.disconnect() ;
-			}
-
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			return 0 ;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			return 0 ;
-		}
+        final HttpClient httpclient = HttpPostHelper.getHttpClient(this, HttpPostHelper.TIMEOUT_DL) ;
+        final HttpPost httppost = HttpPostHelper.getHttpPostRequest(this, postParams);
+    	
+    	String response = null ;
+    	try {
+			HttpResponse httpresponse = httpclient.execute(httppost);
+			HttpEntity entity = httpresponse.getEntity();
+			InputStream content = entity.getContent();
+			response= HttpPostHelper.readStream(content) ;
+    	} catch(Exception e){
+    		
+    	} finally {
+    		if ((httpclient instanceof AndroidHttpClient)) {
+    			((AndroidHttpClient) httpclient).close();
+    		}
+    	}
+    	
+    	if(response == null) {
+    		return 0 ;
+    	}
+    	
+		long versionTimestamp = 0 ;
+        try {
+        	JSONObject jsonResp ;
+        	jsonResp = new JSONObject(response) ;
+        	if( jsonResp.getBoolean("success") ) {
+        		versionTimestamp = jsonResp.getLong("timestamp") ;
+        	}
+        } catch (JSONException e) {
+        	return 0 ;
+        }
+		return versionTimestamp ;
     }
     
     
@@ -570,48 +559,29 @@ public class MainMenuActivity extends Activity {
     	}
     	
         protected DatabaseManager.DatabaseUpgradeResult doInBackground(Void... Params ) {
-        	String android_id = Secure.getString(getContentResolver(),Secure.ANDROID_ID);
             DatabaseManager mDbManager = DatabaseManager.getInstance(MainMenuActivity.this.getApplicationContext()) ;
             
         	HashMap<String,String> postParams = new HashMap<String,String>() ;
-        	postParams.put("__ANDROID_ID", android_id);
         	postParams.put("__DBversionCode", String.valueOf(mDbManager.getDbVersion()));
-        	postParams.put("_domain", "paramount");
-        	postParams.put("_moduleName", "paracrm");
         	postParams.put("_action", "android_getDbImageTab");
-        	String postString = HttpPostHelper.getPostString(postParams) ;
         	
+            final HttpClient httpclient = HttpPostHelper.getHttpClient(mContext, HttpPostHelper.TIMEOUT_DL) ;
+            final HttpPost httppost = HttpPostHelper.getHttpPostRequest(mContext, postParams);
+            
         	DatabaseManager.DatabaseUpgradeResult dbUpResult = new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
     		
     		try {
-    			URL url = new URL(getString(R.string.server_url));
-    			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-    			httpURLConnection.setDoOutput(true);
-    			httpURLConnection.setRequestMethod("POST");
-    			httpURLConnection.setFixedLengthStreamingMode(postString.getBytes().length);
-    			httpURLConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-    			try {
-    				PrintWriter out = new PrintWriter(httpURLConnection.getOutputStream());
-    				out.print(postString);
-    				out.close();
-
-    				InputStream in = new BufferedInputStream(httpURLConnection.getInputStream());  
-    	            dbUpResult = mDbManager.upgradeReferentielStream( in ) ;
-    				// return dbUpResult ;
-    			}
-    			catch (IOException e) {
-    				return new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
-    			}
-    			finally{
-    				httpURLConnection.disconnect() ;
-    			}
-
-    		} catch (MalformedURLException e) {
-    			// TODO Auto-generated catch block
+				HttpResponse httpresponse = httpclient.execute(httppost);
+				HttpEntity entity = httpresponse.getEntity();
+				InputStream content = entity.getContent();
+				dbUpResult = mDbManager.upgradeReferentielStream( content ) ;
+    		} catch (Exception e) {
+    			httppost.abort() ;
     			return new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
-    		} catch (IOException e) {
-    			// TODO Auto-generated catch block
-    			return new DatabaseManager.DatabaseUpgradeResult( false, 0, 0 , 0 ) ;
+    		} finally {
+                if ((httpclient instanceof AndroidHttpClient)) {
+                    ((AndroidHttpClient) httpclient).close();
+                }
     		}
         	
     		
