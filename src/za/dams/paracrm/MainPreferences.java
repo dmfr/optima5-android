@@ -26,6 +26,8 @@ public class MainPreferences {
 	}
 	
 	private String cachedServerFullUrl = null ;
+	private int cachedServerDlTimeout = 0 ;
+	private int cachedServerPullTimeout = 0 ;
 	
 	public String getServerFullUrl() {
 		if( cachedServerFullUrl != null ) {
@@ -35,7 +37,7 @@ public class MainPreferences {
     	String url = prefs.getString("srv_url", "") ;
     	String domain = prefs.getString("srv_domain", "") ;
     	String sdomain = prefs.getString("srv_sdomain", "") ;
-    	return cachedServerFullUrl = buildServerFullUrl(url,domain,sdomain) ;
+    	return (cachedServerFullUrl = buildServerFullUrl(url,domain,sdomain)) ;
 	}
 	public static String buildServerFullUrl(String url, String domain, String sdomain) {
 		if (url.length() > 0 && url.charAt(url.length()-1)=='/') {
@@ -46,6 +48,23 @@ public class MainPreferences {
 			return new String() ;
 		}
 		return url + "/" + domain + "/" + sdomain ;
+	}
+	
+	public int getServerDlTimeout() {
+		if( cachedServerDlTimeout > 0 ) {
+			return cachedServerDlTimeout ;
+		}
+    	SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+    	int dlTimeout = prefs.getInt("srv_dl_timeout", mContext.getResources().getInteger(R.integer.settings_srv_default_dl_timeout)) ;
+    	return (cachedServerDlTimeout = dlTimeout) ;
+	}
+	public int getServerPullTimeout() {
+		if( cachedServerPullTimeout > 0 ) {
+			return cachedServerPullTimeout ;
+		}
+    	SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+    	int pullTimeout = prefs.getInt("srv_pull_timeout", mContext.getResources().getInteger(R.integer.settings_srv_default_pull_timeout)) ;
+    	return (cachedServerPullTimeout = pullTimeout) ;
 	}
 	
 }
