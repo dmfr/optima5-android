@@ -3,6 +3,7 @@ package za.dams.paracrm.settings;
 import java.util.List;
 
 import za.dams.paracrm.DatabaseManager;
+import za.dams.paracrm.MainPreferences;
 import za.dams.paracrm.R;
 import za.dams.paracrm.SyncServiceController;
 import za.dams.paracrm.UploadServiceHelper;
@@ -186,6 +187,7 @@ public class SettingsActivity extends PreferenceActivity implements SettingsCall
 	
 	@Override
 	public void OnServerChanged() {
+		MainPreferences.clearInstance() ;
 		myClearDb();
 	}
 

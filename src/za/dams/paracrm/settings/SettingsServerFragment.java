@@ -3,14 +3,15 @@ package za.dams.paracrm.settings;
 import java.util.ArrayList;
 import java.util.List;
 
+import za.dams.paracrm.MainPreferences;
 import za.dams.paracrm.R;
-import za.dams.paracrm.explorer.DataListFragment.DataListEntry;
 
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.app.ListFragment;
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -142,7 +143,7 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
 		row = new ListRow() ;
 		row.isHeader = false ;
 		row.itemId = ACTION_SRVMANUAL ;
-		row.itemTitle = "Manual configuration - Server Http/Domain/Sdomain" ;
+		row.itemTitle = "Manual configuration - Server Http-Domain-Sdomain" ;
 		row.itemCaption = "" ;
 		mRowList.add(row);
 		
@@ -181,6 +182,12 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
     }
 	
 	@Override
+	public void onResume() {
+		super.onResume();
+		buildCaptions();
+	}
+
+	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long doNotUse) {
 		final ListRow clickDle = ((ListAdapter)getListAdapter()).getItem(position) ;
 		if( clickDle.isHeader ) {
@@ -214,5 +221,47 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
 		transaction.setBreadCrumbTitle(fragmentTitle) ;
 		transaction.commit() ;
 	}
+	
+	private void buildCaptions() {
+		new BuildCaptionsTask().execute() ;
+	}
+    private class BuildCaptionsTask extends AsyncTask<Void,Void,Void> {
+    	String[] tCaptions ;
+
+		@Override
+		protected Void doInBackground(Void... params) {
+			tCaptions = new String[mRowList.size()] ;
+			
+			int idx = -1 ;
+			for( ListRow lr : mRowList ) {
+				idx++ ;
+				switch( lr.itemId ) {
+				case ACTION_SRVMANUAL :
+					tCaptions[idx] = MainPreferences.getInstance(SettingsServerFragment.this.mContext).getServerFullUrl() ;
+					break ;
+				default :
+					tCaptions[idx] = null ;
+					break;
+				}
+			}
+			return null;
+		}
+    	@Override
+    	protected void onPostExecute(Void arg0) {
+    		if( !SettingsServerFragment.this.isAdded() ) {
+    			return ;
+    		}
+    		for( int idx=0 ; idx<tCaptions.length ; idx++ ) {
+    			mRowList.get(idx).itemCaption = tCaptions[idx] ;
+    		}
+    		((ListAdapter)SettingsServerFragment.this.getListAdapter()).notifyDataSetChanged() ;
+    	}
+    	
+        public BuildCaptionsTask execute() {
+    		executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) ;
+        	return this ;
+        }
+    }
+	
 
 }

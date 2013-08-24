@@ -517,7 +517,6 @@ public class MainMenuActivity extends Activity {
     }
     
     public void mySettings() {
-    	Log.w(TAG,"Settings?");
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setClass(this, SettingsActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);

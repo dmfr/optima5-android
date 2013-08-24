@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources
-    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Size of event info dialog box -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+
+    <integer-array name="settings_srv_choices_timeout">
+        <item>10</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+    </integer-array>
+    <integer name="settings_srv_default_dl_timeout">30</integer>
+    <integer name="settings_srv_default_pull_timeout">10</integer>
+
 </resources>

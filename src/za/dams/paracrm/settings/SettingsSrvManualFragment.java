@@ -1,17 +1,28 @@
 package za.dams.paracrm.settings;
 
+import java.util.regex.Pattern;
+
+import za.dams.paracrm.MainMenuActivity;
+import za.dams.paracrm.MainPreferences;
 import za.dams.paracrm.R;
+import za.dams.paracrm.calendar.EditEventView.AccountRow;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.URLUtil;
 import android.widget.BaseAdapter;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
@@ -20,14 +31,15 @@ import android.widget.TextView;
 public class SettingsSrvManualFragment extends Fragment {
 	private static final String TAG = "Settings/SettingsSrvManualFragment";
 	
-	private static final int SAVE_ERR_NONE = 0 ;
-	private static final int SAVE_ERR_URL = 1 ;
-	private static final int SAVE_ERR_MISSING = 2 ;
-	
-	
 	private Activity mContext;
 	private SettingsCallbacks mCallback ;
 	
+	TextView mTxtUrl ;
+	TextView mTxtDomain ;
+	TextView mTxtSdomain ;
+	View mErrorUrl ;
+	View mErrorDomain ;
+	View mErrorSdomain ;
 	Spinner mDlTimeoutSpinner ;
 	Spinner mPullTimeoutSpinner ;
 	
@@ -52,6 +64,12 @@ public class SettingsSrvManualFragment extends Fragment {
         view = inflater.inflate(R.layout.settings_srvmanual_fragment, null);
         
         // Attach UI to class members = cache all the widgets
+        mTxtUrl = (TextView)view.findViewById(R.id.txt_srv_url) ;
+        mTxtDomain = (TextView)view.findViewById(R.id.txt_srv_domain) ;
+        mTxtSdomain = (TextView)view.findViewById(R.id.txt_srv_sdomain) ;
+        mErrorUrl = view.findViewById(R.id.error_srv_url) ;
+        mErrorDomain = view.findViewById(R.id.error_srv_domain) ;
+        mErrorSdomain = view.findViewById(R.id.error_srv_sdomain) ;
         mDlTimeoutSpinner = (Spinner)view.findViewById(R.id.srv_dl_timeout) ;
         mPullTimeoutSpinner = (Spinner)view.findViewById(R.id.srv_pull_timeout) ;
         
@@ -69,7 +87,7 @@ public class SettingsSrvManualFragment extends Fragment {
         mPullTimeoutSpinner.setAdapter(adapter);
         
         /* Start loading */
-        loadValues() ;
+        doLoadValues() ;
 	}
 
 	@Override
@@ -111,67 +129,124 @@ public class SettingsSrvManualFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         return onActionBarItemSelected(item.getItemId());
     }
-
-    /**
-     * Handles menu item selections, whether they come from our custom action bar buttons or from
-     * the standard menu items. Depends on the menu item ids matching the custom action bar button
-     * ids.
-     *
-     * @param itemId the button or menu item id
-     * @return whether the event was handled here
-     */
     private boolean onActionBarItemSelected(int itemId) {
         switch (itemId) {
         case R.id.action_done:
-        	int returnCode = saveValues() ;
-        	if( returnCode == SAVE_ERR_NONE ) {
-        		if( mCallback != null ) {
-        			mCallback.OnServerChanged();
-        		}
-        		getFragmentManager().popBackStack() ;
-        		break ;
-        	}
-        	
-        	String errMsg ;
-        	switch( returnCode ) {
-        	case SAVE_ERR_URL :
-        		errMsg = "Server URL is not valid" ;
-        		break ;
-        	case SAVE_ERR_MISSING :
-        		errMsg = "Parameters are missing" ;
-        		break ;
-        	default:
-        		errMsg = "Undefined error" ;
-        		break ;
-        	}
-        	UiUtilities.showAlert(mContext, "Error", errMsg) ;
-        	
-        	break;
+        	handleSaveValues();
+         	break;
 
         case R.id.action_cancel:
-        	getFragmentManager().popBackStack() ;
+        	closeFragment();
         	break;
         }
         return true;
     }
     
-    private void loadValues() {
+    private void handleSaveValues() {
+    	if( !validateValues() ) {
+    		UiUtilities.showAlert(mContext, "Error", "Incorrect values for URL/(S)Domain parameters") ;
+         	return ;
+    	}
     	
+    	AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+    	builder.setMessage("Save parameters ?\n(Change of parameters will reset local DB)")
+    	       .setCancelable(true)
+    	       .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+    	    	   public void onClick(DialogInterface dialog, int id) {
+    	    		   
+    	    		   /* Actual save */
+    	    		   dialog.dismiss();
+    	    		   doSaveValues() ;
+    	    		   if( mCallback != null ) {
+    	    			   mCallback.OnServerChanged();
+    	    		   }
+    	    		   closeFragment() ;
+    	    	   }
+    	       })
+    	       .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+    	           public void onClick(DialogInterface dialog, int id) {
+    	        	   dialog.dismiss();
+    	           }
+    	       })
+    	       .show();
+		return ;
     }
-    private int saveValues() {
+    
+    private void doLoadValues() {
+    	SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+    	String url = prefs.getString("srv_url", "") ;
+    	String domain = prefs.getString("srv_domain", "") ;
+    	String sdomain = prefs.getString("srv_sdomain", "") ;
+    	int dlTimeout = prefs.getInt("srv_dl_timeout", getResources().getInteger(R.integer.settings_srv_default_dl_timeout)) ;
+    	int pullTimeout = prefs.getInt("srv_pull_timeout", getResources().getInteger(R.integer.settings_srv_default_pull_timeout)) ;
     	
+    	mTxtUrl.setText(url);
+    	mTxtDomain.setText(domain);
+    	mTxtSdomain.setText(sdomain);
+    	mDlTimeoutSpinner.setSelection( ((TimeoutSpinnerAdapter)mDlTimeoutSpinner.getAdapter()).searchPositionByItem(dlTimeout) ) ;
+    	mPullTimeoutSpinner.setSelection( ((TimeoutSpinnerAdapter)mPullTimeoutSpinner.getAdapter()).searchPositionByItem(pullTimeout) ) ;
+    }
+    private boolean validateValues() {
+    	String url = mTxtUrl.getText().toString().trim() ;
+    	String domain = mTxtDomain.getText().toString().trim() ;
+    	String sdomain = mTxtSdomain.getText().toString().trim() ;
     	
-    	return SAVE_ERR_NONE ;
+    	String regExpPattern = "^[a-z]*$";
+    	
+    	boolean hasError = false ;
+    	
+    	if( Patterns.WEB_URL.matcher(url).matches() && (URLUtil.isHttpUrl(url) || URLUtil.isHttpsUrl(url)) ) {
+    		mErrorUrl.setVisibility(View.GONE) ;
+    	} else {
+    		hasError = true ;
+    		mErrorUrl.setVisibility(View.VISIBLE) ;
+    	}
+    	if( domain.length() > 0 && domain.matches(regExpPattern) ) {
+    		mErrorDomain.setVisibility(View.GONE) ;
+    	} else {
+    		hasError = true ;
+    		mErrorDomain.setVisibility(View.VISIBLE) ;
+    	}
+    	if( sdomain.length() > 0 && sdomain.matches(regExpPattern) ) {
+    		mErrorSdomain.setVisibility(View.GONE) ;
+    	} else {
+    		hasError = true ;
+    		mErrorSdomain.setVisibility(View.VISIBLE) ;
+    	}
+    	
+    	return !hasError ;
+    }
+    private void doSaveValues() {
+    	String url = mTxtUrl.getText().toString().trim() ;
+    	String domain = mTxtDomain.getText().toString().trim() ;
+    	String sdomain = mTxtSdomain.getText().toString().trim() ;
+    	int dlTimeout = (Integer)mDlTimeoutSpinner.getAdapter().getItem(mDlTimeoutSpinner.getSelectedItemPosition()) ;
+    	int pullTimeout = (Integer)mPullTimeoutSpinner.getAdapter().getItem(mPullTimeoutSpinner.getSelectedItemPosition()) ;
+    	
+    	SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+    	SharedPreferences.Editor editor = prefs.edit() ;
+    	editor.remove("srv_profilestr") ;
+    	editor.putString("srv_url", url);
+    	editor.putString("srv_domain", domain);
+    	editor.putString("srv_sdomain", sdomain);
+    	editor.putInt("srv_dl_timeout", dlTimeout);
+    	editor.putInt("srv_pull_timeout", pullTimeout) ;
+    	editor.commit() ;
+    }
+    
+    private void closeFragment() {
+    	getFragmentManager().popBackStack() ;
     }
     
     
     private static class TimeoutSpinnerAdapter extends BaseAdapter implements SpinnerAdapter {
     	
-    	private static final int[] timeoutChoices = {10,30,60,120} ;
+    	private final int[] timeoutChoices ;
     	private LayoutInflater mInflater ;
     	
     	public TimeoutSpinnerAdapter( Context c ) {
     		mInflater = (LayoutInflater) c.getSystemService( Context.LAYOUT_INFLATER_SERVICE );
+    		timeoutChoices = c.getResources().getIntArray(R.array.settings_srv_choices_timeout);
     	}
     	
 		@Override
@@ -191,6 +266,15 @@ public class SettingsSrvManualFragment extends Fragment {
 		public long getItemId(int position) {
 			return position;
 		}
+		
+    	public int searchPositionByItem( int searchedTimeout ) {
+        	for( int idx=0 ; idx<timeoutChoices.length ; idx++ ) {
+        		if( timeoutChoices[idx] == searchedTimeout ) {
+        			return idx ;
+        		}
+        	}
+        	return -1 ;
+    	}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
