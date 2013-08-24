@@ -55,7 +55,7 @@ public class SettingsSrvManualFragment extends Fragment {
         if (activity instanceof SettingsCallbacks) {
         	mCallback = (SettingsCallbacks)activity;
         } else {
-        	Log.e(TAG,activity.toString()+" must implement OnHeadlineSelectedListener");
+        	Log.e(TAG,activity.toString()+" must implement SettingsCallbacks");
         }
     }
     @Override

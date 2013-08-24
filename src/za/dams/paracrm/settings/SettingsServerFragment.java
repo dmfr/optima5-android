@@ -23,7 +23,7 @@ import android.widget.TextView;
 import android.widget.AdapterView.OnItemClickListener;
 
 public class SettingsServerFragment extends ListFragment implements OnItemClickListener  {
-	private static final String TAG = "Settings/SettingsSrvManualFragment";
+	private static final String TAG = "Settings/SettingsServerFragment";
 	
 	private static final int ACTION_SRVAUTO = 1 ;
 	private static final int ACTION_SRVMANUAL = 2 ;
@@ -177,7 +177,7 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
         if (activity instanceof SettingsCallbacks) {
         	mCallback = (SettingsCallbacks)activity;
         } else {
-        	Log.e(TAG,activity.toString()+" must implement OnHeadlineSelectedListener");
+        	Log.e(TAG,activity.toString()+" must implement SettingsCallbacks");
         }
     }
 	
@@ -194,6 +194,13 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
 			return ;
 		}
 		switch( clickDle.itemId ) {
+		case ACTION_SRVAUTO :
+			if( mCallback != null && mCallback.IsLocalDbDirty() ) {
+				UiUtilities.showAlert(mContext, "Unavailable", "Pending sync/uploads in progress !\n> Wait for completion or clear local DB") ;
+				return ;
+			}
+			switchToFragment( "za.dams.paracrm.settings.SettingsSrvAutoFragment", clickDle.itemTitle ) ;
+			break ;
 		case ACTION_SRVMANUAL :
 			if( mCallback != null && mCallback.IsLocalDbDirty() ) {
 				UiUtilities.showAlert(mContext, "Unavailable", "Pending sync/uploads in progress !\n> Wait for completion or clear local DB") ;

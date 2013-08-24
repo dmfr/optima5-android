@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/refresh"
+        android:orderInCategory="400"
+        android:alphabeticShortcut="r"
+        android:title="Refresh"
+        android:icon="@drawable/ic_menu_refresh_holo_light"
+        android:showAsAction="ifRoom"
+    />
+</menu>
