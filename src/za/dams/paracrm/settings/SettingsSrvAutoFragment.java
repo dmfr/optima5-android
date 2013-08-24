@@ -1,20 +1,37 @@
 package za.dams.paracrm.settings;
 
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
-import za.dams.paracrm.BibleHelper;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.HttpConnectionParams;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import za.dams.paracrm.HttpServerHelper;
 import za.dams.paracrm.MainPreferences;
 import za.dams.paracrm.R;
-import za.dams.paracrm.explorer.Explorer;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ListFragment;
 import android.app.LoaderManager;
 import android.content.AsyncTaskLoader;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Loader;
-import android.graphics.Typeface;
+import android.content.SharedPreferences;
+import android.net.http.AndroidHttpClient;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,8 +41,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.CheckBox;
-import android.widget.ListAdapter;
 import android.widget.TextView;
 
 public class SettingsSrvAutoFragment extends ListFragment implements LoaderManager.LoaderCallbacks<List<SettingsSrvAutoFragment.SrvProfile>> {
@@ -35,8 +50,10 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 	
 	private Activity mContext;
 	private SettingsCallbacks mCallback ;
+	
+	private SrvProfile tSelectedProfile ;
     
-	public class SrvProfile {
+	public static class SrvProfile {
 		String profileCode ; // UNUSED
 		String profileName ;
 		
@@ -177,6 +194,9 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 
     	@Override
     	public int getCount() {
+    		if( mData==null ) {
+    			return 0 ;
+    		}
    			return mData.size() ;
     	}
 
@@ -225,9 +245,6 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 
     	@Override
     	public void onItemClick(AdapterView<?> parent, View view, int position, long id)  {
-    		CheckBox cb = (CheckBox) view.findViewById(R.id.sync);
-    		cb.setChecked(true);
-    		
     		SrvProfile clickedProfile = getItem(position) ;
     		
     		SettingsSrvAutoFragment.this.onProfileSelected(clickedProfile) ;
@@ -255,16 +272,69 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 	     * data to be published by the loader.
 	     */
 	    @Override public List<SrvProfile> loadInBackground() {
-	    	ArrayList<SrvProfile> entries = new ArrayList<SrvProfile>();
 	    	
-	    	try {
-	    		Thread.sleep(2000) ;
-	    	} catch( Exception e ) {
-	    		
-	    	}
+	        final String serverUrl = getContext().getResources().getString(R.string.directory_url) ;
+	    	
+	    	final HttpClient client = AndroidHttpClient.newInstance("Android");
+	        client.getParams().setParameter(HttpConnectionParams.CONNECTION_TIMEOUT, 10000);
+	        client.getParams().setParameter(HttpConnectionParams.SO_TIMEOUT, 10000);
+	    	
+	        final HttpPost postRequest = new HttpPost(serverUrl);
+	        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2) ;
+	        String android_id = Settings.Secure.getString(getContext().getContentResolver(),Settings.Secure.ANDROID_ID);
+	        nameValuePairs.add(new BasicNameValuePair("__ANDROID_ID", android_id));
+			try {
+				postRequest.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+			} catch (UnsupportedEncodingException e) {
+				return null ;
+			}
 
+        	String response = new String() ;
+        	try {
+				HttpResponse httpresponse = client.execute(postRequest);
+				HttpEntity entity = httpresponse.getEntity();
+				InputStream content = entity.getContent();
+				response= HttpServerHelper.readStream(content) ;
+        	}
+        	catch(Exception e){
+        		postRequest.abort() ;
+        		return null ;
+        		//e.printStackTrace() ;
+        		//Log.w("Bin upload","Failed 3") ;
+        	}finally {
+        		if ((client instanceof AndroidHttpClient)) {
+        			((AndroidHttpClient) client).close();
+        		}
+        	}
+			
+        	//Log.w(TAG,"Response from server : "+response) ;
+        	ArrayList<SrvProfile> entries = new ArrayList<SrvProfile>();
+        	try {
+        		JSONObject jsonResponse = new JSONObject(response) ;
+        		if( !jsonResponse.optBoolean("success", false) ) {
+        			return null ;
+        		}
+        		
+        		JSONArray jsonEntries = jsonResponse.optJSONArray("data") ;
+        		if( jsonEntries != null ) {
+        			for( int idx=0 ; idx<jsonEntries.length() ; idx++ ) {
+        				JSONObject jsonEntry = jsonEntries.getJSONObject(idx) ;
 
-	        return entries;
+        				SrvProfile srvProfile = new SrvProfile() ;
+        				srvProfile.profileCode = jsonEntry.optString("profile_code") ;
+        				srvProfile.profileName = jsonEntry.optString("profile_name") ;
+        				srvProfile.srvUrl = jsonEntry.optString("srv_url") ;
+        				srvProfile.srvDomain = jsonEntry.optString("srv_domain") ;
+        				srvProfile.srvSdomain = jsonEntry.optString("srv_sdomain") ;
+        				entries.add(srvProfile);
+        			}
+        		}
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+				return null ;
+			}
+        	return entries;
 	    }
 
 	    /**
@@ -365,17 +435,59 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 	}
 
 	
-    public void forceReload() {
+	private void forceReload() {
     	final LoaderManager lm = getLoaderManager();
     	if( lm.getLoader(LOADER_ID)!=null ) {
     		this.setListShown(false) ;
     		lm.getLoader(LOADER_ID).forceLoad() ;
     	}
     }
+    private void closeFragment() {
+    	getFragmentManager().popBackStack() ;
+    }
 
-	public void onProfileSelected(SrvProfile clickedProfile) {
-		// TODO Auto-generated method stub
+	private void onProfileSelected(SrvProfile clickedProfile) {
+		tSelectedProfile = clickedProfile ;
 		
+		// TODO Auto-generated method stub
+    	AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+    	builder.setTitle("Selected profile")
+    	       .setMessage( clickedProfile.profileName + "\n\nThis will reset local DB. Continue ?")
+    	       .setCancelable(false)
+    	       .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+    	    	   public void onClick(DialogInterface dialog, int id) {
+    	    		   
+    	    		   /* Actual save */
+    	    		   dialog.dismiss();
+    	    		   doSelectProfile( SettingsSrvAutoFragment.this.tSelectedProfile ) ;
+    	    		   if( mCallback != null ) {
+    	    			   mCallback.OnServerChanged();
+    	    		   }
+    	    		   closeFragment() ;
+    	    	   }
+    	       })
+    	       .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+    	           public void onClick(DialogInterface dialog, int id) {
+    	        	   dialog.dismiss();
+    	        	   SettingsSrvAutoFragment.this.tSelectedProfile = null ;
+    	           }
+    	       })
+    	       .show();
+		return ;
+	}
+	private void doSelectProfile(SrvProfile clickedProfile) {
+    	int dlTimeout = mContext.getResources().getInteger(R.integer.settings_srv_default_dl_timeout) ;
+    	int pullTimeout = mContext.getResources().getInteger(R.integer.settings_srv_default_pull_timeout) ;
+    	
+    	SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+    	SharedPreferences.Editor editor = prefs.edit() ;
+    	editor.putString("srv_profilestr", clickedProfile.profileName) ;
+    	editor.putString("srv_url", clickedProfile.srvUrl);
+    	editor.putString("srv_domain", clickedProfile.srvDomain);
+    	editor.putString("srv_sdomain", clickedProfile.srvSdomain);
+    	editor.putInt("srv_dl_timeout", dlTimeout);
+    	editor.putInt("srv_pull_timeout", pullTimeout) ;
+    	editor.commit() ;
 	}
 
 }

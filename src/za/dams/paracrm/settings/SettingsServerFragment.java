@@ -243,6 +243,9 @@ public class SettingsServerFragment extends ListFragment implements OnItemClickL
 			for( ListRow lr : mRowList ) {
 				idx++ ;
 				switch( lr.itemId ) {
+				case ACTION_SRVAUTO :
+					tCaptions[idx] = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0).getString("srv_profilestr", null) ;
+					break ;
 				case ACTION_SRVMANUAL :
 					tCaptions[idx] = MainPreferences.getInstance(SettingsServerFragment.this.mContext).getServerFullUrl() ;
 					break ;
