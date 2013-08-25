@@ -51,8 +51,6 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
 	private Activity mContext;
 	private SettingsCallbacks mCallback ;
 	
-	private SrvProfile tSelectedProfile ;
-    
 	public static class SrvProfile {
 		String profileCode ; // UNUSED
 		String profileName ;
@@ -447,7 +445,7 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
     }
 
 	private void onProfileSelected(SrvProfile clickedProfile) {
-		tSelectedProfile = clickedProfile ;
+		final SrvProfile tSelectedProfile = clickedProfile ;
 		
 		// TODO Auto-generated method stub
     	AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
@@ -459,7 +457,7 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
     	    		   
     	    		   /* Actual save */
     	    		   dialog.dismiss();
-    	    		   doSelectProfile( SettingsSrvAutoFragment.this.tSelectedProfile ) ;
+    	    		   doSelectProfile( tSelectedProfile ) ;
     	    		   if( mCallback != null ) {
     	    			   mCallback.OnServerChanged();
     	    		   }
@@ -469,7 +467,6 @@ public class SettingsSrvAutoFragment extends ListFragment implements LoaderManag
     	       .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
     	           public void onClick(DialogInterface dialog, int id) {
     	        	   dialog.dismiss();
-    	        	   SettingsSrvAutoFragment.this.tSelectedProfile = null ;
     	           }
     	       })
     	       .show();
