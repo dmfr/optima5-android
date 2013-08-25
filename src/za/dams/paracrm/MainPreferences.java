@@ -29,6 +29,10 @@ public class MainPreferences {
 	private int cachedServerDlTimeout = 0 ;
 	private int cachedServerPullTimeout = 0 ;
 	
+	public String getActiveProfileName() {
+		SharedPreferences prefs = mContext.getSharedPreferences(MainPreferences.SHARED_PREFS_NAME,0);
+		return prefs.getString("srv_profilestr", null) ;
+	}
 	public String getServerFullUrl() {
 		if( cachedServerFullUrl != null ) {
 			return cachedServerFullUrl ;

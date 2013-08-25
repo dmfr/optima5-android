@@ -15,6 +15,7 @@ import java.util.HashMap;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.params.BasicHttpParams;
@@ -114,25 +115,18 @@ public class MainMenuActivity extends Activity {
         
         setContentView(R.layout.mainmenu);
     	
-    	if( !getString(R.string.server_url).equals(getString(R.string.server_url_ref))) {
-			((TextView)findViewById(R.id.warningtext)).setVisibility(View.VISIBLE) ;
-			((TextView)findViewById(R.id.warningtext)).setText("URL : "+getString(R.string.server_url));
-    	}
-    	else {
-        	try {
-    			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
-    			ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA) ;
-    			String appLabel = (String)getPackageManager().getApplicationLabel(appInfo) ;
-    			if( appLabel != null && pInfo.versionName != null ) {
-    				((TextView)findViewById(R.id.versiontext)).setVisibility(View.VISIBLE) ;
-    				((TextView)findViewById(R.id.versiontext)).setText(appLabel+" - "+"v"+pInfo.versionName);
-    			}
-    		} catch (NameNotFoundException e) {
-    			// TODO Auto-generated catch block
-    			// e.printStackTrace();
-    		}
-    	}
-        
+    	try {
+			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_META_DATA);
+			ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA) ;
+			String appLabel = (String)getPackageManager().getApplicationLabel(appInfo) ;
+			if( appLabel != null && pInfo.versionName != null ) {
+				((TextView)findViewById(R.id.versiontext)).setVisibility(View.VISIBLE) ;
+				((TextView)findViewById(R.id.versiontext)).setText(appLabel+" - "+"v"+pInfo.versionName);
+			}
+		} catch (NameNotFoundException e) {
+			// TODO Auto-generated catch block
+			// e.printStackTrace();
+		}
         
         mContext = getApplicationContext();
         
@@ -226,6 +220,8 @@ public class MainMenuActivity extends Activity {
 
             }
         });
+        
+        checkSrvProfile() ;
     }
     protected void onStart() {
     	super.onStart() ;
@@ -241,6 +237,7 @@ public class MainMenuActivity extends Activity {
     	super.onResume() ;
 
         updateBackground() ;
+        updateTitle() ;
         mAdapter.notifyDataSetChanged();
         
     	onForeground = true ;
@@ -302,6 +299,47 @@ public class MainMenuActivity extends Activity {
     		background.setVisibility(View.GONE) ;
     	}
     }
+    private void updateTitle() {
+    	TextView txtProfile = ((TextView)findViewById(R.id.profiletext)) ;
+    	TextView srvManual = ((TextView)findViewById(R.id.srvmanualtext)) ;
+    	
+    	MainPreferences mainPreferences = MainPreferences.getInstance(mContext);
+    	String profileName = mainPreferences.getActiveProfileName() ;
+    	String serverUrl = mainPreferences.getServerFullUrl() ;
+    	if( profileName != null && profileName.length() > 0 ) {
+    		srvManual.setVisibility(View.GONE); 
+    		txtProfile.setVisibility(View.VISIBLE) ;
+    		txtProfile.setText(profileName) ;
+    		return ;
+    	}
+    	if( serverUrl != null && serverUrl.length() > 0 ) {
+    		txtProfile.setVisibility(View.GONE);
+    		srvManual.setVisibility(View.VISIBLE) ;
+    		srvManual.setText("URL : "+serverUrl) ;
+    		return ;
+    	}
+		txtProfile.setVisibility(View.GONE);
+		srvManual.setVisibility(View.GONE); 
+    }
+    private void checkSrvProfile() {
+    	if( MainPreferences.getInstance(this).getServerFullUrl().length() == 0 ) {
+    		AlertDialog.Builder builder = new AlertDialog.Builder(MainMenuActivity.this);
+    		builder.setMessage("No configured service !\nWould you like to define one ?")
+    		.setCancelable(false)
+    		.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+    			public void onClick(DialogInterface dialog, int id) {
+    				dialog.dismiss() ;
+    				MainMenuActivity.this.mySettings() ;
+    			}
+    		})
+    		.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+    			public void onClick(DialogInterface dialog, int id) {
+    				dialog.dismiss() ;
+    			}
+    		})
+    		.show() ;
+    	}
+    }
 
     private void asyncSanityCheck(){
     	
@@ -346,9 +384,43 @@ public class MainMenuActivity extends Activity {
     	
     	// check for bible version
     	SharedPreferences settings = getPreferences(MODE_PRIVATE);
-    	long localTimestamp = settings.getLong("bibleTimestamp", 0);
-
-    	long bibleTimestamp = asyncGetBibleTimestamp() ;
+    	final long localTimestamp = settings.getLong("bibleTimestamp", 0);
+    	
+    	final long bibleTimestamp = asyncGetBibleTimestamp() ;
+    	
+    	if( bibleTimestamp < 0 ) {
+    		if( onForeground ){
+            	MainMenuActivity.this.runOnUiThread(new Runnable() {                   
+        			@Override
+        			public void run() {
+        	    		String errorTitle ;
+        	    		String errorMsg ;
+        	    		switch( (int)bibleTimestamp ) {
+        	    		case -9 :
+        	    			errorTitle = "Error 404" ;
+        	    			errorMsg = "Server replied with a 404 error !\nTry again later or check server profile." ;
+        	    			break ;
+        	    		default :
+        	    			errorTitle = "Error" ;
+        	    			errorMsg = "Undefined network error" ;
+        	    			break ;
+        	    		}
+        	    		AlertDialog.Builder builder = new AlertDialog.Builder(MainMenuActivity.this);
+        	    		builder.setTitle(errorTitle)
+        	    		.setMessage(errorMsg)
+        	    		.setCancelable(false)
+        	    		.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+        	    			public void onClick(DialogInterface dialog, int id) {
+        	    				dialog.dismiss();
+        	    			}
+        	    		})
+        	    		.create()
+        	    		.show();
+        			}
+        		});
+    			return ;
+    		}
+     	}
     	
     	if(bibleTimestamp>localTimestamp ) {
     		if( onForeground ){
@@ -424,6 +496,10 @@ public class MainMenuActivity extends Activity {
     	String response = null ;
     	try {
 			HttpResponse httpresponse = httpclient.execute(httppost);
+            final int statusCode = httpresponse.getStatusLine().getStatusCode();
+            if (statusCode == HttpStatus.SC_NOT_FOUND) {
+                return -9 ;
+            }
 			HttpEntity entity = httpresponse.getEntity();
 			InputStream content = entity.getContent();
 			response= HttpServerHelper.readStream(content) ;
@@ -641,12 +717,12 @@ public class MainMenuActivity extends Activity {
             	
             	AlertDialog.Builder builder = new AlertDialog.Builder(MainMenuActivity.this);
             	builder.setTitle("Authentication error")
-            	       .setMessage("This device is not authorized to connect.\nPlease contact support with ANDROID_ID="+android_id)
+            	       .setMessage("This device is not authorized on currently defined service.\nPlease contact support with ANDROID_ID="+android_id)
             	       .setCancelable(false)
             	       .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
             	           public void onClick(DialogInterface dialog, int id) {
             	                dialog.cancel();
-            	                MainMenuActivity.this.finish() ;
+            	                //MainMenuActivity.this.finish() ;
             	                return ;
             	           }
             	       });
