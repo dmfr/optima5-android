@@ -206,7 +206,7 @@ public class CrmQueryManager {
 		String jsonString = null ;
 		
         HashMap<String,String> nameValuePairs = new HashMap<String,String>();
-        nameValuePairs.put("_action", "android_postBinary");
+        nameValuePairs.put("_action", "android_query_fetchResult");
         nameValuePairs.put("querysrc_id", String.valueOf(cqm.querysrcId));
         nameValuePairs.put("querysrc_where", jsonArrayWhere.toString());
         nameValuePairs.put("querysrc_progress", jsonArrayProgress.toString());
