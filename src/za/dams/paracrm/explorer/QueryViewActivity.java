@@ -2,7 +2,6 @@ package za.dams.paracrm.explorer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.Inflater;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,20 +17,17 @@ import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.View.MeasureSpec;
+import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
-import android.view.Window;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ProgressBar;
@@ -139,8 +135,25 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 	}
 	
 	
-	private void initPaging() {
-		mCalculatedPageSize = 0 ;
+	
+	@Override
+	public void onWindowFocusChanged(boolean hasFocus) {
+		// TODO Auto-generated method stub
+		super.onWindowFocusChanged(hasFocus);
+		
+		/*
+		 * onWindowFocusChanged : ensure main ActivityView has dimensions
+		 */
+		measurePaging() ;
+		
+		mViewSwitcher.removeAllViews(); // reset view system
+		mViewSwitcher.setFactory(QueryViewActivity.this) ;
+		mCurrentRowOffset = 0 ; // switch to page 1
+		startView();
+	}
+	
+	
+	private void measurePaging() {
 		View tActivityView = findViewById(android.R.id.content);
 		LayoutInflater tInflater = getLayoutInflater() ;
 		
@@ -151,7 +164,6 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		tTableCellModel.setText(DUMMY_STRING);
 		tTableCellModel.setTypeface(null, Typeface.BOLD) ; // Some devices displays TextViews larger/higher with bold font (AOSP 3.x) 
 		tTableRowModel.addView(tTableCellModel) ;
-		
 		tTableRowModel.setLayoutParams(new ViewGroup.LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
 		tTableRowModel.measure(MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().width, MeasureSpec.EXACTLY),
@@ -194,14 +206,17 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
         	// Initialisation du ViewSwitcher / ViewSwitcher.Factory 
         	mProgressBar.setVisibility(View.GONE) ;
         	mViewSwitcher.setVisibility(View.VISIBLE);
-        	initPaging() ;
-        	mViewSwitcher.setFactory(QueryViewActivity.this) ;
+        	//initPaging() ;
+        	//mViewSwitcher.setFactory(QueryViewActivity.this) ;
         	
         	
         	// Init des tabs + highlight 1ere tab
         	buildTabs() ;
-        	initFirstTab() ;
-    		//setCurrentTab(0) ;
+        	
+        	// Switch to Tab 1 + page 1 
+        	mCurrentTabIdx = 0 ;
+    		mCurrentRowOffset = 0 ;
+    		startView();
         }
 	}
 	private boolean loadFromDb() {
@@ -350,16 +365,20 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
         }
     }
     */
-	private void initFirstTab() {
-    	mCurrentTabIdx = 0 ;
-    	mCurrentRowOffset = 0 ;
-    	
+	private void startView() {
 		QueryView view = (QueryView) mViewSwitcher.getCurrentView();
+		if( view == null ) {
+			return ;
+		}
 		view.setCallback(this) ;
     	mProgressBar.setVisibility(View.VISIBLE) ;
 		view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
 	}
     private void setCurrentTab(int tabIdx) {
+    	if( mViewSwitcher.getCurrentView() == null ) {
+    		return ;
+    	}
+    	
     	if( tabIdx == mCurrentTabIdx ) {
     		return ;
     	}
@@ -511,7 +530,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     	public List<List<String>> getTabRows( int tabIdx, int startOffset, int nbLimit ) {
     		if( startOffset >= getTabCount( tabIdx ) ) {
     			return new ArrayList<List<String>>() ;
-    		}    		
+    		}
     		return mTabRowCells.get(tabIdx).subList(startOffset, Math.min(startOffset+nbLimit,getTabCount(tabIdx))) ;
     	}
     	
@@ -520,6 +539,8 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     	}
     	
     }
+    
+    
 	@Override
 	public View makeView() {
 		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,mCalculatedPageSize,mCalculatedRowHeight) ;
@@ -529,10 +550,8 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		return queryView;
 	}
 	
-	
 	@Override
 	public void onChildViewInstalled() {
 		mProgressBar.setVisibility(View.GONE) ;
 	}
-    
 }

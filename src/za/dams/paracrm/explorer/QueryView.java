@@ -107,7 +107,6 @@ public class QueryView extends View {
 		mTabGridGetter = tabGridGetter ;
 		mNumRows = numRows ;
 		mMinRowHeight = minRowHeight ;
-		mQgt = mTabGridGetter.getQueryGridTemplate() ;
 		
 		mInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE) ;
 		
@@ -122,6 +121,10 @@ public class QueryView extends View {
     	setWillNotDraw(false) ;
     }
     public void preloadAdjacentForTabAndPage( int tabIdx, int pageIdx ) {
+    	if( mNumRows==0 || mTabGridGetter==null ) {
+    		return ;
+    	}
+    	
 		// Dernier recours => chargement à la volée
 		if( mPreloadAdjacentPagesTask != null && mPreloadAdjacentPagesTask.getStatus() != AsyncTask.Status.FINISHED ) {
 			if( tabIdx==mPreloadTabIdx && mPreloadAdjacentPageIdx==pageIdx ) {
@@ -136,6 +139,10 @@ public class QueryView extends View {
 		mPreloadAdjacentPagesTask.execute();
     }
 	public void setTabAndOffset( int tabIdx, int pageIdx ) {
+    	if( mNumRows==0 || mTabGridGetter==null ) {
+    		return ;
+    	}
+    	
 		// When setting parameters for a child view, set view offsets to zero 
 		mViewStartX = 0 ;
 		mViewStartY = 0 ;
@@ -265,6 +272,7 @@ public class QueryView extends View {
 		return tv ;
 	}
 	private View buildTableLabelsView( int tabIdx, int pageIdx ) {
+		mQgt = mTabGridGetter.getQueryGridTemplate() ; 
 		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(tabIdx) ;
 		List<List<String>> dataGrid = mTabGridGetter.getTabRows(tabIdx, pageIdx*mNumRows, mNumRows) ;
 	
@@ -319,6 +327,7 @@ public class QueryView extends View {
   		return tableView ;
 	}
 	private View buildTableDataView( int tabIdx, int pageIdx ) {
+		mQgt = mTabGridGetter.getQueryGridTemplate() ; 
 		List<QueryViewActivity.ColumnDesc> columnsDesc = mTabGridGetter.getTabColumns(tabIdx) ;
 		List<List<String>> dataGrid = mTabGridGetter.getTabRows(tabIdx, pageIdx*mNumRows, mNumRows) ;
 	
