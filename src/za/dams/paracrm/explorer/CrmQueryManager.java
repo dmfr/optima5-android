@@ -350,7 +350,7 @@ public class CrmQueryManager {
     	int cacheOver = c.getInt(0) - QUERY_MAX_CACHE ;
     	c.close() ;
     	if( QUERY_MAX_CACHE > 0 && cacheOver > 0 ) {
-    		mDb.execSQL(String.format("DELETE FROM query_cache_json ORDER BY pull_timestamp LIMIT %d",cacheOver)) ;
+    		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id IN (SELECT json_result_id FROM query_cache_json ORDER BY pull_timestamp LIMIT %d)",cacheOver)) ;
     	}
     	
     	
