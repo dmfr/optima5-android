@@ -97,8 +97,8 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     private List<List<ColumnDesc>> mTabColumnsDesc ;
     private List<List<List<String>>> mTabRowCells ;
     
-    private int mCurrentTabIdx ;
-    private int mCurrentRowOffset ;
+    private int mCurrentTabIdx = 0 ;
+    private int mCurrentRowOffset = 0 ;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -122,6 +122,9 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		
 		final ActionBar ab = getActionBar();
 		ab.setDisplayHomeAsUpEnabled(true);
+		
+		// Initialisation du "getter" TabGridGetter
+		mTabGridGetter = new TabGridGetter() ;
 		
 		mLoadTask = new LoadQueryTask() ;
 		mLoadTask.execute() ;
@@ -196,18 +199,10 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
             	mProgressBar.setVisibility(View.GONE) ;
         		return ;
         	}
-        	mCurrentTabIdx = 0 ;
-        	mCurrentRowOffset = 0 ;
         	
         	
-        	// Initialisation du "getter" TabGridGetter
-        	mTabGridGetter = new TabGridGetter() ;
-        	
-        	// Initialisation du ViewSwitcher / ViewSwitcher.Factory 
-        	mProgressBar.setVisibility(View.GONE) ;
+        	// Visibilité du ViewSwitcher 
         	mViewSwitcher.setVisibility(View.VISIBLE);
-        	//initPaging() ;
-        	//mViewSwitcher.setFactory(QueryViewActivity.this) ;
         	
         	
         	// Init des tabs + highlight 1ere tab
@@ -524,6 +519,9 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     	}
     	
     	public List<ColumnDesc> getTabColumns( int tabIdx ) {
+    		if( mTabColumnsDesc == null || tabIdx >= mTabColumnsDesc.size() ) {
+    			return new ArrayList<ColumnDesc>() ;
+    		}
     		return mTabColumnsDesc.get(tabIdx) ;
     	}
     	
@@ -535,6 +533,9 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
     	}
     	
     	public int getTabCount( int tabIdx ) {
+    		if( mTabRowCells == null || tabIdx >= mTabRowCells.size() ) {
+    			return 0 ;
+    		}
     		return mTabRowCells.get(tabIdx).size() ;
     	}
     	
