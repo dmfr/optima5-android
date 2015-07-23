@@ -304,7 +304,7 @@ public class FiledetailLoglistFragment extends FiledetailFragment {
 
         	// Log.w(TAG,"Response from server : "+response) ;
         	try {
-				mTransaction.page_populateRecordsFromJSON( pageId, new JSONObject(response).optJSONArray("data") ) ;
+				mTransaction.page_populateRecordsFromJSON( pageId, new JSONObject(response).getJSONArray("data") ) ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				//e.printStackTrace();
