@@ -189,17 +189,8 @@ public class EventInfoFragment extends DialogFragment
         if (isDialog) {
             Resources r = context.getResources();
 
-            mDialogWidth = r.getInteger(R.integer.event_info_dialog_width);
-            mDialogHeight = r.getInteger(R.integer.event_info_dialog_height);
-
-            if (mScale == 0) {
-                mScale = context.getResources().getDisplayMetrics().density;
-                if (mScale != 1) {
-                    mDialogWidth *= mScale;
-                    mDialogHeight *= mScale;
-                    DIALOG_TOP_MARGIN *= mScale;
-                }
-            }
+            mDialogWidth = (int)r.getDimension(R.dimen.event_info_dialog_width);
+            mDialogHeight = (int)r.getDimension(R.dimen.event_info_dialog_height);
         }
         mIsDialog = isDialog;
 
