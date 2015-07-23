@@ -120,11 +120,10 @@ public class FileListFragment extends ListFragment {
      */
     public List<BibleHelper.BibleEntry> getBibleConditions() {
     	List<BibleHelper.BibleEntry> bibleConditions = new ArrayList<BibleHelper.BibleEntry>() ;
-    	if( mCallback != null && mCallback.getExplorerConstraint() != null ) {
-    		bibleConditions.add(mCallback.getExplorerConstraint()) ;
-    	}
     	if( mExplorerContext.isFiltered() ) {
     		bibleConditions.add(mExplorerContext.mFilteredBibleEntry) ;
+    	} else if( mCallback != null && mCallback.getExplorerConstraint() != null ) {
+    		bibleConditions.add(mCallback.getExplorerConstraint()) ;
     	}
     	return bibleConditions ;
     }
