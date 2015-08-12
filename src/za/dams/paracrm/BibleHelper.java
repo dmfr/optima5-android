@@ -715,32 +715,33 @@ public class BibleHelper {
     		Tree<String> bibleTree = new Tree<String>("&");
     		
     		c = mDb.rawQuery(String.format("SELECT treenode_key, treenode_parent_key FROM store_bible_tree WHERE bible_code='%s'",bibleCode.bibleCode)) ;
-    		do {
-    			nbPushedThispass = 0 ;
-    			for( c.moveToPosition(-1) ; !c.isLast() ; ) {
-    				c.moveToNext() ;
-    				
-    				String treenodeParentKey = c.getString(1) ;
-    				if( treenodeParentKey.equals("") ){
-    					treenodeParentKey = "&" ;
+    		if( c.getCount() > 0 ) {
+    			do {
+    				nbPushedThispass = 0 ;
+    				for( c.moveToPosition(-1) ; !c.isLast() ; ) {
+    					c.moveToNext() ;
+
+    					String treenodeParentKey = c.getString(1) ;
+    					if( treenodeParentKey.equals("") ){
+    						treenodeParentKey = "&" ;
+    					}
+    					String treenodeKey = c.getString(0) ;
+    					if( treenodeKey.equals("") ){
+    						continue ;
+    					}
+
+    					if( bibleTree.getTree(treenodeParentKey) != null && bibleTree.getTree(treenodeKey) == null ) {
+    						bibleTree.addLeaf(treenodeParentKey, treenodeKey) ;
+    						nbPushedThispass++ ;
+    						nbPushed++ ;
+    					}
     				}
-    				String treenodeKey = c.getString(0) ;
-    				if( treenodeKey.equals("") ){
-    					continue ;
-    				}
-    				
-    				if( bibleTree.getTree(treenodeParentKey) != null && bibleTree.getTree(treenodeKey) == null ) {
-    					bibleTree.addLeaf(treenodeParentKey, treenodeKey) ;
-    					nbPushedThispass++ ;
-    					nbPushed++ ;
+    				if( nbPushed >= c.getCount() ) {
+    					break ;
     				}
     			}
-    			if( nbPushed >= c.getCount() ) {
-    				break ;
-    			}
+    			while( nbPushedThispass > 0 ) ;
     		}
-    		while( nbPushedThispass > 0 ) ;
-    		
     		c.close() ;
     		
     		//Log.w(TAG,"For bible "+bibleCode.bibleCode) ;
