@@ -372,7 +372,7 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
 			public void onItemClick(AdapterView<?> parent, View view, int position, long doNotUse) {
 				String syncVuid = ((CrmFileRecord)parent.getAdapter().getItem(position)).syncVuid ;
 				
-				FileViewImageDialog fragment = FileViewImageDialog.newInstance(syncVuid,true) ;
+				FileViewImageDialog fragment = FileViewImageDialog.newInstance(FileViewImageDialog.MODE_CRMSYNCVUID, syncVuid,true) ;
                 FragmentManager fm = getFragmentManager();
                 FragmentTransaction ft = fm.beginTransaction();
                 // if we have an old popup replace it

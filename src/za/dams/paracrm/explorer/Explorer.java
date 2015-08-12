@@ -13,6 +13,7 @@ public final class Explorer {
 	
 	static public void clearContext() {
 		RefreshManager.clearInstance() ;
+		CrmBibleManager.clearInstance() ;
 		CrmFileManager.clearInstance() ;
 		CrmExplorerConfig.clearInstance() ;
 	}

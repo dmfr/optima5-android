@@ -24,8 +24,13 @@ import android.widget.ProgressBar;
 
 public class FileViewImageDialog extends DialogFragment implements View.OnClickListener, CrmImageLoader.Callback {
     /** Argument name(s) */
-    private static final String ARG_CRMSYNCVUID = "crmSyncVuid";
+    private static final String ARG_MODE = "mode";
+    private static final String ARG_ID = "crmId";
     private static final String ARG_ISDIALOG = "isDialog";
+    
+    public static final int MODE_CRMMEDIAID = 1 ;
+    public static final int MODE_CRMSYNCVUID = 2 ;
+    
     public static final String FILEVIEWIMAGE_DIALOG_TAG = "FileViewImageDialog";
 	
 	private Context mContext ;
@@ -35,23 +40,38 @@ public class FileViewImageDialog extends DialogFragment implements View.OnClickL
 	private ImageView mImageView ;
 	private ProgressBar mProgressBar ;
     
-    public static FileViewImageDialog newInstance(String crmSyncVuid, boolean isDialog) {
-        if (crmSyncVuid == null) {
+    public static FileViewImageDialog newInstance(int mode, String id, boolean isDialog) {
+        if (mode == 0 || id == null) {
             throw new IllegalArgumentException();
         }
         final FileViewImageDialog instance = new FileViewImageDialog();
         final Bundle args = new Bundle();
-        args.putString(ARG_CRMSYNCVUID, crmSyncVuid);
+        args.putInt(ARG_MODE, mode);
+        args.putString(ARG_ID, id);
         args.putBoolean(ARG_ISDIALOG, isDialog);
         instance.setArguments(args);
         return instance;
     }
+    private String mImmutableCrmMediaId = null ;
     private String mImmutableCrmSyncVuid = null ;
     private boolean mIsDialog ;
     private void initializeArgCache() {
         if (mImmutableCrmSyncVuid != null) return;
-        mImmutableCrmSyncVuid = getArguments().getString(ARG_CRMSYNCVUID);
+        switch( getArguments().getInt(ARG_MODE) ) {
+        case MODE_CRMMEDIAID :
+        	mImmutableCrmMediaId = getArguments().getString(ARG_ID);
+        	mImmutableCrmSyncVuid = null ;
+        	break ;
+        case MODE_CRMSYNCVUID :
+        	mImmutableCrmMediaId = null ;
+        	mImmutableCrmSyncVuid = getArguments().getString(ARG_ID);
+        	break ;
+        }
         mIsDialog = getArguments().getBoolean(ARG_ISDIALOG);
+    }
+    public String getCrmMediaId() {
+        initializeArgCache();
+        return mImmutableCrmMediaId;
     }
     public String getCrmSyncVuid() {
         initializeArgCache();
@@ -112,7 +132,11 @@ public class FileViewImageDialog extends DialogFragment implements View.OnClickL
     	mImageView.setOnClickListener(this) ;
     	
     	CrmUrl crmUrl = new CrmUrl() ;
-    	crmUrl.syncVuid = getCrmSyncVuid() ;
+    	if( getCrmMediaId() != null ) {
+    		crmUrl.mediaId = getCrmMediaId() ;
+    	} else if( getCrmSyncVuid() != null ) {
+    		crmUrl.syncVuid = getCrmSyncVuid() ;
+    	}
     	crmUrl.thumbnail = false ;
     	mCrmImageLoader.download(crmUrl, mImageView) ;
     	

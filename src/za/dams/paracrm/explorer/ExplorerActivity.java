@@ -62,7 +62,7 @@ public class ExplorerActivity extends Activity implements View.OnClickListener, 
         	// @DAMS TODO : récupérer le dernier ExplorerContext dans mController
         	
             ExplorerContext viewContext = ExplorerContext.forNone() ;
-            mUIController.open(viewContext,"",0,0) ;
+            mUIController.open(viewContext,null,0,0) ;
         }
         mUIController.onActivityCreated();
     }

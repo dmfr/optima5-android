@@ -282,6 +282,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
             installEmptyListFragment((EmptyListFragment) fragment);
         } else if (fragment instanceof BibleListFragment) {
             installBibleListFragment((BibleListFragment) fragment);
+        } else if (fragment instanceof BibleViewFragment) {
+            installBibleViewFragment((BibleViewFragment) fragment);
         } else if (fragment instanceof FileListFragment) {
             installFileListFragment((FileListFragment) fragment);
         } else if (fragment instanceof FileViewFragment) {
@@ -328,6 +330,16 @@ public class ExplorerController implements ExplorerLayout.Callback,
             getDataListFragment().setHighlightedDataListEntry(dle);
         }
         getBibleListFragment().setLayout(mThreePane);
+    }
+    protected void installBibleViewFragment(BibleViewFragment fragment) {
+        mBibleViewFragment = fragment;
+        mBibleViewFragment.setCallback(this);
+
+        refreshActionBar();
+        
+        if( isBibleListInstalled() ) {
+        	getBibleListFragment().setSelectedBibleEntry(fragment.getBibleEntryKey());
+        }
     }
 
 
@@ -402,6 +414,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
             uninstallEmptyListFragment();
         } else if (fragment == mBibleListFragment) {
             uninstallBibleListFragment();
+        } else if (fragment == mBibleViewFragment) {
+            uninstallBibleViewFragment();
         } else if (fragment == mFileListFragment) {
             uninstallFileListFragment();
         } else if (fragment == mFileViewFragment) {
@@ -430,6 +444,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
     protected void uninstallBibleListFragment() {
     	mBibleListFragment.setCallback(null);
     	mBibleListFragment = null;
+    }
+
+    /** Uninstall {@link BibleViewFragment} */
+    protected void uninstallBibleViewFragment() {
+    	mBibleViewFragment.setCallback(null);
+    	mBibleViewFragment = null;
     }
 
     /** Uninstall {@link FileListFragment} */
@@ -569,7 +589,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
     }
     /** @return true if a {@link mFileListFragment} is installed. */
     protected final boolean isBibleViewInstalled() {
-        return mBibleListFragment != null;
+        return mBibleViewFragment != null;
     }
     /** @return true if a {@link mFileListFragment} is installed. */
     protected final boolean isFileListInstalled() {
@@ -660,8 +680,12 @@ public class ExplorerController implements ExplorerLayout.Callback,
         return isFileListInstalled() ? getFileListFragment().getExplorerContext() 
                 : null ;
     }
-    protected String getBibleViewEntryKey() {
-        return isBibleViewInstalled() ? ""
+    protected String getBibleViewBibleCode() {
+        return isBibleViewInstalled() ? getBibleViewFragment().getBibleCode()
+                : null ;
+    }
+    protected String getBibleViewBibleEntryKey() {
+        return isBibleViewInstalled() ? getBibleViewFragment().getBibleEntryKey()
                 : null ;
     }
     protected long getFileViewFilerecordId() {
@@ -679,7 +703,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
      * @param messageId if specified and not {@link Message#NO_MESSAGE}, will open the message
      *     in the message list.
      */
-    public final void open(final ExplorerContext explorerContext, final String bibleEntryKey, final long filerecordId, final int querysrcId ) {
+    public final void open(final ExplorerContext explorerContext, final String[] bibleCodePlusEntryKey, final long filerecordId, final int querysrcId ) {
         if (explorerContext.equals(mExplorerContext)) {
             return;
         }
@@ -698,6 +722,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
         	updateQueryList(ft, true);
         } else if( explorerContext.mMode == ExplorerContext.MODE_FILE ) {
             updateFileList(ft, true);
+        } else if( explorerContext.mMode == ExplorerContext.MODE_BIBLE ) {
+            updateBibleList(ft, true);
         } else {
         	updateEmptyList(ft, true);
         }
@@ -707,6 +733,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
             mThreePane.showRightPane();
         } else if (filerecordId != 0 && explorerContext.mMode == ExplorerContext.MODE_FILE ) {
             updateFileView(ft, filerecordId);
+            mThreePane.showRightPane();
+        } else if (bibleCodePlusEntryKey != null && explorerContext.mMode == ExplorerContext.MODE_BIBLE ) {
+            updateBibleView(ft, bibleCodePlusEntryKey[0], bibleCodePlusEntryKey[1]);
             mThreePane.showRightPane();
         } else if (explorerContext.isFiltered()) {
             mThreePane.showRightPane();
@@ -739,9 +768,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
     	mExplorerContext = newExplorerContext;
     	updateBibleList(true);
     }
-    public final void openBibleEntry( String bibleEntryKey ) {
-        if (getBibleViewEntryKey() != bibleEntryKey) {
-            navigateToBible(bibleEntryKey);
+    public final void openBibleEntry( String bibleCode, String bibleEntryKey ) {
+        if (getBibleViewBibleCode() != bibleCode || getBibleViewBibleEntryKey() != bibleEntryKey) {
+            navigateToBible(bibleCode, bibleEntryKey);
             mThreePane.showRightPane();
         }
     }
@@ -809,6 +838,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         }
         if (clearDependentPane) {
             removeBibleListFragment(ft);
+            removeBibleViewFragment(ft);
             removeFileListFragment(ft);
             removeFileViewFragment(ft);
             removeQueryListFragment(ft);
@@ -890,7 +920,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         updateBibleList(ft, clearDependentPane);
         commitFragmentTransaction(ft);
     }
-    private void updateBibleView(FragmentTransaction ft, String bibleEntryKey) {
+    private void updateBibleView(FragmentTransaction ft, String bibleCode, String bibleEntryKey) {
         if (Explorer.DEBUG) {
             Log.d(LOGTAG, this + " updateMessageView bibleEntryKey=" + bibleEntryKey);
         }
@@ -898,7 +928,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
             throw new IllegalArgumentException();
         }
 
-        if (bibleEntryKey == getBibleViewEntryKey()) {
+        if (bibleCode == getBibleViewBibleCode() && bibleEntryKey == getBibleViewBibleEntryKey()) {
             return; // nothing to do.
         }
 
@@ -906,7 +936,7 @@ public class ExplorerController implements ExplorerLayout.Callback,
         removeFileViewFragment(ft);
         removeBibleViewFragment(ft);
 
-        ft.add(mThreePane.getRightPaneId(), BibleViewFragment.newInstance(bibleEntryKey));
+        ft.add(mThreePane.getRightPaneId(), BibleViewFragment.newInstance(bibleCode,bibleEntryKey));
     }
     
     
@@ -973,9 +1003,9 @@ public class ExplorerController implements ExplorerLayout.Callback,
     /**
      * Shortcut to call {@link #updateMessageView(FragmentTransaction, long)} and commit.
      */
-    protected void navigateToBible(String bibleEntryKey) {
+    protected void navigateToBible(String bibleCode, String bibleEntryKey) {
         FragmentTransaction ft = mFragmentManager.beginTransaction();
-        updateBibleView(ft, bibleEntryKey);
+        updateBibleView(ft, bibleCode, bibleEntryKey);
         commitFragmentTransaction(ft);
     }
 
@@ -1430,8 +1460,8 @@ public class ExplorerController implements ExplorerLayout.Callback,
 
 	// BibleListFragment$Callback
 	@Override
-	public void onBibleEntryOpen(String bibleEntryKey) {
-		openBibleEntry(bibleEntryKey) ;
+	public void onBibleEntryOpen(String bibleCode, String bibleEntryKey) {
+		openBibleEntry(bibleCode, bibleEntryKey) ;
 	}
 
 	// FileListFragment$Callback

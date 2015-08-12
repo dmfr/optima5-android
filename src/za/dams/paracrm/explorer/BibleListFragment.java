@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
+import za.dams.paracrm.CrmImageLoader;
 import za.dams.paracrm.R;
+import za.dams.paracrm.explorer.CrmBibleManager.CrmBibleRecord;
+import za.dams.paracrm.explorer.CrmFileManager.CrmFileRecord;
 import za.dams.paracrm.widget.GridFragment;
 import android.app.Activity;
 import android.app.Fragment;
@@ -22,6 +25,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -66,11 +70,11 @@ public class BibleListFragment extends GridFragment {
      * Callback interface that owning activities must implement
      */
     public interface Callback {
-    	public void onBibleEntryOpen( String bibleEntryKey ) ;
+    	public void onBibleEntryOpen( String bibleCode, String bibleEntryKey ) ;
     }
     private static class EmptyCallback implements Callback {
     	public static final Callback INSTANCE = new EmptyCallback();
-    	public void onBibleEntryOpen( String bibleEntryKey ) {} ;
+    	public void onBibleEntryOpen( String bibleCode, String bibleEntryKey ) {} ;
     }
     public void setCallback(Callback callback) {
         mCallback = (callback == null) ? EmptyCallback.INSTANCE : callback;
@@ -180,7 +184,7 @@ public class BibleListFragment extends GridFragment {
         final GridView gv = getGridView();
         gv.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
-        setEmptyText("No records to display !!!!!!");
+        setEmptyText("No records to display");
 
         if (savedInstanceState != null) {
             // Fragment doesn't have this method.  Call it manually.
@@ -318,7 +322,7 @@ public class BibleListFragment extends GridFragment {
     @Override
     public void onGridItemClick(GridView parent, View view, int position, long id) {
         	String clickedBibleEntryKey = mListAdapter.getItem(position).entryKey ;
-        	mCallback.onBibleEntryOpen(clickedBibleEntryKey) ;
+        	mCallback.onBibleEntryOpen(this.getBibleCode(), clickedBibleEntryKey) ;
     }
     
     
@@ -423,12 +427,18 @@ public class BibleListFragment extends GridFragment {
 		private CrmBibleManager.CrmBibleDesc mCbd ;
 		private ArrayList<CrmBibleManager.CrmBibleRecord> mData ;
 		
+		Context mAdapterContext ;
+		CrmImageLoader mCrmImageLoader ;
+		
 		LayoutInflater mInflater ;
+		ArrayList<CrmFileRecord> mArrCfr ;
 
 		public BibleListFragmentAdapter(Context context) {
 			super();
 			mData = new ArrayList<CrmBibleManager.CrmBibleRecord>() ;
 			mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			mAdapterContext = context.getApplicationContext() ;
+			mCrmImageLoader = new CrmImageLoader(mAdapterContext) ;
 		}
 	    public void setData( CrmBibleManager.CrmBibleDesc bibleDesc, List<CrmBibleManager.CrmBibleRecord> data) {
 	    	mData.clear() ;
@@ -459,6 +469,7 @@ public class BibleListFragment extends GridFragment {
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			BibleGridItem view ;
+			CrmBibleRecord cbr = getItem(position) ;
 			
 			if( convertView != null ) {
 				// able to reuse view
@@ -468,9 +479,15 @@ public class BibleListFragment extends GridFragment {
 			}
 			
 			view.buildCrmFields(mCbd) ;
+			view.setCrmValues(cbr) ;
 			
-			view.setCrmValues(getItem(position)) ;
-			
+			if( cbr.defaultPhoto != null ) {
+				CrmImageLoader.CrmUrl crmUrl = new CrmImageLoader.CrmUrl() ;
+				crmUrl.mediaId = cbr.defaultPhoto.mediaId ;
+				crmUrl.thumbnail = true ;
+				ImageView imgView = (ImageView)view.findViewById(R.id.imageView) ;
+				mCrmImageLoader.download(crmUrl, imgView) ;
+			}
 			
 
 			return view;

@@ -9,7 +9,6 @@ import java.util.List;
 
 import za.dams.paracrm.BibleHelper;
 import za.dams.paracrm.BibleHelper.BibleEntry;
-import za.dams.paracrm.CrmFileTransaction.CrmFilePhoto;
 import za.dams.paracrm.DatabaseManager;
 import android.content.ContentValues;
 import android.content.Context;
@@ -96,6 +95,7 @@ public class CrmBibleManager {
 	}
 	
 	public static class CrmBiblePhoto {
+		public String mediaId ;
 	}
    
 	private boolean isInitialized = false ;
@@ -219,6 +219,10 @@ public class CrmBibleManager {
 			public String valueDate ;
 			public String valueLink ;
 		}
+		class StoreBibleGalleryRecord {
+			public String mediaId ;
+			public boolean mediaIsDefault ;
+		}
     	
     	DatabaseManager mDb = DatabaseManager.getInstance(mContext) ;
     	Cursor c ;
@@ -251,6 +255,24 @@ public class CrmBibleManager {
 		}
 		c.close() ;
 	
+		HashMap<String,ArrayList<StoreBibleGalleryRecord>> dbRecordMedias = new HashMap<String,ArrayList<StoreBibleGalleryRecord>>() ;
+		c = mDb.rawQuery(String.format("SELECT * FROM store_bible_entry_gallery WHERE bible_code='%s' AND entry_key IN (%s) ORDER BY entry_key, media_idx", bibleCode, queryMaster));
+		while( c.moveToNext() ) {
+			String cEntryKey = c.getString(c.getColumnIndex("entry_key")) ;
+			
+			if( !dbRecordMedias.containsKey(cEntryKey) ) {
+				dbRecordMedias.put(cEntryKey, new ArrayList<StoreBibleGalleryRecord>()) ;
+			}
+			
+			StoreBibleGalleryRecord media = new StoreBibleGalleryRecord() ;
+			media.mediaId = c.getString(c.getColumnIndex("media_id")) ;
+			media.mediaIsDefault = c.getString(c.getColumnIndex("media_is_default")).equals("O") ;
+			dbRecordMedias.get(cEntryKey).add(media) ;
+		}
+		c.close() ;
+		
+	
+		CrmBibleDesc cbd = bibleGetBibleDescriptor(bibleCode) ;
     
     	ArrayList<CrmBibleRecord> data = new ArrayList<CrmBibleRecord>();
     	c = mDb.rawQuery(String.format("SELECT entry_key FROM store_bible_entry WHERE entry_key IN (%s) ORDER BY entry_key",queryMaster)) ;
@@ -260,7 +282,7 @@ public class CrmBibleManager {
     		cbr.entryKey = c.getString(0) ;
     		cbr.recordData = new HashMap<String,CrmBibleFieldValue>() ;
     		
-    		for( CrmBibleFieldDesc fd : bibleGetBibleDescriptor(bibleCode).fieldsDesc ) {
+    		for( CrmBibleFieldDesc fd : cbd.fieldsDesc ) {
     			if( !dbRecordFields.containsKey(cbr.entryKey) || !dbRecordFields.get(cbr.entryKey).containsKey(fd.fieldCode) ) {
     				cbr.recordData.put(fd.fieldCode,
     						new CrmBibleFieldValue(fd.fieldType,
@@ -332,6 +354,20 @@ public class CrmBibleManager {
     			}
     		}
     		
+    		if( cbd.bibleHasGallery ) {
+    			cbr.defaultPhoto = null ;
+    			cbr.galleryPhotos = new ArrayList<CrmBiblePhoto>() ; 
+    			if( dbRecordMedias.containsKey(cbr.entryKey) ) {
+    				for( StoreBibleGalleryRecord sbgr : dbRecordMedias.get(cbr.entryKey) ) {
+    					CrmBiblePhoto cbp = new CrmBiblePhoto() ;
+    					cbp.mediaId = sbgr.mediaId ;
+    					cbr.galleryPhotos.add(cbp) ;
+    					if( sbgr.mediaIsDefault ) {
+    						cbr.defaultPhoto = cbp ;
+    					}
+    				}
+    			}
+    		}
     		
     		data.add(cbr) ;
     	}

@@ -240,8 +240,6 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         	mSearchContainer.setVisibility(View.GONE);
         	mTitleContainer.setVisibility(View.VISIBLE);
         	
-        	CrmFileManager cfm = CrmFileManager.getInstance(mContext) ;
-        	cfm.fileInitDescriptors() ;
         	StringBuilder sb = new StringBuilder() ;
         	sb.append("Explorer") ;
         	switch( mCallback.getCurrentExplorerContext().mMode ) {
@@ -249,10 +247,14 @@ public class ActionBarController implements AdapterView.OnItemClickListener {
         		sb.append(" : Queries") ;
         		break ;
         	case ExplorerContext.MODE_BIBLE :
+            	CrmBibleManager cbm = CrmBibleManager.getInstance(mContext) ;
+            	cbm.bibleInitDescriptors() ;
         		sb.append(" : ") ;
-        		sb.append(mCallback.getCurrentExplorerContext().mBibleCode) ;
+        		sb.append(cbm.bibleGetBibleDescriptor(mCallback.getCurrentExplorerContext().mBibleCode).bibleName) ;
         		break ;
         	case ExplorerContext.MODE_FILE :
+            	CrmFileManager cfm = CrmFileManager.getInstance(mContext) ;
+            	cfm.fileInitDescriptors() ;
         		sb.append(" : ") ;
         		sb.append(cfm.fileGetFileDescriptor(mCallback.getCurrentExplorerContext().mFileCode).fileName) ;
         		break ;
