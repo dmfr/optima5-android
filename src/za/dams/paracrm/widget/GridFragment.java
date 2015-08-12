@@ -105,7 +105,7 @@ public class GridFragment extends Fragment {
 	            if (!mGridShown && !hadAdapter) {
 	                // The list was hidden, and previously didn't have an
 	                // adapter.  It is now time to show it.
-	            	if( getActivity() != null ) {
+	            	if( getActivity() != null && adapter.getCount() > 0 ) {
 	            		// Try to measure column width
 	            		View cell = adapter.getView(0, null, null) ;
 	            		mGrid.setColumnWidth(measureCellWidth(getActivity(),cell));
