@@ -37,6 +37,10 @@ import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 
 public class CrmImageLoader {
+	/*
+	 * Inspired by :
+	 * http://android-developers.blogspot.com/2010/07/multithreading-for-performance.html
+	 */
     private static final String LOG_TAG = "CrmImageLoader";
     private static final int RES_LOADING = R.drawable.ic_explorer_fileicon ;
     private static final int RES_ERROR = R.drawable.crm_missing ;
@@ -46,12 +50,18 @@ public class CrmImageLoader {
     private final Bitmap mBitmapError ;
 
     public static class CrmUrl implements Cloneable {
+    	public String mediaId ;
     	public String syncVuid ;
     	public boolean thumbnail ;
     	
 		public boolean equals( Object o ) {
 			CrmUrl cu = (CrmUrl)o ;
-			if( !this.syncVuid.equals(cu.syncVuid) ) {
+			if( (this.mediaId == null && cu.mediaId != null)
+					|| (this.mediaId != null && !this.mediaId.equals(cu.mediaId)) ) {
+				return false ;
+			}
+			if( (this.syncVuid == null && cu.syncVuid != null)
+					|| (this.syncVuid != null && !this.syncVuid.equals(cu.syncVuid)) ) {
 				return false ;
 			}
 			if( this.thumbnail != cu.thumbnail ) {
@@ -61,14 +71,14 @@ public class CrmImageLoader {
 		}
 		public int hashCode() {
 			int result = 17 ;
-			
-			result = 31 * result + syncVuid.hashCode() ;
+			result = 31 * result + ( mediaId != null ? mediaId.hashCode() : 0 ) ;
+			result = 31 * result + ( syncVuid != null ? syncVuid.hashCode() : 0 ) ;
 			result = 31 * result + (thumbnail?1:0) ;
 			
 			return result ;
 		}
     	public String toString() {
-    		String retStr = "syncVuid="+syncVuid+" thumbnail="+(thumbnail?"yes":"no") ;
+    		String retStr = "mediaId="+mediaId+" syncVuid="+syncVuid+" thumbnail="+(thumbnail?"yes":"no") ;
     		return retStr ;
     	}
     	public CrmUrl clone() {
@@ -179,7 +189,13 @@ public class CrmImageLoader {
     
     private static String getFileCacheName( CrmUrl crmUrl ) {
 		StringBuilder sb = new StringBuilder() ;
-		sb.append(crmUrl.syncVuid) ;
+		if( crmUrl.mediaId != null ) {
+			sb.append(crmUrl.mediaId) ;
+		} else if( crmUrl.syncVuid != null ) {
+			sb.append(crmUrl.syncVuid) ;
+		} else {
+			sb.append("NOIMG") ;
+		}
 		if( crmUrl.thumbnail ) {
 			sb.append(".thumb") ;
 		}
@@ -216,7 +232,13 @@ public class CrmImageLoader {
 
         HashMap<String,String> nameValuePairs = new HashMap<String,String>();
         nameValuePairs.put("_action", "android_imgPull");
-        nameValuePairs.put("sync_vuid", crmUrl.syncVuid);
+        if( crmUrl.mediaId != null ) {
+        	nameValuePairs.put("media_id", crmUrl.mediaId);
+        } else if( crmUrl.syncVuid != null ) {
+        	nameValuePairs.put("sync_vuid", crmUrl.syncVuid);
+        } else {
+        	return null ;
+        }
         nameValuePairs.put("thumbnail", crmUrl.thumbnail?"O":"N");
         
         // AndroidHttpClient is not allowed to be used from the main thread
