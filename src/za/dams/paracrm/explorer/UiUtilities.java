@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.os.Handler;
 import android.view.View;
+import android.widget.GridView;
 import android.widget.ListView;
 
 public class UiUtilities {
@@ -103,6 +104,19 @@ public class UiUtilities {
                     return; // Activity being destroyed
                 }
                 listView.smoothScrollToPosition(position);
+            }
+        });
+    }
+    public static void gridViewSmoothScrollToPosition(final Activity activity,
+            final GridView gridView, final int position) {
+        // Workarond: delay-call smoothScrollToPosition()
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                if (activity.isFinishing()) {
+                    return; // Activity being destroyed
+                }
+                gridView.smoothScrollToPosition(position);
             }
         });
     }

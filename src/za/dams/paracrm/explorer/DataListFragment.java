@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import za.dams.paracrm.R;
-
 import android.app.Activity;
 import android.app.ListFragment;
 import android.app.LoaderManager;
@@ -487,6 +486,9 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 			
 			if( dle.isHeader ) {
 				final TextView nameView = (TextView) view.findViewById(R.id.display_name);
+				if( dle.dataType == DataListEntry.DATA_BIBLE ) {
+					nameView.setText("Bibles") ;
+				}
 				if( dle.dataType == DataListEntry.DATA_FILE ) {
 					nameView.setText("Files") ;
 				}
@@ -499,6 +501,10 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 		        final ImageView mailboxExpandedIcon =
 		                (ImageView) view.findViewById(R.id.folder_expanded_icon);
 		        
+		        if( dle.dataType == DataListEntry.DATA_BIBLE ) {
+		        	folderIcon.setImageResource(R.drawable.ic_explorer_file);
+		        	nameView.setText(dle.bibleName) ;
+		        }
 		        if( dle.dataType == DataListEntry.DATA_FILE ) {
 		        	folderIcon.setImageResource(R.drawable.ic_explorer_file);
 		        	nameView.setText(dle.fileName) ;
@@ -550,17 +556,41 @@ public class DataListFragment extends ListFragment implements OnItemClickListene
 		@Override public List<DataListEntry> loadInBackground() {
 			//Log.w(LOGTAG,"Loading !!!") ;
 			
+			CrmBibleManager cbm = CrmBibleManager.getInstance(mContext) ;
+			if( !cbm.isInitialized() ) {
+				cbm.bibleInitDescriptors() ;
+				try {
+					Thread.sleep(250) ;
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			
 			CrmFileManager cfm = CrmFileManager.getInstance(mContext) ;
 			if( !cfm.isInitialized() ) {
 				cfm.fileInitDescriptors() ;
 				try {
-					Thread.sleep(500) ;
+					Thread.sleep(250) ;
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
 			
 			ArrayList<DataListEntry> data = new  ArrayList<DataListEntry>() ;
+			if( cbm.bibleGetDescriptors().size() > 0 ) {
+				DataListEntry dle = new DataListEntry() ;
+				dle.isHeader = true ;
+				dle.dataType = DataListEntry.DATA_BIBLE ;
+				data.add(dle) ;
+			}
+			for( CrmBibleManager.CrmBibleDesc cfd : cbm.bibleGetDescriptors() ) {
+				DataListEntry dle = new DataListEntry() ;
+				dle.isHeader = false ;
+				dle.dataType = DataListEntry.DATA_BIBLE ;
+				dle.bibleCode = cfd.bibleCode ;
+				dle.bibleName = cfd.bibleName ;
+				data.add(dle) ;
+			}
 			if( cfm.fileGetRootDescriptors().size() > 0 ) {
 				DataListEntry dle = new DataListEntry() ;
 				dle.isHeader = true ;

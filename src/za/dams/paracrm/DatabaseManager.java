@@ -32,7 +32,7 @@ public class DatabaseManager {
     
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 37;
+    private final int DB_VERSION = 39;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -82,7 +82,8 @@ public class DatabaseManager {
                     + "bible_lib" + " VARCHAR(100),"
                     + "bible_iconfile" + " VARCHAR(50),"
                     + "bible_specdata" + " VARCHAR(10),"
-                    + "gmap_is_on" + " VARCHAR(1)"
+                    + "gmap_is_on" + " VARCHAR(1),"
+                    + "gallery_is_on" + " VARCHAR(1)"
                     + ");";
             db.execSQL(createTableQuery);
 
@@ -183,6 +184,17 @@ public class DatabaseManager {
                     + "entry_field_value_date" + " DATE,"
                     + "entry_field_value_link" + " VARCHAR(500),"
                     + "PRIMARY KEY( bible_code, entry_key,entry_field_code)"
+                    + ");";
+            db.execSQL(createTableQuery);
+            
+    		createTableQuery = "CREATE TABLE IF NOT EXISTS "
+                    + "store_bible_entry_gallery" + " ("
+                    + "bible_code" + " VARCHAR(50), "
+                    + "entry_key" + " VARCHAR(100),"
+                    + "media_idx" + " INTEGER,"
+                    + "media_id" + " VARCHAR(500),"
+                    + "media_is_default" + " VARCHAR(1),"
+                    + "PRIMARY KEY( bible_code, entry_key, media_idx)"
                     + ");";
             db.execSQL(createTableQuery);
             
@@ -693,6 +705,7 @@ public class DatabaseManager {
     	                   "querygrid_template",
     	                   "store_bible_entry",
     	                   "store_bible_entry_field",
+    	                   "store_bible_entry_gallery",
     	                   "store_bible_tree",
     	                   "store_bible_tree_field"} ;
     	for(int a=0 ; a<tables.length ; a++){

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<za.dams.paracrm.explorer.BibleGridItem 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="208dp"
+    android:layout_height="210dp"
+    android:orientation="vertical"
+    android:background="#6000ff00"
+    android:padding="4dp">
+
+    <ImageView
+        android:layout_height="150dp"
+        android:id="@+id/imageView"
+        android:layout_width="200dp"
+        android:src="@drawable/crm_missing"
+        android:scaleType="center"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true">
+    </ImageView>
+    
+    <LinearLayout
+        android:id="@+id/crm_fields"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+    </LinearLayout>
+
+</za.dams.paracrm.explorer.BibleGridItem>
