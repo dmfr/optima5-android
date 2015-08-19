@@ -145,6 +145,11 @@ public class XpressfileViewController {
     		crmFieldsIndex++ ;
     		
     		switch( fd.fieldType ) {
+    		case FIELD_BIBLE :
+    	    	newView = inflater.inflate(R.layout.xpressfile_view_row_bible,null) ;
+    	    	((TextView)newView.findViewById(R.id.crm_label)).setText(fd.fieldName) ;
+    	    	((Button)newView.findViewById(R.id.crm_button)).setOnClickListener(new BibleClickListener(new BibleCode(fd.fieldLinkBible),crmFieldsIndex));
+    			break ;
     		case FIELD_TEXT :
     	    	newView = inflater.inflate(R.layout.xpressfile_view_row_text,null) ;
     	    	((EditText)newView.findViewById(R.id.crm_text)).addTextChangedListener(mTextWatcher) ;
@@ -238,6 +243,9 @@ public class XpressfileViewController {
 			mCrmFieldViews.get(idx).setVisibility(View.VISIBLE) ;
 			String tFieldCode = fd.fieldCode ;
     		switch( fd.fieldType ) {
+    		case FIELD_BIBLE:
+    			((TextView)mCrmFieldViews.get(idx).findViewById(R.id.crm_button)).setText(cfr.recordData.get(tFieldCode).displayStr) ;
+    			break ;
     		case FIELD_TEXT:
     		case FIELD_NUMBER:
     			((TextView)mCrmFieldViews.get(idx).findViewById(R.id.crm_text)).setText(cfr.recordData.get(tFieldCode).displayStr) ;
@@ -322,13 +330,29 @@ public class XpressfileViewController {
 
         @Override
         public void onBibleSet(BibleEntry be) {
-            if( mView == mPrimarykeyButton && be != null ) {
+            if( mView == mPrimarykeyButton ) {
+            	if( be != null ) {
             	Log.d(TAG, "onBibleSet for button: " + be.displayStr + " for field idx "+mCrmFieldIndex);
             	((Button)mView).setText(be.displayStr) ;
             	if( mListener != null ) {
             		mListener.onXpressfilePrimarykeySet(be.entryKey);
             	}
+            	}
+            	return ;
             }
+            CrmFileFieldDesc cfd = mCrmFieldDescs.get(mCrmFieldIndex) ;
+            CrmFileFieldValue fv = mCrmFileRecord.recordData.get(cfd.fieldCode) ;
+            if( be != null ) {
+            	((Button)mView).setText(be.displayStr) ;
+            	fv.displayStr = be.displayStr ;
+            	fv.valueString = be.entryKey ;
+            }
+            else{
+            	((Button)mView).setText("") ;
+            	fv.displayStr = "" ;
+            	fv.valueString = "" ;
+            }
+            
         }
     }
 	
