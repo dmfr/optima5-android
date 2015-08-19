@@ -99,14 +99,14 @@ public class CrmFileTransaction {
     		pageIsHidden = true ;
     		pageInnerContainer = false ;
     	}
-    	public CrmFilePageinfo( int aPageInstanceTag, int aPageId , PageType aPageType , int aNbChildren ) {
+    	public CrmFilePageinfo( int aPageInstanceTag, int aPageId , PageType aPageType , int aNbChildren, String aPageLib ) {
     		pageInstanceTag = aPageInstanceTag ;
     		pageId = aPageId ;
     		nbChildren = aNbChildren ;
     		pageType = aPageType ;
     		pageTableType = PageTableType.TABLE_NULL ;
     		pageCode = "" ;
-    		pageLib = "" ;
+    		pageLib = aPageLib ;
     		fileCode = "" ;
     		fileLib = "" ;
     		fileIsSubfile = false ;
@@ -948,7 +948,7 @@ public class CrmFileTransaction {
 			}
 			tmpInnerCursor.close() ;
 
-			tmpPageInfo = new CrmFilePageinfo(nextPageInstanceTag++,tmpCursor.getInt(4),pageType,nbChildren) ;
+			tmpPageInfo = new CrmFilePageinfo(nextPageInstanceTag++,tmpCursor.getInt(4),pageType,nbChildren,tmpCursor.getString(0)) ;
 		}
 		else if( pageType == PageType.PAGETYPE_SAVE ){
 			tmpPageInfo = new CrmFilePageinfo(nextPageInstanceTag++,tmpCursor.getInt(4),pageType,pagetableType,"",tmpCursor.getString(0) ,false,false) ;
