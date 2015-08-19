@@ -39,6 +39,18 @@ public class FileListItemNormal extends FileListItem {
 				continue ;
 			}
 			
+			if( cffd.fieldType == CrmFileManager.FieldType.FIELD_BOOLEAN 
+					&& !mCrmFieldViews.contains(mIcon) ) {
+				
+				mCrmFieldViews.add(mIcon) ;
+				mCrmFieldDesc.add(cffd) ;
+				continue ;
+			}
+			
+			if( nbAdded >= MAX_LINES ) {
+				continue ;
+			}
+			
 			View v = View.inflate(mContext, R.layout.explorer_filelist_item_row_singletext, null) ;
 			switch( cffd.fieldType ) {
 			case FIELD_DATE:
@@ -53,10 +65,6 @@ public class FileListItemNormal extends FileListItem {
 			mCrmFieldViews.add(v) ;
 			mCrmFieldDesc.add(cffd) ;
 			nbAdded++ ;
-			
-			if( nbAdded >= MAX_LINES ) {
-				break ;
-			}
 		}
 	}
 
@@ -72,6 +80,18 @@ public class FileListItemNormal extends FileListItem {
 			CrmFileManager.CrmFileFieldValue cffv = crmFileRecord.recordData.get(cffd.fieldCode) ;
 			
 			View v = mCrmFieldViews.get(idx) ;
+			
+			if( v == mIcon ) {
+				if( cffd.fieldType==CrmFileManager.FieldType.FIELD_BOOLEAN ) {
+					if( cffv.valueBoolean ) {
+						mIcon.setImageResource(R.drawable.crm_foldergreen);
+					} else {
+						mIcon.setImageResource(R.drawable.crm_missing);
+					}
+				}
+				continue ;
+			}
+			
 			switch( cffd.fieldType ) {
 			case FIELD_BIBLE:
 				((TextView)v).setText(cffv.displayStr) ;

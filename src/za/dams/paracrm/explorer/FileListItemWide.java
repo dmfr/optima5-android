@@ -30,6 +30,14 @@ public class FileListItemWide extends FileListItem {
 				continue ;
 			}
 			
+			if( cffd.fieldType == CrmFileManager.FieldType.FIELD_BOOLEAN 
+					&& !mCrmFieldViews.contains(mIcon) ) {
+				
+				mCrmFieldViews.add(mIcon) ;
+				mCrmFieldDesc.add(cffd) ;
+				continue ;
+			}
+			
 			View v ;
 			switch( cffd.fieldType ) {
 			case FIELD_BIBLE:
@@ -72,6 +80,17 @@ public class FileListItemWide extends FileListItem {
 			CrmFileManager.CrmFileFieldValue cffv = crmFileRecord.recordData.get(cffd.fieldCode) ;
 			
 			View v = mCrmFieldViews.get(idx) ;
+			
+			if( v == mIcon ) {
+				if( cffd.fieldType==CrmFileManager.FieldType.FIELD_BOOLEAN ) {
+					if( cffv.valueBoolean ) {
+						mIcon.setImageResource(R.drawable.crm_foldergreen);
+					} else {
+						mIcon.setImageResource(R.drawable.crm_missing);
+					}
+				}
+				continue ;
+			}
 			
 			switch( cffd.fieldType ) {
 			case FIELD_BIBLE:

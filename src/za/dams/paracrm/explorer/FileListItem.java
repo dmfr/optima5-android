@@ -3,19 +3,20 @@ package za.dams.paracrm.explorer;
 import java.util.ArrayList;
 
 import za.dams.paracrm.R;
-
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 public abstract class FileListItem extends LinearLayout {
 	
 	protected Context mContext ;
 	protected ViewGroup mCrmViewGroup ;
+	protected ImageView mIcon ;
 	protected ArrayList<View> mCrmFieldViews ;
 	protected ArrayList<CrmFileManager.CrmFileFieldDesc> mCrmFieldDesc ;
 
@@ -42,6 +43,7 @@ public abstract class FileListItem extends LinearLayout {
 	@Override
 	protected void onFinishInflate(){
 		mCrmViewGroup = (ViewGroup)findViewById(R.id.crm_fields) ;
+		mIcon = (ImageView)findViewById(R.id.fileicon) ;
 	}
 	
 	public abstract void buildCrmFields( CrmFileManager.CrmFileDesc crmFileDesc ) ;
