@@ -30,7 +30,8 @@
         <activity
             android:name=".ui.FileCaptureActivity"
             android:label="VISIT Transaction"
-            android:screenOrientation="landscape" >
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustResize" >
         </activity>
         
         <activity

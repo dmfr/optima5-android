@@ -35,6 +35,9 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewTreeObserver;
 
 /**
  * Demonstration of using fragments to implement different activity layouts.
@@ -115,7 +118,20 @@ public class FileCaptureActivity extends Activity {
         // *************************************************
         
         setContentView(R.layout.filecapture);
-    }
+        
+        
+        final View activityRootView = findViewById(android.R.id.content);
+        activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                int heightDiff = activityRootView.getRootView().getHeight() - activityRootView.getHeight();
+                if (heightDiff > activityRootView.getRootView().getHeight() * 0.35) { // if more than 35%, its probably a keyboard...
+                    FileCaptureActivity.this.onKeyboardShown(true);
+                } else {
+                	FileCaptureActivity.this.onKeyboardShown(false);
+                }
+             }
+        });    }
     protected void onPause() {
     	super.onPause();
     	CrmFileTransactionManager.saveInstance( getApplicationContext() ) ;
@@ -133,7 +149,27 @@ public class FileCaptureActivity extends Activity {
     }
     
     
+    @Override
+    public void onBackPressed() {
+    	Fragment fileDetailFragment = getFragmentManager().findFragmentById(R.id.filedetail) ;
+    	if( fileDetailFragment != null
+    			&& fileDetailFragment instanceof OnBackPressedListener
+    			&& fileDetailFragment.isVisible() ){
+    		if( ((OnBackPressedListener)fileDetailFragment).onBackPressed() == true ) {
+    			return ;
+    		}
+    	}
+    	super.onBackPressed();
+    }
     
+    protected void onKeyboardShown( boolean keyboardShown ) {
+    	Fragment fileDetailFragment = getFragmentManager().findFragmentById(R.id.filedetail) ;
+    	if( fileDetailFragment != null
+    			&& fileDetailFragment instanceof OnKeyboardShownListener
+    			&& fileDetailFragment.isVisible() ){
+    		((OnKeyboardShownListener)fileDetailFragment).onKeyboardShown(keyboardShown) ;
+    	}
+    }
     
     public void endOfTransaction() {
     	// ----- check saisie complète ------
@@ -169,6 +205,13 @@ public class FileCaptureActivity extends Activity {
     		// deleteFile(fileList[a]) ;
     	}
     }
+    
+    public interface OnBackPressedListener {
+    	public boolean onBackPressed() ;
+    };
+    public interface OnKeyboardShownListener {
+    	public void onKeyboardShown( boolean keyboardShown ) ;
+    };
     
     private class DownloadFilesTask extends AsyncTask<Void, Integer, Integer> {
     	protected void onPreExecute(){
