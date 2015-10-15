@@ -2,7 +2,6 @@ package za.dams.paracrm.ui;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import za.dams.paracrm.CrmFileTransaction;
@@ -11,23 +10,24 @@ import za.dams.paracrm.CrmFileTransactionManager;
 import za.dams.paracrm.R;
 import za.dams.paracrm.widget.DatetimePickerDialog;
 import za.dams.paracrm.widget.DatetimePickerDialog.OnDatetimeSetListener;
+import android.app.AlertDialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
-import android.app.FragmentTransaction;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.TypedValue;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnKeyListener;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -102,6 +102,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 		TableRow row = new TableRow(getActivity()) ;
 		View view ;
 		CheckBox cb ;
+		ImageButton btn ;
 		TextView text ;
 		EditText etext ;
 		text = new TextView(getActivity());
@@ -144,11 +145,20 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 
 			row = new TableRow(getActivity()) ;
 
-			cb = new CheckBox(getActivity()) ;
-			cb.setTag(new Integer(a)) ;
-			cb.setChecked(!(mrecord.recordIsDisabled)) ;
-			cb.setOnCheckedChangeListener(checkDisableListener) ;
-			row.addView(cb);
+			if( mrecord.recordIsDeletable ) {
+				btn = new ImageButton(getActivity()) ;
+				btn.setTag(new Integer(a)) ;
+				btn.setOnClickListener(clickDeleteListener);
+				btn.setImageResource(android.R.drawable.ic_delete);
+				row.addView(btn);
+			} else {
+				cb = new CheckBox(getActivity()) ;
+				cb.setTag(new Integer(a)) ;
+				cb.setChecked(!(mrecord.recordIsDisabled)) ;
+				cb.setOnCheckedChangeListener(checkDisableListener) ;
+				cb.setText("Pt");
+				row.addView(cb);
+			}
 
 			mIter = tDesc.iterator() ;
 			b = 0 ;
@@ -250,6 +260,37 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 			mTransaction.links_refresh() ;
 			syncWithData() ;
 			((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
+		}
+	} ;
+	OnClickListener clickDeleteListener = new OnClickListener() {
+		public void onClick(View buttonView) {
+			final int buttonId = ((Integer)buttonView.getTag()).intValue() ;
+			
+        	AlertDialog.Builder builder = new AlertDialog.Builder(FiledetailTableFragment.this.getActivity());
+        	builder.setMessage("Delete record ?")
+        	       .setCancelable(true)
+        	       .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        	           public void onClick(DialogInterface dialog, int id) {
+        	        	   int pageId = FiledetailTableFragment.this.getShownIndex() ;
+        	        	   int recordId = buttonId ;
+        	        	   CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( FiledetailTableFragment.this.getActivity().getApplicationContext() ) ;
+        	        	   CrmFileTransaction mTransaction = mManager.getTransaction() ;
+        	        	   mTransaction.page_deleteRecord(pageId, recordId) ;
+        	        	   saveValues() ;
+        	        	   mTransaction.links_refresh() ;
+        	        	   syncWithData() ;
+        	        	   ((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
+        	        	   
+        	        	   dialog.dismiss();
+        	           }
+        	       })
+        	       .setNegativeButton("No", new DialogInterface.OnClickListener() {
+        	           public void onClick(DialogInterface dialog, int id) {
+        	        	   dialog.dismiss();
+        	           }
+        	       });
+        	AlertDialog alert = builder.create();
+        	alert.show();
 		}
 	} ;
 

@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -651,6 +652,7 @@ public class CrmFileTransaction {
     	public int recordTmpId ;
     	public HashMap<String,CrmFileFieldValue> recordData ;
     	public CrmFilePhoto recordPhoto ;
+    	public boolean recordIsDeletable ;
     	public boolean recordIsDisabled ;
     	public boolean recordIsHidden ;
     	
@@ -659,12 +661,14 @@ public class CrmFileTransaction {
     		this.recordData = recordData ;
     		this.recordIsDisabled = recordIsDisabled ;
     		this.recordIsHidden = false ;
+    		this.recordIsDeletable = false ;
     	}
     	public CrmFileRecord( int recordTmpId, CrmFilePhoto recordPhoto, boolean recordIsDisabled )  {
     		this.recordTmpId = recordTmpId ;
     		this.recordPhoto = recordPhoto ;
     		this.recordIsDisabled = recordIsDisabled ;
     		this.recordIsHidden = false ;
+    		this.recordIsDeletable = false ;
     	}
     	
     	public CrmFileRecord( JSONObject jsonObject ) {
@@ -683,6 +687,7 @@ public class CrmFileTransaction {
 						this.recordData.put(key, cffv) ;
 					}
 				}
+				this.recordIsDeletable = jsonObject.getBoolean("recordIsDeletable") ;
 				this.recordIsDisabled = jsonObject.getBoolean("recordIsDisabled") ;
 				this.recordIsHidden = jsonObject.getBoolean("recordIsHidden") ;
 			} catch (JSONException e) {
@@ -705,6 +710,7 @@ public class CrmFileTransaction {
     				}
     				jsonObject.put("recordData", jsonRecordData) ;
     			}
+    			jsonObject.put("recordIsDeletable", this.recordIsDeletable) ;
     			jsonObject.put("recordIsDisabled", this.recordIsDisabled) ;
     			jsonObject.put("recordIsHidden", this.recordIsHidden) ;
     			
@@ -1299,7 +1305,6 @@ public class CrmFileTransaction {
     		repeatCount = 1 ;
     	}
     	
-    	
     	// appel a bible helper pour remplir la table
     	BibleHelper bibleHelper = new BibleHelper(mContext) ;
     	int a = 0 ;
@@ -1488,6 +1493,15 @@ public class CrmFileTransaction {
 	}
 	public void page_setFieldReadonly( int pageId, int fieldId, boolean isReadonly ) {
 		TransactionPageFields.get(pageId).get(fieldId).fieldIsReadonly = isReadonly ;
+	}
+	public void page_deleteRecord( int pageId , int recordId ) {
+		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE ) {
+			return ;
+		}
+		CrmFileRecord crmFileRecord = TransactionPageRecords.get(pageId).get(recordId) ;
+		if( crmFileRecord.recordIsDeletable ) {
+			TransactionPageRecords.get(pageId).remove(recordId) ;
+		}
 	}
 	public void page_setRecordDisabled( int pageId , int recordId, boolean isDisabled ) {
 		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE ) {
