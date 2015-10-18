@@ -35,7 +35,7 @@ import android.widget.TextView;
 
 public class FiledetailTableFragment extends FiledetailFragment implements UtilityFragment.Listener {
 
-	private CrmFileTransaction mTransaction ;
+	protected CrmFileTransaction mTransaction ;
 
 	@SuppressWarnings("unused")
 	private static final String TAG = "PARACRM/UI/FiledetailTableFragment";
@@ -63,11 +63,14 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View view = inflater.inflate(R.layout.filecapture_filedetail_table, container, false ) ;
-		mProgressBar = (ProgressBar) view.findViewById(R.id.myprogress) ;
+		
 		return view ;
 	}
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
+		View view = getView() ;
+		mProgressBar = (ProgressBar)view.findViewById(R.id.myprogress) ;
+		
 		super.onActivityCreated(savedInstanceState);
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
 		mTransaction = mManager.getTransaction() ;
@@ -294,7 +297,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 	} ;
 
 
-	private void saveValues() {
+	protected void saveValues() {
 		CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( getActivity().getApplicationContext() ) ;
 		CrmFileTransaction mTransaction = mManager.getTransaction() ;
 		//mTransaction.page_setRecordFieldValue_bible(pageId,recordId,fieldId,mEntryKey ) ;

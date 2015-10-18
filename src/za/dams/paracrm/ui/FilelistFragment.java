@@ -135,6 +135,7 @@ public class FilelistFragment extends ListFragment {
         int tab_to_show = ((Integer)mList.get(index).get("tab_id")).intValue() ;
         //Log.w(TAG,"Tab to show is "+tab_to_show );
         CrmFileTransaction.PageType pageType = mTransaction.list_getPageType(tab_to_show) ;
+        CrmFileTransaction.PageTableType pageTableType = mTransaction.list_getPageTableType(tab_to_show) ;
         
 
         if (mDualPane || true) {
@@ -155,7 +156,7 @@ public class FilelistFragment extends ListFragment {
             	//Log.w(TAG,"Creating a fragment !" );
             	
                 // Make new fragment to show this selection.
-                details = FiledetailFragmentFactory.getFiledetailFragment(tab_to_show, pageType);
+                details = FiledetailFragmentFactory.getFiledetailFragment(tab_to_show, pageType, pageTableType);
 
                 // Execute a transaction, replacing any existing fragment
                 // with this one inside the frame.

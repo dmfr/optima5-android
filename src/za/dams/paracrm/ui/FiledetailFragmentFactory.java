@@ -5,12 +5,19 @@ import za.dams.paracrm.CrmFileTransaction;
 
 public class FiledetailFragmentFactory {
 
-    public static FiledetailFragment getFiledetailFragment(int position, CrmFileTransaction.PageType pageType) {
+    public static FiledetailFragment getFiledetailFragment(int position, CrmFileTransaction.PageType pageType, CrmFileTransaction.PageTableType pageTableType) {
     	FiledetailFragment f = new FiledetailFragment();
 
     	switch( pageType ) {
     	case  PAGETYPE_TABLE :
-            f = FiledetailTableFragment.newInstance(position);
+    		switch( pageTableType ) {
+    		case TABLE_OPEN :
+    			f = FiledetailTablePickerFragment.newInstance(position);
+    			break ;
+    		default:
+    			f = FiledetailTableFragment.newInstance(position);
+    			break ;
+    		}
             break;
     		
     	case  PAGETYPE_LIST :

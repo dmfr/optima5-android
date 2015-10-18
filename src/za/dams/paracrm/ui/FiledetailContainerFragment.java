@@ -63,8 +63,9 @@ public class FiledetailContainerFragment extends FiledetailFragment {
     		// Log.w(TAG,"Show child indexes "+subPageIndex) ;
     		
     		CrmFileTransaction.PageType pageType = mTransaction.list_getPageType(subPageIndex) ;
+    		CrmFileTransaction.PageTableType pageTableType = mTransaction.list_getPageTableType(subPageIndex) ;
     		
-    		FiledetailFragment details = FiledetailFragmentFactory.getFiledetailFragment(subPageIndex, pageType);
+    		FiledetailFragment details = FiledetailFragmentFactory.getFiledetailFragment(subPageIndex, pageType, pageTableType);
             // Execute a transaction, replacing any existing fragment
             // with this one inside the frame.
     		

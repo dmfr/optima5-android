@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <FrameLayout
+        android:id="@+id/upper"
+        android:layout_width="match_parent"
+        android:layout_height="0px"
+        android:layout_weight="1" >
+
+        <LinearLayout
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/search_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="10px"
+            android:orientation="horizontal"
+            android:visibility="visible" >
+
+            <com.journeyapps.barcodescanner.CompoundBarcodeView
+                android:id="@+id/barcode_scanner"
+                android:layout_width="0px"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:background="@drawable/filecapture_border"
+                android:padding="10dp" >
+            </com.journeyapps.barcodescanner.CompoundBarcodeView>
+
+            <LinearLayout
+                android:id="@+id/search_row"
+                android:layout_width="0px"
+                android:layout_height="match_parent"
+                android:layout_margin="10px"
+                android:layout_weight="1"
+                android:minHeight="64dip"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:id="@+id/search_label"
+                    style="@android:style/TextAppearance.Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Search item" />
+
+                <AutoCompleteTextView
+                    android:id="@+id/search_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:completionThreshold="1"
+                    android:ellipsize="end"
+                    android:singleLine="true" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/pivot_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="10px"
+            android:orientation="horizontal"
+            android:visibility="gone" >
+
+            <ImageView
+                android:id="@+id/pivot_image"
+                android:layout_width="0px"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:background="@drawable/filecapture_border"
+                android:padding="10dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/explorer_imag" />
+
+            <FrameLayout
+                android:id="@+id/search_row"
+                android:layout_width="0px"
+                android:layout_height="match_parent"
+                android:layout_margin="10px"
+                android:layout_weight="1"
+                android:orientation="vertical" >
+
+                <LinearLayout
+                    android:id="@+id/pivot_fields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top"
+                    android:orientation="vertical" />
+
+                <FrameLayout
+                    android:id="@+id/pivot_actions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:orientation="horizontal" >
+
+                    <LinearLayout
+                        android:id="@+id/pivot_directinput"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="left"
+                        android:orientation="horizontal" >
+
+                        <Button
+                            android:id="@+id/pivot_directinput_minus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-" />
+
+                        <EditText
+                            style="@android:style/TextAppearance.Large"
+                            android:focusable="false"
+                            android:id="@+id/pivot_directinput_text"
+                            android:layout_width="64px"
+                            android:layout_height="wrap_content"
+                            android:gravity="center" />
+
+                        <Button
+                            android:id="@+id/pivot_directinput_plus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="+" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/pivot_submit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="right"
+                        android:text="OK" >
+                    </Button>
+                </FrameLayout>
+            </FrameLayout>
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progress_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" >
+        </ProgressBar>
+    </FrameLayout>
+
+    <include
+        android:id="@+id/lower"
+        android:layout_width="match_parent"
+        android:layout_height="0px"
+        android:layout_weight="1"
+        layout="@layout/filecapture_filedetail_table" />
+
+</LinearLayout>

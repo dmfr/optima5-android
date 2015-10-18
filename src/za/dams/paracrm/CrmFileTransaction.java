@@ -54,7 +54,7 @@ public class CrmFileTransaction {
 		PIVOT_NULL, PIVOT_CONTAINER, PIVOT_TABLE
 	}
 	public enum PageTableType {
-		TABLE_NULL, TABLE_MANUAL, TABLE_AUTOFILL_DISABLED, TABLE_AUTOFILL_ENABLED
+		TABLE_NULL, TABLE_OPEN, TABLE_AUTOFILL_DISABLED, TABLE_AUTOFILL_ENABLED
 	}
 	public enum FieldType {
 	    FIELD_TEXT, FIELD_NUMBER, FIELD_DATE, FIELD_DATETIME, FIELD_BIBLE, FIELD_NULL
@@ -377,6 +377,18 @@ public class CrmFileTransaction {
 			return result ;
 		}
 	}
+	public static class CrmFileOpenpivotParams {
+		public int targetPageId ;
+		public int targetFieldId ;
+		public String targetBibleCode ;
+		
+		public boolean foreignIsOn ;
+		public String foreignBiblecode ;
+		public String foreignEntrykey ;
+		
+		public boolean directInputFieldIsOn ;
+		public int directInputFieldId ;
+	}
 	
 	
 	
@@ -537,6 +549,8 @@ public class CrmFileTransaction {
     	
     	public boolean fieldIsHighlight ;
     	
+    	public boolean fieldIsDirectInputForOpenPivot ;
+    	
     	public boolean fieldAutovalueIsOn ;
     	public String fieldAutovalueSrc ;
     	public CrmFileFieldValue fieldAutovalue ;
@@ -577,6 +591,7 @@ public class CrmFileTransaction {
 				this.fieldIsPivot = jsonObject.optBoolean("fieldIsPivot",false) ;
 				this.fieldIsReadonly = jsonObject.optBoolean("fieldIsReadonly",false) ;
 				this.fieldIsHighlight = jsonObject.optBoolean("fieldIsHighlight",false) ;
+				this.fieldIsDirectInputForOpenPivot = jsonObject.optBoolean("fieldIsDirectInputForOpenPivot",false) ;
 				this.fieldAutovalueIsOn = jsonObject.optBoolean("fieldAutovalueIsOn",false) ;
 				this.fieldAutovalueSrc = jsonObject.optString("fieldAutovalueSrc",null) ;
 				if( jsonObject.has("fieldAutovalue") ) {
@@ -622,6 +637,7 @@ public class CrmFileTransaction {
     			jsonObject.put("fieldIsPivot",this.fieldIsPivot) ;
     			jsonObject.put("fieldIsReadonly",this.fieldIsReadonly) ;
     			jsonObject.put("fieldIsHighlight",this.fieldIsHighlight) ;
+    			jsonObject.put("fieldIsDirectInputForOpenPivot",this.fieldIsDirectInputForOpenPivot) ;
     			if( this.fieldAutovalueIsOn ) {
     				jsonObject.put("fieldAutovalueIsOn",this.fieldAutovalueIsOn) ;
     				jsonObject.put("fieldAutovalueSrc",this.fieldAutovalueSrc) ;
@@ -942,6 +958,8 @@ public class CrmFileTransaction {
 			pagetableType = PageTableType.TABLE_AUTOFILL_ENABLED ;
 		if( sPageTableType.equals("TABLE_AUTOFILL_DISABLED") )
 			pagetableType = PageTableType.TABLE_AUTOFILL_DISABLED ;
+		if( sPageTableType.equals("TABLE_OPEN") )
+			pagetableType = PageTableType.TABLE_OPEN ;
 
 
 		if( pageType == PageType.PAGETYPE_CONTAINER ) {
@@ -1128,6 +1146,9 @@ public class CrmFileTransaction {
 
 				CrmFileFieldDesc tmpField = new CrmFileFieldDesc( tFieldType, tmpInnerCursor.getString(3),
 						tmpInnerCursor.getString(1) , tmpInnerCursor.getString(2) , tmpCursor.getString(2).equals("O"), false ) ;
+				if( tmpCursor.getString(2).equals("S") ) {
+					tmpField.fieldIsDirectInputForOpenPivot = true ;
+				}
 				if( tmpCursor.getString(3).equals("O") ) {
 					tmpField.fieldAutovalueIsOn = true ;
 					tmpField.fieldAutovalueSrc = tmpCursor.getString(4) ;
@@ -1449,6 +1470,12 @@ public class CrmFileTransaction {
 		}
 		return PageType.PAGETYPE_NULL ;
 	}
+	public PageTableType list_getPageTableType( int pageId ) {
+		if( TransactionPages.get(pageId) != null ) {
+			return TransactionPages.get(pageId).pageTableType ;
+		}
+		return PageTableType.TABLE_NULL ;
+	}
 	public int list_getPageInstanceTag( int pageId ) {
 		if( TransactionPages.get(pageId) != null ) {
 			return TransactionPages.get(pageId).pageInstanceTag ;
@@ -1495,13 +1522,109 @@ public class CrmFileTransaction {
 		TransactionPageFields.get(pageId).get(fieldId).fieldIsReadonly = isReadonly ;
 	}
 	public void page_deleteRecord( int pageId , int recordId ) {
-		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE ) {
+		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE
+				|| list_getPageTableType( pageId ) != PageTableType.TABLE_OPEN ) {
 			return ;
 		}
 		CrmFileRecord crmFileRecord = TransactionPageRecords.get(pageId).get(recordId) ;
 		if( crmFileRecord.recordIsDeletable ) {
 			TransactionPageRecords.get(pageId).remove(recordId) ;
 		}
+	}
+	public void page_addRecordForOpenPivot( int pageId, BibleEntry bibleEntry ) {
+		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE
+				|| list_getPageTableType( pageId ) != PageTableType.TABLE_OPEN ) {
+			return ;
+		}
+		
+		ArrayList<CrmFileFieldDesc> tFields = TransactionPageFields.get(pageId) ;
+		
+		HashMap<String,CrmFileFieldValue> recordData = new HashMap<String,CrmFileFieldValue>() ;
+
+		// CREATION DU FIELD
+		for( CrmFileFieldDesc tFieldDesc : tFields ){
+
+			if( tFieldDesc.fieldIsPivot ) {
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								new String(bibleEntry.entryKey),
+								null,
+								new String(bibleEntry.displayStr),
+								true) ) ;
+
+				continue ;
+			}
+
+
+
+
+			switch( tFieldDesc.fieldType ) {
+			case FIELD_DATE :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								null,
+								new Date(),
+								new SimpleDateFormat(DATE_FORMAT).format(new Date()),
+								tFieldDesc.inputCfg_dateSetNow) ) ;
+				break ;
+			case FIELD_DATETIME :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								null,
+								new Date(),
+								new SimpleDateFormat(DATETIME_FORMAT).format(new Date()),
+								tFieldDesc.inputCfg_dateSetNow) ) ;
+				break ;
+
+			case FIELD_TEXT :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								new String(""),
+								null,
+								new String("") ) ) ;
+				break ;
+
+			case FIELD_BIBLE :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								new String(""),
+								null,
+								new String("") ) ) ;
+				break ;
+
+			case FIELD_NUMBER :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								null,
+								null,
+								new Integer(0).toString()) ) ;
+				break ;
+
+			default :
+				recordData.put(tFieldDesc.fieldCode,
+						new CrmFileFieldValue(tFieldDesc.fieldType,
+								new Float(0),
+								false,
+								null,
+								null,
+								null) ) ;
+			}
+		}
+		CrmFileRecord cfr = new CrmFileRecord(TransactionPageRecords.get(pageId).size(),recordData,false) ; 
+		cfr.recordIsDeletable = true ;
+		TransactionPageRecords.get(pageId).add(0, cfr);
 	}
 	public void page_setRecordDisabled( int pageId , int recordId, boolean isDisabled ) {
 		if( list_getPageType( pageId ) != PageType.PAGETYPE_TABLE ) {
@@ -1808,7 +1931,18 @@ public class CrmFileTransaction {
 			else {
 				pageInfo.pageIsHidden = !isFirstComplete ;
 				if( pageInfo.pageType == PageType.PAGETYPE_TABLE || pageInfo.innerPivot!=null ) {
-					if( TransactionPageRecords.get(pageId).size() == 0 ) {
+					boolean autoFill ;
+					switch( pageInfo.pageTableType ) {
+					case TABLE_AUTOFILL_ENABLED:
+					case TABLE_AUTOFILL_DISABLED:
+						autoFill = true ;
+						break ;
+					default :
+						autoFill = false ;
+						break ;
+					}
+					
+					if( autoFill && TransactionPageRecords.get(pageId).size() == 0 ) {
 						pageInfo.pageIsHidden = true ;
 					}
 				}
@@ -2083,6 +2217,20 @@ public class CrmFileTransaction {
 			}
 			CrmFilePivot fpivot = fpi.innerPivot ;
 			
+			boolean fillTable ;
+			switch( fpi.pageTableType ) {
+			case TABLE_AUTOFILL_ENABLED:
+			case TABLE_AUTOFILL_DISABLED:
+				fillTable = true ;
+				break ;
+			default :
+				fillTable = false ;
+				break ;
+			}
+			if( !fillTable ) {
+				continue ;
+			}
+			
 			String targetBiblecode = fpivot.targetBibleCode ;
 			if( fpi.pageId != fpivot.targetPageId ) {
 				// ??? mauvaise config
@@ -2185,6 +2333,48 @@ public class CrmFileTransaction {
 				page_fillTable( pageIdx, fpivot.localConditions, foreignEntries ) ;
 			}
 		}
+	}
+	public CrmFileOpenpivotParams pivots_getOpenpivotParams( int pageId ) {
+		CrmFilePageinfo fpi = TransactionPages.get(pageId) ;
+		ArrayList<CrmFileFieldDesc> arrCffd = TransactionPageFields.get(pageId) ;
+		if( fpi.innerPivot == null ) {
+			return null ;
+		}
+		
+		CrmFileOpenpivotParams cfopp = new CrmFileOpenpivotParams() ;
+		
+		cfopp.targetBibleCode = fpi.innerPivot.targetBibleCode ;
+		cfopp.targetPageId = pageId ;
+		cfopp.targetFieldId = fpi.innerPivot.targetFieldId ;
+		
+		if( fpi.innerPivot.conditionSrc ) {
+			int conditionSrcPageIdx = pagetool_findOffset( fpi.innerPivot.conditionSrcPageId, 0 ) ;
+			int conditionSrcFieldIdx = fpi.innerPivot.conditionSrcFieldId ;
+
+			String foreignBiblecode = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldLinkBible ;
+			String foreignFieldkey = TransactionPageFields.get(conditionSrcPageIdx).get(conditionSrcFieldIdx).fieldCode ;
+			
+			for( CrmFileRecord cfr : TransactionPageRecords.get(conditionSrcPageIdx) ) {
+				if( cfr.recordIsDisabled || cfr.recordIsHidden || !cfr.recordData.get(foreignFieldkey).isSet ) {
+					continue ;
+				}
+				cfopp.foreignIsOn = true ;
+				cfopp.foreignBiblecode = foreignBiblecode ;
+				cfopp.foreignEntrykey = cfr.recordData.get(foreignFieldkey).valueString ;
+				break ;
+			}
+		}
+		
+		int difopIdx = -1 ;
+		for( CrmFileFieldDesc cffd : arrCffd ) {
+			difopIdx++ ;
+			if( cffd.fieldIsDirectInputForOpenPivot ) {
+				cfopp.directInputFieldIsOn = true ;
+				cfopp.directInputFieldId = difopIdx ;
+			}
+		}
+		
+		return cfopp ;
 	}
 	
 	
