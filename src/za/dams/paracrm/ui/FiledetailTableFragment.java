@@ -156,7 +156,6 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 				cb.setTag(new Integer(a)) ;
 				cb.setChecked(!(mrecord.recordIsDisabled)) ;
 				cb.setOnCheckedChangeListener(checkDisableListener) ;
-				cb.setText("Pt");
 				row.addView(cb);
 			}
 
@@ -275,8 +274,8 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
         	        	   int recordId = buttonId ;
         	        	   CrmFileTransactionManager mManager = CrmFileTransactionManager.getInstance( FiledetailTableFragment.this.getActivity().getApplicationContext() ) ;
         	        	   CrmFileTransaction mTransaction = mManager.getTransaction() ;
-        	        	   mTransaction.page_deleteRecord(pageId, recordId) ;
         	        	   saveValues() ;
+        	        	   mTransaction.page_deleteRecord(pageId, recordId) ;
         	        	   mTransaction.links_refresh() ;
         	        	   syncWithData() ;
         	        	   ((FilelistFragment)getFragmentManager().findFragmentById(R.id.filelist)).syncWithData() ;
