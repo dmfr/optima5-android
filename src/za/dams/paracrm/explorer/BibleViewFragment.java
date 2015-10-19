@@ -226,34 +226,33 @@ public class BibleViewFragment extends Fragment implements View.OnClickListener 
 		showContent(true) ;
 	}
     
-    private void setViewHeader() {
-    	// Banner (view group)
-    	for( CrmBibleFieldDesc cbfd : mBibleDesc.fieldsDesc ) {
-    		if( !cbfd.fieldIsHeader ) {
-    			continue ;
-    		}
-    		
-    		if( mBibleDesc.bibleHasGallery && mBibleRecord.defaultPhoto != null ) {
-    			ImageView imageView = mHeaderIcon ;
-    			
-    			CrmImageLoader.CrmUrl crmUrl = new CrmImageLoader.CrmUrl() ;
-    			crmUrl.mediaId = mBibleRecord.defaultPhoto.mediaId ;
-    			crmUrl.thumbnail = true ;
-    			
-    			mCrmImageLoader.download(crmUrl, imageView) ;
-    		}
-    		
-    		TableRow tr = (TableRow) mInflater.inflate(R.layout.explorer_fileview_header_row, null) ;
-    		String label = cbfd.fieldName ;
-    		String text = mBibleRecord.recordData.get(cbfd.fieldCode).displayStr ;
-    		
-    		((TextView)tr.findViewById(R.id.crm_label)).setText(label) ;
-    		((TextView)tr.findViewById(R.id.crm_text)).setText(text) ;
-    		
-    		mHeaderTable.addView(tr) ;
-    	}
-    	
-    }
+	private void setViewHeader() {
+		// Banner (view group)
+		if( mBibleDesc.bibleHasGallery && mBibleRecord.defaultPhoto != null ) {
+			ImageView imageView = mHeaderIcon ;
+
+			CrmImageLoader.CrmUrl crmUrl = new CrmImageLoader.CrmUrl() ;
+			crmUrl.mediaId = mBibleRecord.defaultPhoto.mediaId ;
+			crmUrl.thumbnail = true ;
+
+			mCrmImageLoader.download(crmUrl, imageView) ;
+		}
+		for( CrmBibleFieldDesc cbfd : mBibleDesc.fieldsDesc ) {
+			if( !cbfd.fieldIsHeader ) {
+				continue ;
+			}
+
+			TableRow tr = (TableRow) mInflater.inflate(R.layout.explorer_fileview_header_row, null) ;
+			String label = cbfd.fieldName ;
+			String text = mBibleRecord.recordData.get(cbfd.fieldCode).displayStr ;
+
+			((TextView)tr.findViewById(R.id.crm_label)).setText(label) ;
+			((TextView)tr.findViewById(R.id.crm_text)).setText(text) ;
+
+			mHeaderTable.addView(tr) ;
+		}
+
+	}
     private void setViewDetails() {
     	// 1ere TAB
     	Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
