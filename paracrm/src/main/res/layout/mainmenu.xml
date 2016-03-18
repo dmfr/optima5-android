@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" 
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white">
+<ImageView
+    android:id="@+id/background"
+    android:src="@drawable/background_wonderful"
+    android:layout_gravity="right|bottom"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:scaleType="matrix"
+    android:visibility="gone"
+    />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    >
+
+    <TextView android:id="@+id/profiletext" 
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" 
+        android:textSize="16dp" android:textColor="#555555"
+        android:visibility="gone" />
+    
+    <TextView android:id="@+id/srvmanualtext" 
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" 
+        android:textSize="16dp" android:textColor="#FF0000" android:textStyle="bold"
+        android:visibility="gone" />
+    
+    <GridView android:id="@+id/modulesgridview" android:numColumns="auto_fit"
+        android:horizontalSpacing="10dip" android:verticalSpacing="10dip"
+        android:stretchMode="columnWidth" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:columnWidth="90dp"
+        android:gravity="center" />
+    
+    <GridView android:id="@+id/dynamicgridview" android:numColumns="auto_fit"
+        android:horizontalSpacing="10dip" android:verticalSpacing="10dip"
+        android:stretchMode="columnWidth" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:columnWidth="90dp"
+        android:gravity="center" />
+    
+    <GridView android:id="@+id/staticgridview" android:numColumns="auto_fit"
+        android:horizontalSpacing="10dip" android:verticalSpacing="10dip"
+        android:stretchMode="columnWidth" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:columnWidth="90dp"
+        android:gravity="center" />
+    
+    <TextView android:id="@+id/versiontext" 
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" 
+        android:textSize="16dp" android:textColor="#888888" android:textStyle="italic"
+        android:visibility="gone" />
+    
+</LinearLayout>
+
+</FrameLayout>

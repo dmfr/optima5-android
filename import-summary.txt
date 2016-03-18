@@ -1,0 +1,126 @@
+ECLIPSE ANDROID PROJECT IMPORT SUMMARY
+======================================
+
+Manifest Merging:
+-----------------
+Your project uses libraries that provide manifests, and your Eclipse
+project did not explicitly turn on manifest merging. In Android Gradle
+projects, manifests are always merged (meaning that contents from your
+libraries' manifests will be merged into the app manifest. If you had
+manually copied contents from library manifests into your app manifest
+you may need to remove these for the app to build correctly.
+
+Ignored Files:
+--------------
+The following files were *not* copied into the new Gradle project; you
+should evaluate whether these are still needed in your project and if
+so manually move them:
+
+From paracrm:
+* .gitignore
+* proguard.cfg
+From zxing-android-embedded:
+* .gitignore
+* build.gradle
+* res-orig/
+* res-orig/raw/
+* res-orig/raw/zxing_beep.ogg
+* res-orig/values-ar/
+* res-orig/values-ar/zxing_strings.xml
+* res-orig/values-bg/
+* res-orig/values-bg/zxing_strings.xml
+* res-orig/values-ca/
+* res-orig/values-ca/zxing_strings.xml
+* res-orig/values-cs/
+* res-orig/values-cs/zxing_strings.xml
+* res-orig/values-da/
+* res-orig/values-da/zxing_strings.xml
+* res-orig/values-de/
+* res-orig/values-de/zxing_strings.xml
+* res-orig/values-el/
+* res-orig/values-el/zxing_strings.xml
+* res-orig/values-es/
+* res-orig/values-es/zxing_strings.xml
+* res-orig/values-eu/
+* res-orig/values-eu/zxing_strings.xml
+* res-orig/values-fi/
+* res-orig/values-fi/zxing_strings.xml
+* res-orig/values-fr/
+* res-orig/values-fr/zxing_strings.xml
+* res-orig/values-he/
+* res-orig/values-he/
+* res-orig/values-he/zxing_strings.xml
+* res-orig/values-he/zxing_strings.xml
+* res-orig/values-hi/
+* res-orig/values-hi/zxing_strings.xml
+* res-orig/values-hu/
+* res-orig/values-hu/zxing_strings.xml
+* res-orig/values-id/
+* res-orig/values-id/zxing_strings.xml
+* res-orig/values-it/
+* res-orig/values-it/zxing_strings.xml
+* res-orig/values-ja/
+* res-orig/values-ja/zxing_strings.xml
+* res-orig/values-ko/
+* res-orig/values-ko/zxing_strings.xml
+* res-orig/values-nl/
+* res-orig/values-nl/zxing_strings.xml
+* res-orig/values-pl/
+* res-orig/values-pl/zxing_strings.xml
+* res-orig/values-pt/
+* res-orig/values-pt/zxing_strings.xml
+* res-orig/values-ro/
+* res-orig/values-ro/zxing_strings.xml
+* res-orig/values-ru/
+* res-orig/values-ru/zxing_strings.xml
+* res-orig/values-sk/
+* res-orig/values-sk/zxing_strings.xml
+* res-orig/values-sl/
+* res-orig/values-sl/zxing_strings.xml
+* res-orig/values-sv/
+* res-orig/values-sv/zxing_strings.xml
+* res-orig/values-th/
+* res-orig/values-th/zxing_strings.xml
+* res-orig/values-tr/
+* res-orig/values-tr/zxing_strings.xml
+* res-orig/values-uk/
+* res-orig/values-uk/zxing_strings.xml
+* res-orig/values-zh-rCN/
+* res-orig/values-zh-rCN/zxing_strings.xml
+* res-orig/values-zh-rTW/
+* res-orig/values-zh-rTW/
+* res-orig/values-zh-rTW/zxing_strings.xml
+* res-orig/values-zh-rTW/zxing_strings.xml
+* res-orig/values/
+* res-orig/values/zxing_strings.xml
+
+Moved Files:
+------------
+Android Gradle projects use a different directory structure than ADT
+Eclipse projects. Here's how the projects were restructured:
+
+In zxing-android-embedded:
+* AndroidManifest.xml => zxingandroidembedded/src/main/AndroidManifest.xml
+* libs/core-3.2.2-SNAPSHOT.jar => zxingandroidembedded/libs/core-3.2.2-SNAPSHOT.jar
+* res/ => zxingandroidembedded/src/main/res/
+* src/ => zxingandroidembedded/src/main/java/
+In paracrm:
+* AndroidManifest.xml => paracrm/src/main/AndroidManifest.xml
+* lint.xml => paracrm/lint.xml
+* res/ => paracrm/src/main/res/
+* src/ => paracrm/src/main/java/
+
+Next Steps:
+-----------
+You can now build the project. The Gradle project needs network
+connectivity to download dependencies.
+
+Bugs:
+-----
+If for some reason your project does not build, and you determine that
+it is due to a bug or limitation of the Eclipse to Gradle importer,
+please file a bug at http://b.android.com with category
+Component-Tools.
+
+(This import summary is for your information only, and can be deleted
+after import once you are satisfied with the results.)
