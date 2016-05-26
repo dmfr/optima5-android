@@ -35,7 +35,12 @@ public class SettingsActivity extends PreferenceActivity {
 
     	super.onCreate(savedIcicle);
     }
-    
+
+  @Override
+  public boolean onIsMultiPane() {
+    return true;
+  }
+
     @Override
     public void onBuildHeaders(List<Header> target) {
         loadHeadersFromResource(R.xml.explorer_settings_headers, target);

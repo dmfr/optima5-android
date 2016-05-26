@@ -39,8 +39,13 @@ public class SettingsActivity extends PreferenceActivity implements SettingsCall
 		super.onCreate(savedInstanceState);
 		mContext = getApplicationContext();
 	}
-	
-    @Override
+
+	@Override
+	public boolean onIsMultiPane() {
+		return true;
+	}
+
+	@Override
     public void onBuildHeaders(List<Header> target) {
         Header accountHeader = new Header();
         accountHeader.title = "Server/Domain" ;

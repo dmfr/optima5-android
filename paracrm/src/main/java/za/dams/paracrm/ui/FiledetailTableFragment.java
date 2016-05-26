@@ -18,6 +18,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -102,6 +103,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 		TableLayout mTabLayout = (TableLayout) FiledetailTableFragment.this.getView().findViewById(R.id.mytable) ;
 		mTabLayout.removeAllViews() ;
 		mTabLayout.setColumnStretchable(1,true) ;
+		mTabLayout.setColumnShrinkable(1,true);
 		TableRow row = new TableRow(getActivity()) ;
 		View view ;
 		CheckBox cb ;
@@ -129,7 +131,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 		view = new View(getActivity()) ;
 		view.setBackgroundColor(Color.rgb(255,255,255)) ;
 		//view.setMinimumHeight(3) ;
-		view.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.FILL_PARENT, 1));
+		view.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, 1));
 		mTabLayout.addView(view);
 
 		ArrayList<CrmFileTransaction.CrmFileRecord> records = mTransaction.pageTable_getRecords(pageId) ;
@@ -201,7 +203,7 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 						if( mrecord.recordData.get(fieldDesc.fieldCode).isSet ) {
 							etext.setText(mrecord.recordData.get(fieldDesc.fieldCode).displayStr);
 						}
-						etext.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22) ;
+						etext.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18) ;
 						// text.setTextColor(Color.rgb(255,255,255)) ;
 						etext.setPadding(10, 3, 10, 10) ;
 						etext.setMaxLines(1) ;
@@ -217,10 +219,12 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 
 				default:
 					text = new TextView(getActivity());
+					text.setEllipsize(TextUtils.TruncateAt.END);
+					text.setMaxLines(1);
 					if( mrecord.recordData.get(fieldDesc.fieldCode).isSet ) {
 						text.setText(mrecord.recordData.get(fieldDesc.fieldCode).displayStr);
 					}
-					text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22) ;
+					text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18) ;
 					if( mrecord.recordIsDisabled ) {
 						text.setTextColor(Color.rgb(255,0,0)) ;
 						text.setPaintFlags(text.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
@@ -236,14 +240,14 @@ public class FiledetailTableFragment extends FiledetailFragment implements Utili
 
 				b++ ;
 			}
-			row.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.FILL_PARENT, 48));
+			row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT));
 			mTabLayout.addView(row);
 
 			if( mIter2.hasNext() ) {
 				view = new View(getActivity()) ;
 				view.setBackgroundColor(Color.rgb(255,255,255)) ;
 				//view.setMinimumHeight(3) ;
-				view.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.FILL_PARENT, 1));
+				view.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, 1));
 				mTabLayout.addView(view);
 
 			}
