@@ -102,19 +102,19 @@ public class FiledetailGalleryFragment extends FiledetailFragment {
 			int pageId = getShownIndex() ;
 			int recordId = position - 1 ;
 			Log.w(TAG,"Displaying page "+pageId+" position "+recordId) ;
-			
+
 			FiledetailGalleryImageDialog fragment = FiledetailGalleryImageDialog.newInstance(pageId,recordId,true) ;
 			fragment.setTargetFragment(this, SHOWIMAGE_REQUEST);
-            FragmentManager fm = getFragmentManager();
-            FragmentTransaction ft = fm.beginTransaction();
-            // if we have an old popup replace it
-            Fragment fOld = fm.findFragmentByTag(FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
-            if (fOld != null && fOld.isAdded()) {
-                ft.remove(fOld);
-            }
-            ft.add(fragment, FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
-            ft.commit();
-            return ;
+			FragmentManager fm = getFragmentManager();
+			FragmentTransaction ft = fm.beginTransaction();
+			// if we have an old popup replace it
+			Fragment fOld = fm.findFragmentByTag(FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+			if (fOld != null && fOld.isAdded()) {
+				ft.remove(fOld);
+			}
+			ft.add(fragment, FiledetailGalleryImageDialog.FILEVIEWIMAGE_DIALOG_TAG);
+			ft.commit();
+			return ;
 		}
 		
 		FiledetailCameraFragment cameraFragment = FiledetailCameraFragment.newInstance(getShownIndex()); 
