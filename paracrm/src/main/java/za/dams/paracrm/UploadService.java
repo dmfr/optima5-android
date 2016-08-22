@@ -68,7 +68,7 @@ public class UploadService extends Service {
 	public void uploadBinaries() {
 		DatabaseManager mDbManager = DatabaseManager.getInstance(UploadService.this.getApplicationContext()) ;
 
-		String req = String.format("SELECT filerecord_id, media_filename FROM upload_media") ;
+		String req = String.format("SELECT sync_vuid, media_filename FROM upload_media") ;
 		Cursor tmpCursor = mDbManager.rawQuery(req) ;
 		if( tmpCursor.getCount() > 0 ) {
 			while(!tmpCursor.isLast()) {
@@ -82,7 +82,7 @@ public class UploadService extends Service {
 				try {
 					is = this.openFileInput(tmpCursor.getString(1));
 				} catch (FileNotFoundException e) {
-					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
+					req = String.format("DELETE FROM upload_media WHERE sync_vuid='%s'",tmpCursor.getString(0)) ;
 					mDbManager.execSQL(req) ;
 					// TODO Auto-generated catch block
 					//Log.w("Bin upload","Failed 1") ;
@@ -109,7 +109,7 @@ public class UploadService extends Service {
 
 		        HashMap<String,String> nameValuePairs = new HashMap<String,String>();
 		        nameValuePairs.put("_action", "android_postBinary");
-		        nameValuePairs.put("filerecord_id",tmpCursor.getString(0));
+		        nameValuePairs.put("sync_vuid",tmpCursor.getString(0));
 		        nameValuePairs.put("base64_binary",Base64.encodeToString(byteBuffer.toByteArray(),Base64.DEFAULT));
 		        
 		        final HttpClient httpclient = HttpServerHelper.getHttpClient(this, HttpServerHelper.TIMEOUT_DL) ;
@@ -140,7 +140,7 @@ public class UploadService extends Service {
 
 				}
 				if( jsonResp.optBoolean("success",false) == true ) {
-					req = String.format("DELETE FROM upload_media WHERE filerecord_id='%s'",tmpCursor.getString(0)) ;
+					req = String.format("DELETE FROM upload_media WHERE sync_vuid='%s'",tmpCursor.getString(0)) ;
 					mDbManager.execSQL(req) ;
 
 					this.getFileStreamPath(tmpCursor.getString(1)).delete() ;

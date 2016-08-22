@@ -34,6 +34,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.provider.Settings;
+import android.util.Log;
 
 public class SyncService extends Service {
 	
@@ -194,7 +195,7 @@ public class SyncService extends Service {
     				tmpCursor.moveToNext() ;
     			
     				ContentValues cv = new ContentValues() ;
-    				cv.put("filerecord_id",uploadEntry.remoteId) ;
+    				cv.put("sync_vuid",uploadEntry.syncVuid) ;
     				cv.put("media_filename",tmpCursor.getString(0)) ;
     				mDbManager.insert( "upload_media" , cv ) ;
     			}
@@ -393,12 +394,12 @@ public class SyncService extends Service {
     
     public static class UploadEntry {
     	public int localId ;
-    	public int remoteId ;
+    	public String syncVuid ;
     	public boolean isSlot ;
     	
-    	public UploadEntry( int localId, int remoteId, boolean isSlot ) {
+    	public UploadEntry( int localId, String syncVuid, boolean isSlot ) {
     		this.localId = localId ;
-    		this.remoteId = remoteId ;
+    		this.syncVuid = syncVuid ;
     		this.isSlot = isSlot ;
     	}
     }
@@ -446,8 +447,8 @@ public class SyncService extends Service {
         	return new ArrayList<UploadEntry>() ;
         }
         
-        JSONArray jsonUploadSlots = jsonResp.optJSONArray("upload_slots") ;
-        JSONObject jsonMap = jsonResp.optJSONObject("map_tmpid_fileid") ;
+        JSONArray jsonUploadSlots = jsonResp.optJSONArray("upload_slots_vuid") ;
+        JSONObject jsonMap = jsonResp.optJSONObject("map_tmpid_syncvuid") ;
         if( jsonMap == null ) {
         	jsonMap = new JSONObject() ;
         }
@@ -458,23 +459,23 @@ public class SyncService extends Service {
         ArrayList<UploadEntry> arrUploadEntry = new ArrayList<UploadEntry>() ;
         Iterator<?> mIter ;
         if( jsonResp.optBoolean("success",false) == true ) {
-        	ArrayList<Integer> remoteSlots = new ArrayList<Integer>() ;
+        	ArrayList<String> remoteSlots = new ArrayList<String>() ;
         	int a=0 ;
         	for( a=0 ; a<jsonUploadSlots.length() ; a++ ) {
-        		remoteSlots.add(new Integer(jsonUploadSlots.optString(a))) ;
+        		remoteSlots.add(jsonUploadSlots.optString(a)) ;
         	}
         	
         	
         	
         	 mIter = jsonMap.keys();
         	 Integer localId ;
-        	 Integer remoteId ;
+        	 String syncVuid ;
         	 String curKey ;
         	while( mIter.hasNext() ){
         		curKey = (String)mIter.next() ;
         		localId = new Integer(curKey) ;
-        		remoteId = new Integer(jsonMap.optString(curKey)) ;
-        		arrUploadEntry.add(new UploadEntry(localId.intValue(),remoteId.intValue(),remoteSlots.contains(remoteId))) ; 
+						syncVuid = jsonMap.optString(curKey) ;
+        		arrUploadEntry.add(new UploadEntry(localId.intValue(),syncVuid,remoteSlots.contains(syncVuid))) ;
         	}
         }
 				
@@ -525,7 +526,7 @@ public class SyncService extends Service {
     		JSONObject jsonObj ;
     		JSONArray jsonArr ;
 			while( (readLine = r.readLine()) != null ) {
-				// Log.w(TAG,readLine) ;
+				 Log.w(TAG,readLine) ;
 				try {
 					if( isFirst ) {
 						jsonObj = new JSONObject(readLine) ;

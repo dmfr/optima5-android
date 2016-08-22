@@ -32,7 +32,7 @@ public class DatabaseManager {
     
     private SQLiteDatabase mDb;
     private final String DB_NAME = "_paracrm";
-    private final int DB_VERSION = 39;
+    private final int DB_VERSION = 40;
     
     public static class DatabaseUpgradeResult {
     	public boolean success ;
@@ -290,7 +290,7 @@ public class DatabaseManager {
             
     		createTableQuery = "CREATE TABLE IF NOT EXISTS "
                     + "upload_media" + " ("
-                    + "filerecord_id" + " INTEGER PRIMARY KEY, "
+                    + "sync_vuid" + " VARCHAR(100) PRIMARY KEY, "
                     + "media_filename" + " VARCHAR(50)"
                     + ");";
             db.execSQL(createTableQuery);
