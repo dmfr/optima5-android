@@ -67,6 +67,8 @@ public class CrmQueryManager {
 			crmQueryModel.querysrcType = CrmQueryModel.QueryType.QMERGE ;
 		} else if( strType.equals("qweb") ) {
 			crmQueryModel.querysrcType = CrmQueryModel.QueryType.QWEB ;
+		} else if( strType.equals("qsql") ) {
+			crmQueryModel.querysrcType = CrmQueryModel.QueryType.QSQL ;
 		}
 		crmQueryModel.querysrcName = c.getString(3) ;
 		c.close() ;
@@ -272,6 +274,8 @@ public class CrmQueryManager {
                 ((AndroidHttpClient) httpclient).close();
             }
         }
+
+		Log.w("DAMS", jsonString) ;
         
         
         if( jsonString == null && !getAsXls ) {

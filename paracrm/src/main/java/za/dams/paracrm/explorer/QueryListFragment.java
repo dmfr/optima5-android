@@ -424,18 +424,19 @@ public class QueryListFragment extends ListFragment {
 				icon.setVisibility(View.GONE) ;
 				text.setText("Shouldn't happen !!!") ;
 			}
-			
-			
-			switch( getItem(position).querysrcType ) {
-			case QWEB :
-				icon.setImageResource(R.drawable.ic_menu_add_event_holo_light) ;
-				break ;
-			case QMERGE :
-			case QUERY :
-				icon.setImageResource(R.drawable.ic_explorer_fileicon) ;
-				break ;
-			}
-			text.setText(getItem(position).querysrcName) ;
+
+
+      switch( getItem(position).querysrcType ) {
+        case QWEB :
+          icon.setImageResource(R.drawable.ic_menu_add_event_holo_light) ;
+          break ;
+        case QSQL :
+        case QMERGE :
+        case QUERY :
+          icon.setImageResource(R.drawable.ic_explorer_fileicon) ;
+          break ;
+      }
+      text.setText(getItem(position).querysrcName) ;
 			
 
 			return view;

@@ -224,19 +224,22 @@ public class QueryLaunchFragment extends Fragment {
     	TableRow tr ;
     	
 		tr = (TableRow) mInflater.inflate(R.layout.explorer_fileview_header_row, null) ;
-		switch( mModel.querysrcType ) {
-		case QUERY:
-			text = "Query" ;
-			break ;
-		case QMERGE:
-			text = "Qmerge" ;
-			break ;
-		case QWEB :
-			text = "QWeb" ;
-			break;
-		default: 
-			text ="" ;
-		}
+			switch( mModel.querysrcType ) {
+				case QUERY:
+					text = "Query" ;
+					break ;
+				case QMERGE:
+					text = "Qmerge" ;
+					break ;
+				case QWEB :
+					text = "QWeb" ;
+					break;
+				case QSQL :
+					text = "Qsql" ;
+					break;
+				default:
+					text ="" ;
+			}
 		((TextView)tr.findViewById(R.id.crm_label)).setText("Type :") ;
 		((TextView)tr.findViewById(R.id.crm_text)).setText(text) ;
 		mHeaderTable.addView(tr) ;

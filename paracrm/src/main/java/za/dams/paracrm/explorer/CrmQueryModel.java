@@ -9,7 +9,7 @@ import android.text.format.Time;
 public class CrmQueryModel {
 	
 	public static enum QueryType {
-	    QUERY, QMERGE, QWEB
+	    QUERY, QMERGE, QWEB, QSQL
 	};
 	public static enum FieldType {
 	    FIELD_TEXT, FIELD_NUMBER, FIELD_DATE, FIELD_DATETIME, FIELD_BIBLE, FIELD_NULL
