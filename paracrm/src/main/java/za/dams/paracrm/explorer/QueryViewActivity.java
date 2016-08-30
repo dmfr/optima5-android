@@ -36,7 +36,7 @@ import android.widget.TextView;
 import android.widget.ViewSwitcher;
 
 public class QueryViewActivity extends Activity implements ActionBar.TabListener, ViewSwitcher.ViewFactory, QueryView.Callback {
-	
+
 	public static class QueryGridTemplate {
 		boolean template_is_on ;
 		String color_key ;
@@ -52,80 +52,80 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 	public static class ColumnDesc {
 		String dataIndex ;
 		String dataType ;
-		
+
 		String text ;
 		boolean text_bold ;
 		boolean text_italic ;
 		boolean is_bold ;
-		
+
 		boolean progressColumn ;
 		boolean detachedColumn ;
 	}
-	
-    /**
-     * The view id used for all the views we create. It's OK to have all child
-     * views have the same ID. This ID is used to pick which view receives
-     * focus when a view hierarchy is saved / restore
-     */
-    private static final int VIEW_ID = 1;
 
-    /** Argument name(s) */
-    public static final String ARG_QUERYSRC_ID = "querysrcId";
-    public static final String ARG_JSONRESULT_ID = "jsonresultId";
-    
-    private int querysrcId ;
-    private int jsonresultId ;
-    
-    private static final String DUMMY_STRING = "DUMMY STRING" ;
-    private int mCalculatedPageSize = 0 ;
-    private int mCalculatedRowHeight = 0 ;
-    
-    private List<Tab> mTabs ;
-    private ProgressBar mProgressBar ;
-    private ViewSwitcher mViewSwitcher ;
-    protected Animation mInAnimationForward;
-    protected Animation mOutAnimationForward;
-    protected Animation mInAnimationBackward;
-    protected Animation mOutAnimationBackward;
-    
-    private LoadQueryTask mLoadTask ;
-    
-    private String mTitle ;
-    private QueryGridTemplate mQgt ;
-    private int mNbTabs ;
-    private List<String> mTabTitles ;
-    private List<List<ColumnDesc>> mTabColumnsDesc ;
-    private List<List<List<String>>> mTabRowCells ;
-    
-    private int mCurrentTabIdx = 0 ;
-    private int mCurrentRowOffset = 0 ;
+	/**
+	 * The view id used for all the views we create. It's OK to have all child
+	 * views have the same ID. This ID is used to pick which view receives
+	 * focus when a view hierarchy is saved / restore
+	 */
+	private static final int VIEW_ID = 1;
+
+	/** Argument name(s) */
+	public static final String ARG_QUERYSRC_ID = "querysrcId";
+	public static final String ARG_JSONRESULT_ID = "jsonresultId";
+
+	private int querysrcId ;
+	private int jsonresultId ;
+
+	private static final String DUMMY_STRING = "DUMMY STRING" ;
+	private int mCalculatedPageSize = 0 ;
+	private int mCalculatedRowHeight = 0 ;
+
+	private List<Tab> mTabs ;
+	private ProgressBar mProgressBar ;
+	private ViewSwitcher mViewSwitcher ;
+	protected Animation mInAnimationForward;
+	protected Animation mOutAnimationForward;
+	protected Animation mInAnimationBackward;
+	protected Animation mOutAnimationBackward;
+
+	private LoadQueryTask mLoadTask ;
+
+	private String mTitle ;
+	private QueryGridTemplate mQgt ;
+	private int mNbTabs ;
+	private List<String> mTabTitles ;
+	private List<List<ColumnDesc>> mTabColumnsDesc ;
+	private List<List<List<String>>> mTabRowCells ;
+
+	private int mCurrentTabIdx = 0 ;
+	private int mCurrentRowOffset = 0 ;
 
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+
 		Bundle bundle = this.getIntent().getExtras();
 		querysrcId = bundle.getInt(ARG_QUERYSRC_ID) ;
 		jsonresultId = bundle.getInt(ARG_JSONRESULT_ID) ;
-		
+
 		setContentView(R.layout.explorer_viewer_query);
-		
+
 		mProgressBar = (ProgressBar) findViewById(R.id.progressbar) ;
 		mViewSwitcher = (ViewSwitcher) findViewById(R.id.switcher) ;
 		mTabs = new ArrayList<Tab>() ;
-		
-        mInAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_in);
-        mOutAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_out);
-        mInAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_in);
-        mOutAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_out);
-		
+
+		mInAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_in);
+		mOutAnimationForward = AnimationUtils.loadAnimation(this, R.anim.slide_left_out);
+		mInAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_in);
+		mOutAnimationBackward = AnimationUtils.loadAnimation(this, R.anim.slide_right_out);
+
 		final ActionBar ab = getActionBar();
 		ab.setDisplayHomeAsUpEnabled(true);
-		
+
 		// Initialisation du "getter" TabGridGetter
 		mTabGridGetter = new TabGridGetter() ;
-		
+
 		mLoadTask = new LoadQueryTask() ;
 		mLoadTask.execute() ;
 	}
@@ -136,9 +136,9 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		}
 		super.onDestroy();
 	}
-	
-	
-	
+
+
+
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
 		// TODO Auto-generated method stub
@@ -148,81 +148,81 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		 * onWindowFocusChanged : ensure main ActivityView has dimensions
 		 */
 		measurePaging() ;
-		
+
 		mViewSwitcher.removeAllViews(); // reset view system
 		mViewSwitcher.setFactory(QueryViewActivity.this) ;
 		mCurrentRowOffset = 0 ; // switch to page 1
 		startView();
 	}
-	
-	
+
+
 	private void measurePaging() {
 		View tActivityView = findViewById(android.R.id.content);
 		LayoutInflater tInflater = getLayoutInflater() ;
-		
+
 		int tViewHeight = tActivityView.getHeight() ;
-		
+
 		TableRow tTableRowModel = (TableRow)tInflater.inflate(R.layout.explorer_viewer_table_row, null) ;
 		TextView tTableCellModel = (TextView)tInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
 		tTableCellModel.setText(DUMMY_STRING);
 		tTableCellModel.setTypeface(null, Typeface.BOLD) ; // Some devices displays TextViews larger/higher with bold font (AOSP 3.x) 
 		tTableRowModel.addView(tTableCellModel) ;
 		tTableRowModel.setLayoutParams(new ViewGroup.LayoutParams(
-                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
+						LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
 		tTableRowModel.measure(MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().width, MeasureSpec.EXACTLY),
-		        MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().height, MeasureSpec.EXACTLY));
+						MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().height, MeasureSpec.EXACTLY));
 		int tRowHeight = tTableRowModel.getMeasuredHeight() + 1 ; // tableRow + horizontal ruler
-		
+
 		//Log.w("QueryViewActivity","Page height="+tViewHeight+"   Row height="+tRowHeight) ;
 		mCalculatedPageSize = (int) Math.floor( (tViewHeight-tRowHeight) / tRowHeight );
 		mCalculatedRowHeight = tRowHeight ;
 	}
-	
-	
+
+
 	private class LoadQueryTask extends AsyncTask<Void,Void,Boolean> {
-        protected void onPreExecute() {
-            
-        }
-        protected Boolean doInBackground(Void... arg0) {
-        	return loadFromDb() ;
-        }
-        protected void onPostExecute(Boolean isDone) {
-        	if( this.isCancelled() ) {
-        		return ;
-        	}
-        	if( !isDone ) {
-        		QueryViewActivity.this.finish() ;
-        		return ;
-        	}
-        	
-        	if( mNbTabs == 0 ) {
-            	mProgressBar.setVisibility(View.GONE) ;
-        		return ;
-        	}
-        	
-        	
-        	// Visibilité du ViewSwitcher 
-        	mViewSwitcher.setVisibility(View.VISIBLE);
-        	
-        	
-        	// Init des tabs + highlight 1ere tab
-        	buildTabs() ;
-        	
-        	// Switch to Tab 1 + page 1 
-        	mCurrentTabIdx = 0 ;
-    		mCurrentRowOffset = 0 ;
-    		startView();
-        }
+		protected void onPreExecute() {
+
+		}
+		protected Boolean doInBackground(Void... arg0) {
+			return loadFromDb() ;
+		}
+		protected void onPostExecute(Boolean isDone) {
+			if( this.isCancelled() ) {
+				return ;
+			}
+			if( !isDone ) {
+				QueryViewActivity.this.finish() ;
+				return ;
+			}
+
+			if( mNbTabs == 0 ) {
+				mProgressBar.setVisibility(View.GONE) ;
+				return ;
+			}
+
+
+			// Visibilité du ViewSwitcher
+			mViewSwitcher.setVisibility(View.VISIBLE);
+
+
+			// Init des tabs + highlight 1ere tab
+			buildTabs() ;
+
+			// Switch to Tab 1 + page 1
+			mCurrentTabIdx = 0 ;
+			mCurrentRowOffset = 0 ;
+			startView();
+		}
 	}
 	private boolean loadFromDb() {
 		DatabaseManager mDb = DatabaseManager.getInstance(this) ;
 		Cursor c ;
-		
+
 		c = mDb.rawQuery(String.format("SELECT querysrc_name FROM input_query WHERE querysrc_id='%d'",querysrcId));
 		c.moveToNext() ;
 		mTitle = c.getString(0) ;
 		c.close() ;
-		
+
 		c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
 		if( c.getCount() != 1 ) {
 			c.close() ;
@@ -231,7 +231,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		c.moveToNext() ;
 		String jsonBlob = c.getString(0) ;
 		c.close();
-		
+
 		mQgt = new QueryGridTemplate();
 		c = mDb.rawQuery("SELECT * FROM querygrid_template WHERE query_id='0'") ;
 		if( c.moveToNext() ) {
@@ -247,45 +247,45 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 			mQgt.color_red = Color.parseColor("#EE0000") ;
 		}
 		c.close();
-		
+
 		//mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",jsonresultId));
-		
+
 		loadFromJsonBlob(jsonBlob) ;
-		
+
 		return true ;
 	}
 	private void loadFromJsonBlob( String jsonBlob ) {
-		
+
 		mNbTabs = 0 ;
 		mTabTitles = new ArrayList<String>() ;
 		mTabColumnsDesc = new ArrayList<List<ColumnDesc>>() ;
 		mTabRowCells = new ArrayList<List<List<String>>>() ;
-		
+
 		try {
 			JSONObject jsonObj = new JSONObject(jsonBlob) ;
 			JSONArray jsonTabs = jsonObj.getJSONArray("tabs") ;
 			// set up tabs nav
 			for (int i = 0; i < jsonTabs.length(); i++) {
-				
+
 				JSONObject jsonObjTab = jsonTabs.getJSONObject(i) ;
 				loadTabFromJson(jsonObjTab) ;
 			}
-			
+
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			// e.printStackTrace();
 		}
 	}
-	
+
 	private void loadTabFromJson( JSONObject jsonObjTab ) {
-		
+
 		// column map
 		String tabTitle = "" ;
 		ArrayList<ColumnDesc> columnsDesc = new ArrayList<ColumnDesc>() ;
 		ArrayList<List<String>> dataGrid = new ArrayList<List<String>>();
 		try {
 			tabTitle = jsonObjTab.getString("tab_title") ;
-			
+
 			JSONArray jsonCols = jsonObjTab.getJSONArray("columns");
 			for(int i=0 ; i<jsonCols.length() ; i++) {
 				JSONObject jsonCol = jsonCols.getJSONObject(i) ;
@@ -300,7 +300,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 				cd.detachedColumn = jsonCol.optBoolean("detachedColumn");
 				columnsDesc.add(cd) ;
 			}
-			
+
 			JSONArray jsonData = jsonObjTab.getJSONArray("data");
 			for(int j=0 ; j<jsonData.length() ; j++) {
 				JSONObject jsonRow = jsonData.getJSONObject(j) ;
@@ -317,28 +317,28 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 								s = newS ;
 							}
 						}catch(NumberFormatException e ) {
-							
+
 						}
 					}
-					
+
 					dataRow.add(s) ;
 				}
 				dataGrid.add(dataRow) ;
 			}
-			
+
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		mNbTabs++ ;
 		mTabTitles.add(tabTitle) ;
 		mTabColumnsDesc.add(columnsDesc);
 		mTabRowCells.add(dataGrid) ;
 	}
-	
-	
-	
+
+
+
 	private void buildTabs() {
 		ActionBar ab = getActionBar();
 		ab.setTitle(mTitle);
@@ -350,7 +350,7 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		}
 		ab.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 	}
-	
+
 	/*
     private void setCurrentTab(int tabIdx) {
         int idx = -1 ;
@@ -366,50 +366,50 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 			return ;
 		}
 		view.setCallback(this) ;
-    	mProgressBar.setVisibility(View.VISIBLE) ;
+		mProgressBar.setVisibility(View.VISIBLE) ;
 		view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
 	}
-    private void setCurrentTab(int tabIdx) {
-    	if( mViewSwitcher.getCurrentView() == null ) {
-    		return ;
-    	}
-    	
-    	if( tabIdx == mCurrentTabIdx ) {
-    		return ;
-    	}
-    	
-    	
-        if (tabIdx-mCurrentTabIdx > 0) {
-            mViewSwitcher.setInAnimation(mInAnimationForward);
-            mViewSwitcher.setOutAnimation(mOutAnimationForward);
-        } else {
-            mViewSwitcher.setInAnimation(mInAnimationBackward);
-            mViewSwitcher.setOutAnimation(mOutAnimationBackward);
-        }
+	private void setCurrentTab(int tabIdx) {
+		if( mViewSwitcher.getCurrentView() == null ) {
+			return ;
+		}
 
-    	mCurrentTabIdx = tabIdx ;
-    	mCurrentRowOffset = 0 ; // @DAMS : à voir?
-    	
-        QueryView view = (QueryView) mViewSwitcher.getNextView();
-    	view.setCallback(this) ;
-    	mProgressBar.setVisibility(View.VISIBLE) ;
-    	view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
-    	mViewSwitcher.showNext();
-    	
-    	// On détruit l'autre vue
-    	// => dégrade l'esthétique car on scroll sur du vide
-    	// => pas fiable car la suivante à déja commencé son Draw
-    	// => pas utile car l'autre vue est par défaut invisible (hors scroll) et sera réinitialisée avant tout scroll/switchTab
-    	//((QueryView)mViewSwitcher.getNextView()).manualDestroy() ;
-    }
-	
-	
-	
+		if( tabIdx == mCurrentTabIdx ) {
+			return ;
+		}
+
+
+		if (tabIdx-mCurrentTabIdx > 0) {
+			mViewSwitcher.setInAnimation(mInAnimationForward);
+			mViewSwitcher.setOutAnimation(mOutAnimationForward);
+		} else {
+			mViewSwitcher.setInAnimation(mInAnimationBackward);
+			mViewSwitcher.setOutAnimation(mOutAnimationBackward);
+		}
+
+		mCurrentTabIdx = tabIdx ;
+		mCurrentRowOffset = 0 ; // @DAMS : à voir?
+
+		QueryView view = (QueryView) mViewSwitcher.getNextView();
+		view.setCallback(this) ;
+		mProgressBar.setVisibility(View.VISIBLE) ;
+		view.setTabAndOffset(mCurrentTabIdx, mCurrentRowOffset) ;
+		mViewSwitcher.showNext();
+
+		// On détruit l'autre vue
+		// => dégrade l'esthétique car on scroll sur du vide
+		// => pas fiable car la suivante à déja commencé son Draw
+		// => pas utile car l'autre vue est par défaut invisible (hors scroll) et sera réinitialisée avant tout scroll/switchTab
+		//((QueryView)mViewSwitcher.getNextView()).manualDestroy() ;
+	}
+
+
+
 
 	@Override
 	public void onTabReselected(Tab arg0, FragmentTransaction arg1) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -424,133 +424,133 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 	@Override
 	public void onTabUnselected(Tab arg0, FragmentTransaction arg1) {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	@Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.explorer_viewer_options, menu);
-        return true;
-    }
-	@Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                // Comes from the action bar when the app icon on the left is pressed.
-                // It works like a back press, but it won't close the activity.
-                onBackPressed();
-                break ;
-            case R.id.savetosd:
-            	onSaveToSd() ;
-            	break ;
-        }
-        return false;
-    }
-    @Override
-    public void onBackPressed() {
-    	super.onBackPressed();
-    }
-    
-    private void onSaveToSd() {
-    	new DownloadAgainTask().execute() ;
-    }
-    
-    
-    private ProgressDialog mDownloadProgress ;
-    private class DownloadAgainTask extends AsyncTask<Void,Void,Void> {
-    	String fileName ;
-    	byte[] data = null ;
-    	
-        protected void onPreExecute() {
-			mDownloadProgress = ProgressDialog.show(
-		    		QueryViewActivity.this,
-		    		"Downloading Query",
-		            "Please wait...",
-		            true);
-			
-	    	ActionBar ab = getActionBar() ;
-	    	String title = ab.getTitle().toString() ;
-	    	String timestamp = String.valueOf((int)(System.currentTimeMillis() / 1000)) ; 
-	    	fileName = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp+".xlsx" ;
-			return ;
-        }
-        protected Void doInBackground(Void... arg0) {
-        	CrmQueryModel lastFetchModel = CrmQueryManager.getLastFetchModel() ;
-        	Integer tmpJsonRecord = CrmQueryManager.fetchRemoteJson(QueryViewActivity.this, lastFetchModel, true) ;
-        	if( tmpJsonRecord == null ) {
-        		return null ;
-        	}
-    		
-        	DatabaseManager mDb = DatabaseManager.getInstance(QueryViewActivity.this) ;
-    		Cursor c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
-    		c.moveToNext() ;
-    		String jsonBlob = c.getString(0) ;
-    		c.close();
-    		
-    		mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
-    		
-    		try {
-    			JSONObject jsonObj = new JSONObject(jsonBlob) ;
-    			String xlsBase64 = jsonObj.getString("xlsx_base64") ;
-    			data = Base64.decode(xlsBase64, Base64.DEFAULT) ;
-    		}catch(JSONException e) {
-    			return null ;
-    		}
-    		
-        	return null ;
-        }
-        protected void onPostExecute(Void arg0) {
-        	if( isCancelled() ) {
-        		return ;
-        	}
-        	mDownloadProgress.dismiss() ;
-        	if( data == null ) {
-        		return ;
-        	}
-        	SdcardManager.saveData(QueryViewActivity.this, fileName, data, true) ;
-        }
+		return true;
 	}
-    
-    private TabGridGetter mTabGridGetter = null ;
-    public class TabGridGetter {
-    	
-    	public QueryGridTemplate getQueryGridTemplate() {
-    		return mQgt ;
-    	}
-    	
-    	public List<ColumnDesc> getTabColumns( int tabIdx ) {
-    		if( mTabColumnsDesc == null || tabIdx >= mTabColumnsDesc.size() ) {
-    			return new ArrayList<ColumnDesc>() ;
-    		}
-    		return mTabColumnsDesc.get(tabIdx) ;
-    	}
-    	
-    	public List<List<String>> getTabRows( int tabIdx, int startOffset, int nbLimit ) {
-    		if( startOffset >= getTabCount( tabIdx ) ) {
-    			return new ArrayList<List<String>>() ;
-    		}
-    		return mTabRowCells.get(tabIdx).subList(startOffset, Math.min(startOffset+nbLimit,getTabCount(tabIdx))) ;
-    	}
-    	
-    	public int getTabCount( int tabIdx ) {
-    		if( mTabRowCells == null || tabIdx >= mTabRowCells.size() ) {
-    			return 0 ;
-    		}
-    		return mTabRowCells.get(tabIdx).size() ;
-    	}
-    	
-    }
-    
-    
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case android.R.id.home:
+				// Comes from the action bar when the app icon on the left is pressed.
+				// It works like a back press, but it won't close the activity.
+				onBackPressed();
+				break ;
+			case R.id.savetosd:
+				onSaveToSd() ;
+				break ;
+		}
+		return false;
+	}
+	@Override
+	public void onBackPressed() {
+		super.onBackPressed();
+	}
+
+	private void onSaveToSd() {
+		new DownloadAgainTask().execute() ;
+	}
+
+
+	private ProgressDialog mDownloadProgress ;
+	private class DownloadAgainTask extends AsyncTask<Void,Void,Void> {
+		String fileName ;
+		byte[] data = null ;
+
+		protected void onPreExecute() {
+			mDownloadProgress = ProgressDialog.show(
+							QueryViewActivity.this,
+							"Downloading Query",
+							"Please wait...",
+							true);
+
+			ActionBar ab = getActionBar() ;
+			String title = ab.getTitle().toString() ;
+			String timestamp = String.valueOf((int)(System.currentTimeMillis() / 1000)) ;
+			fileName = "CrmQuery_"+title.replaceAll("[^a-zA-Z0-9]", "")+"_"+timestamp+".xlsx" ;
+			return ;
+		}
+		protected Void doInBackground(Void... arg0) {
+			CrmQueryModel lastFetchModel = CrmQueryManager.getLastFetchModel() ;
+			Integer tmpJsonRecord = CrmQueryManager.fetchRemoteJson(QueryViewActivity.this, lastFetchModel, true) ;
+			if( tmpJsonRecord == null ) {
+				return null ;
+			}
+
+			DatabaseManager mDb = DatabaseManager.getInstance(QueryViewActivity.this) ;
+			Cursor c = mDb.rawQuery(String.format("SELECT json_blob FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
+			c.moveToNext() ;
+			String jsonBlob = c.getString(0) ;
+			c.close();
+
+			mDb.execSQL(String.format("DELETE FROM query_cache_json WHERE json_result_id='%d'",tmpJsonRecord));
+
+			try {
+				JSONObject jsonObj = new JSONObject(jsonBlob) ;
+				String xlsBase64 = jsonObj.getString("xlsx_base64") ;
+				data = Base64.decode(xlsBase64, Base64.DEFAULT) ;
+			}catch(JSONException e) {
+				return null ;
+			}
+
+			return null ;
+		}
+		protected void onPostExecute(Void arg0) {
+			if( isCancelled() ) {
+				return ;
+			}
+			mDownloadProgress.dismiss() ;
+			if( data == null ) {
+				return ;
+			}
+			SdcardManager.saveData(QueryViewActivity.this, fileName, data, true) ;
+		}
+	}
+
+	private TabGridGetter mTabGridGetter = null ;
+	public class TabGridGetter {
+
+		public QueryGridTemplate getQueryGridTemplate() {
+			return mQgt ;
+		}
+
+		public List<ColumnDesc> getTabColumns( int tabIdx ) {
+			if( mTabColumnsDesc == null || tabIdx >= mTabColumnsDesc.size() ) {
+				return new ArrayList<ColumnDesc>() ;
+			}
+			return mTabColumnsDesc.get(tabIdx) ;
+		}
+
+		public List<List<String>> getTabRows( int tabIdx, int startOffset, int nbLimit ) {
+			if( startOffset >= getTabCount( tabIdx ) ) {
+				return new ArrayList<List<String>>() ;
+			}
+			return mTabRowCells.get(tabIdx).subList(startOffset, Math.min(startOffset+nbLimit,getTabCount(tabIdx))) ;
+		}
+
+		public int getTabCount( int tabIdx ) {
+			if( mTabRowCells == null || tabIdx >= mTabRowCells.size() ) {
+				return 0 ;
+			}
+			return mTabRowCells.get(tabIdx).size() ;
+		}
+
+	}
+
+
 	@Override
 	public View makeView() {
 		QueryView queryView = new QueryView(this,mViewSwitcher,mTabGridGetter,mCalculatedPageSize,mCalculatedRowHeight) ;
 		queryView.setLayoutParams(new ViewSwitcher.LayoutParams(
-                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+						LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		queryView.setId(VIEW_ID) ;
 		return queryView;
 	}
-	
+
 	@Override
 	public void onChildViewInstalled() {
 		mProgressBar.setVisibility(View.GONE) ;
