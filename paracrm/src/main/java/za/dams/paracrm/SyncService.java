@@ -526,7 +526,7 @@ public class SyncService extends Service {
     		JSONObject jsonObj ;
     		JSONArray jsonArr ;
 			while( (readLine = r.readLine()) != null ) {
-				 Log.w(TAG,readLine) ;
+				// Log.w(TAG,readLine) ;
 				try {
 					if( isFirst ) {
 						jsonObj = new JSONObject(readLine) ;
