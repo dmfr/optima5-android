@@ -21,6 +21,7 @@ import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -169,11 +170,11 @@ public class QueryViewActivity extends Activity implements ActionBar.TabListener
 		tTableRowModel.addView(tTableCellModel) ;
 		tTableRowModel.setLayoutParams(new ViewGroup.LayoutParams(
 						LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
-		tTableRowModel.measure(MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().width, MeasureSpec.EXACTLY),
-						MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().height, MeasureSpec.EXACTLY));
+		tTableRowModel.measure(MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().width, MeasureSpec.UNSPECIFIED),
+						MeasureSpec.makeMeasureSpec(tTableRowModel.getLayoutParams().height, MeasureSpec.UNSPECIFIED));
 		int tRowHeight = tTableRowModel.getMeasuredHeight() + 1 ; // tableRow + horizontal ruler
 
-		//Log.w("QueryViewActivity","Page height="+tViewHeight+"   Row height="+tRowHeight) ;
+		// Log.w("QueryViewActivity","Page height="+tViewHeight+"   Row height="+tRowHeight) ;
 		mCalculatedPageSize = (int) Math.floor( (tViewHeight-tRowHeight) / tRowHeight );
 		mCalculatedRowHeight = tRowHeight ;
 	}

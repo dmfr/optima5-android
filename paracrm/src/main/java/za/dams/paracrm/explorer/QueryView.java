@@ -214,13 +214,13 @@ public class QueryView extends View {
     tableView.setLayoutParams(new ViewGroup.LayoutParams(
             LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) ;
 
-    tableView.measure(MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().width, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().height, MeasureSpec.EXACTLY));
+    tableView.measure(MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().width, MeasureSpec.UNSPECIFIED),
+            MeasureSpec.makeMeasureSpec(tableView.getLayoutParams().height, MeasureSpec.UNSPECIFIED));
 
     tableView.layout(0, 0, tableView.getMeasuredWidth(), tableView.getMeasuredHeight());
 
-    // Log.w(TAG,"TableView created :") ;
-    // Log.w(TAG,"MeasureWidth: "+tableView.getMeasuredWidth()+" MeasuredHeight:"+tableView.getMeasuredHeight()) ;
+     Log.w(TAG,"TableView created :") ;
+     Log.w(TAG,"MeasureWidth: "+tableView.getMeasuredWidth()+" MeasuredHeight:"+tableView.getMeasuredHeight()) ;
   }
   private View getTableCell( ColumnDesc cd ) {
     TextView tv = (TextView)mInflater.inflate(R.layout.explorer_viewer_table_cell, null) ;
