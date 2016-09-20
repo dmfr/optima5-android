@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="za.dams.paracrm"
-    android:versionCode="26"
-    android:versionName="0.026" >
+    android:versionCode="27"
+    android:versionName="0.027" >
 
     <uses-sdk
         android:minSdkVersion="11"
