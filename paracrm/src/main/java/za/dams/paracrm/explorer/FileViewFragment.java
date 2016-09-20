@@ -25,6 +25,7 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -232,6 +233,21 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
 		enableTabButtons() ;
 		showContent(true) ;
 	}
+
+	private void addTabView( String title, View view ) {
+		Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
+		b.setText(title) ;
+		if( mTabs.size() == 0 ) { // 1ere TAB ?
+			b.setTypeface(null, Typeface.BOLD);
+		}
+		mTabsContainer.addView(b) ;
+		mTabs.add(b) ;
+
+		ScrollView sv = (ScrollView) mInflater.inflate(R.layout.explorer_fileview_tabcontent, null) ;
+		sv.addView(view) ;
+		mTabViewsContainer.addView(sv) ;
+		mTabViews.add(view) ;
+	}
 	
     private void setViewMstrHeader() {
     	// Banner (view group)
@@ -252,13 +268,6 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     	
     }
     private void setViewMstrDetails() {
-    	// 1ere TAB
-    	Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
-    	b.setText(mMstrDesc.fileName) ;
-    	b.setTypeface(null, Typeface.BOLD) ;
-    	mTabsContainer.addView(b) ;
-    	mTabs.add(b) ;
-    	
     	TableLayout table = (TableLayout)mInflater.inflate(R.layout.explorer_fileview_mstr_table, null) ;
     	for( CrmFileFieldDesc cffd : mMstrDesc.fieldsDesc ) {
     		
@@ -271,8 +280,7 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     		
     		table.addView(tr) ;
     	}
-    	mTabViewsContainer.addView(table) ;
-    	mTabViews.add(table) ;
+			addTabView(mMstrDesc.fileName, table) ;
     }
     private void setViewChildren() {
     	int idx = -1 ;
@@ -292,14 +300,8 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     private void subSetViewChildTable( CrmFileDesc cfd, ArrayList<CrmFileRecord> arrCfr ) {
     	// enregistrement d'une tab + une view
     	TableLayout table = subBuildViewForChildFile(cfd,arrCfr) ;
-    	mTabViewsContainer.addView(table) ;
-    	mTabViews.add(table) ;
-    	
-    	Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
-    	b.setText(cfd.fileName) ;
-    	mTabsContainer.addView(b) ;
-    	mTabs.add(b) ;
-    }
+			addTabView(cfd.fileName,table) ;
+     }
     private TableLayout subBuildViewForChildFile( CrmFileDesc cfd, ArrayList<CrmFileRecord> arrCfr ) {
     	// retour d'une vue TableLayout
     	TableLayout table = (TableLayout)mInflater.inflate(R.layout.explorer_fileview_sub_table, null) ;
@@ -353,18 +355,13 @@ public class FileViewFragment extends Fragment implements View.OnClickListener {
     	// - grid view > mTabViews liée à un adapter
     	// - baseadapter > mMediaAdapters
     	// - enregistrement du l
-    	Button b = (Button)mInflater.inflate(R.layout.explorer_fileview_tab, null) ;
-    	b.setText(cfd.fileName) ;
-    	mTabsContainer.addView(b) ;
-    	mTabs.add(b) ;
-    	
+
     	MediaAdapter gridAdapter = new MediaAdapter(mContext);
     	gridAdapter.setData(arrCfr) ;
     	GridView gridView = (GridView)mInflater.inflate(R.layout.explorer_gallery, null) ;
     	gridView.setAdapter(gridAdapter) ;
     	mMediaAdapters.add(gridAdapter) ;
-    	mTabViewsContainer.addView(gridView) ;
-    	mTabViews.add(gridView) ;
+			addTabView(cfd.fileName, gridView) ;
     	
     	gridView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
 
