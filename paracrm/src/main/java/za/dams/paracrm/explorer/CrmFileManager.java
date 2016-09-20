@@ -308,7 +308,7 @@ public class CrmFileManager {
         			}
         		}
         	}
-        	sb.append( String.format(" WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) ORDER BY store_file.sync_timestamp DESC LIMIT %d",fileCode,limit) ) ;
+        	sb.append( String.format(" WHERE store_file.file_code='%s' AND ( store_file.sync_is_deleted IS NULL OR store_file.sync_is_deleted<>'O' ) ORDER BY store_file.sync_timestamp DESC, store_file.sync_vuid DESC LIMIT %d",fileCode,limit) ) ;
         	queryMaster = sb.toString();
     	}
     	
@@ -334,7 +334,7 @@ public class CrmFileManager {
 	
     
     	ArrayList<CrmFileRecord> data = new ArrayList<CrmFileRecord>();
-    	c = mDb.rawQuery(String.format("SELECT filerecord_id, sync_vuid FROM store_file WHERE filerecord_id IN (%s) ORDER BY sync_timestamp DESC",queryMaster)) ;
+    	c = mDb.rawQuery(String.format("SELECT filerecord_id, sync_vuid FROM store_file WHERE filerecord_id IN (%s) ORDER BY sync_timestamp DESC , store_file.sync_vuid DESC",queryMaster)) ;
     	while( c.moveToNext() ) {
     		CrmFileRecord cfr = new CrmFileRecord();
     		cfr.fileCode = fileCode ;
