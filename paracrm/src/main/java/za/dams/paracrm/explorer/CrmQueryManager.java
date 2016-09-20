@@ -275,9 +275,7 @@ public class CrmQueryManager {
             }
         }
 
-		Log.w("DAMS", jsonString) ;
-        
-        
+
         if( jsonString == null && !getAsXls ) {
         	// Recherche en cache
         	int cachedJsonResultId = -1 ;
